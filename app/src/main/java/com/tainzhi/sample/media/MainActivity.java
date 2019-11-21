@@ -1,29 +1,22 @@
 package com.tainzhi.sample.media;
 
-import android.app.ListActivity;
 import android.content.Intent;
 import android.os.Bundle;
-
-import com.google.android.material.floatingactionbutton.FloatingActionButton;
-import com.google.android.material.snackbar.Snackbar;
+import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ListView;
+import android.widget.SimpleAdapter;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
-import android.view.View;
-import android.view.Menu;
-import android.view.MenuItem;
-import android.widget.ListView;
-import android.widget.SimpleAdapter;
-
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class MainActivity extends ListActivity {
+public class MainActivity extends AppCompatActivity implements ListView.OnItemClickListener {
 	// map keys
 	private static final String TITLE = "title";
 	private static final String DESCRIPTION = "description";
@@ -36,7 +29,10 @@ public class MainActivity extends ListActivity {
 	private static final String[][] TESTS = {
 			{ "通过三种方式绘制图片",
 					"ImageView, SurfaceView, 自定义图片",
-					"DrawImageActivity" }
+					"DrawImageActivity"},
+			{"录制音频, 播放音频",
+					"AudioRecord采集音频PCM, AudioTrack播放",
+					"AudioRecordPlayActivity"}
 	};
 	
 	/**
@@ -52,15 +48,22 @@ public class MainActivity extends ListActivity {
 				}
 			};
 	
+	private ListView listView;
+	
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
+		Toolbar toolbar = findViewById(R.id.toolbar);
+		setSupportActionBar(toolbar);
 		
-		setListAdapter(new SimpleAdapter(this, createActivityList(),
+		listView = findViewById(R.id.listview);
+		
+		listView.setAdapter(new SimpleAdapter(this, createActivityList(),
 				android.R.layout.two_line_list_item, new String[] { TITLE, DESCRIPTION },
 				new int[] { android.R.id.text1, android.R.id.text2 } ));
+		listView.setOnItemClickListener(this);
 	}
 	
 	/**
@@ -86,13 +89,13 @@ public class MainActivity extends ListActivity {
 			testList.add(tmp);
 		}
 		
-		Collections.sort(testList, TEST_LIST_COMPARATOR);
+		// Collections.sort(testList, TEST_LIST_COMPARATOR);
 		
 		return testList;
 	}
 	
 	@Override
-	protected void onListItemClick(ListView listView, View view, int position, long id) {
+	public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
 		Map<String, Object> map = (Map<String, Object>)listView.getItemAtPosition(position);
 		Intent intent = (Intent) map.get(CLASS_NAME);
 		startActivity(intent);

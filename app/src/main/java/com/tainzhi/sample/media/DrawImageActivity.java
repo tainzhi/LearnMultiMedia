@@ -1,22 +1,20 @@
 package com.tainzhi.sample.media;
 
-import androidx.appcompat.app.AppCompatActivity;
-
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.os.Bundle;
-import android.os.Environment;
-import android.util.Log;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.widget.ImageView;
 
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
+
 import com.tainzhi.sample.media.widget.CustomImageView;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -39,6 +37,8 @@ public class DrawImageActivity extends AppCompatActivity implements SurfaceHolde
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_draw_image);
+		Toolbar toolbar = findViewById(R.id.toolbar);
+		setSupportActionBar(toolbar);
 		
 		imageView = findViewById(R.id.iamgeview);
 		surfaceView = findViewById(R.id.surfaceView);

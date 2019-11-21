@@ -1,4 +1,10 @@
 <resources>
-    <string name="app_name">LearnMultiMedia</string>
-    <string name="action_settings">Settings</string>
+	<string name="app_name">LearnMultiMedia</string>
+	<string name="action_settings">Settings</string>
+	<string name="title_activity_audio_record_play">AudioRecordPlayActivity</string>
+	<string name="title_activity_draw_image2">DrawImageActivity</string>
+	<string name="audio_start_record">StartRecord</string>
+	<string name="audio_stop_record">StopRecord</string>
+	<string name="audio_start_play">StartPlay</string>
+	<string name="audio_stop_play">StopPlay</string>
 </resources>
