@@ -10,7 +10,8 @@ import android.media.AudioTrack;
 import android.media.MediaRecorder;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Environment;
+import android.os.Handler;
+import android.os.HandlerThread;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -56,10 +57,20 @@ public class AudioRecordPlayActivity extends AppCompatActivity implements View.O
 	private AudioRecord audioRecord;
 	private AudioTrack audioTrack;
 	
+	private HandlerThread handlerThread;
+	private Handler threadHandler;
+	private Handler mainHandler;
+	
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
+		
+		handlerThread = new HandlerThread(TAG);
+		handlerThread.start();
+		threadHandler = new Handler(handlerThread.getLooper());
+		mainHandler = new Handler();
+		
 		setContentView(R.layout.activity_audio_record_play);
 		Toolbar toolbar = findViewById(R.id.toolbar);
 		setSupportActionBar(toolbar);
@@ -80,99 +91,39 @@ public class AudioRecordPlayActivity extends AppCompatActivity implements View.O
 	}
 	
 	@Override
+	protected void onDestroy() {
+		super.onDestroy();
+		if (handlerThread != null) {
+			handlerThread.quitSafely();
+		}
+	}
+	
+	@Override
 	public void onClick(View v) {
 		Button button = (Button) v;
 		switch (v.getId()) {
 			case R.id.btn_record:
 				if (button.getText().toString().equals(getString(R.string.audio_start_record))) {
-					button.setText(getString(R.string.audio_stop_record));
 					startRecord();
+					btnRecod.setText(getString(R.string.audio_stop_record));
 				} else {
-					button.setText(getString(R.string.audio_start_record));
 					stopRecord();
-					btnConvert.setEnabled(true);
 				}
 				break;
 			case R.id.btn_convert:
-				PcmToWav pcmToWav = new PcmToWav(SAMPLE_RATE_INHX, CHANNEL_CONFIG, AUDIO_FORMAT);
-				File pcmFile = new File(getFilesDir(),
-						"audio_test.pcm");
-				File wavFile = new File(getFilesDir(), "audio_test.wav");
-				// if (!wavFile.mkdirs()) {
-				// 	Log.e(TAG, "wavFile Directory not crated");
-				// }
-				if (wavFile.exists()) {
-					wavFile.delete();
-				}
-				boolean result = pcmToWav.pcmToWav(pcmFile.getAbsolutePath(),
-					wavFile.getAbsolutePath());
-				if (result) {
-					btnPlay.setEnabled(true);
-				}
+				convert();
 				break;
 			case R.id.btn_play:
-				if (button.getText().toString().equals(R.string.audio_start_play)) {
-					button.setText(getString(R.string.audio_stop_play));
+				if (button.getText().toString().equals(getString(R.string.audio_start_play))) {
 					playInModeStream();
+					btnPlay.setText(getString(R.string.audio_stop_play));
 				} else {
-					button.setText(getString(R.string.audio_start_play));
 					stopPlay();
 				}
 				break;
 			default:
 				break;
 		}
-	}
-	
-	private void startRecord() {
-		final int minBufferSize = AudioRecord.getMinBufferSize(SAMPLE_RATE_INHX, CHANNEL_CONFIG,
-				AUDIO_FORMAT);
-		audioRecord = new AudioRecord(MediaRecorder.AudioSource.MIC, SAMPLE_RATE_INHX,
-				CHANNEL_CONFIG, AUDIO_FORMAT, minBufferSize);
-		final byte data[] = new byte[minBufferSize];
-		final File file = new File(getFilesDir(), "audio_test.pcm");
-		Log.d(TAG, file.getAbsolutePath() + " created");
-		// if (!file.mkdir()) {
-		// 	Log.e(TAG, "Directory not created");
-		// }
-		if (file.exists()) {
-			file.delete();
-		}
-		
-		audioRecord.startRecording();
-		isRecording = true;
-		
-		new Thread(new Runnable() {
-			@Override
-			public void run() {
-				FileOutputStream os = null;
-				try {
-					os = new FileOutputStream(file);
-				} catch (FileNotFoundException e) {
-					e.printStackTrace();
-				}
-				
-				if (os != null) {
-					while (isRecording) {
-						int read = audioRecord.read(data, 0, minBufferSize);
-						if (AudioRecord.ERROR_INVALID_OPERATION != read) {
-							try {
-								os.write(data);
-							} catch (IOException e) {
-								e.printStackTrace();
-							}
-						}
-					}
-					try {
-						Log.i(TAG, "run: close file ouput stream!");
-						os.close();
-					} catch (IOException e) {
-						e.printStackTrace();
-					}
-				}
-				
-			}
-		}).start();
 	}
 	
 	private void stopRecord() {
@@ -184,64 +135,137 @@ public class AudioRecordPlayActivity extends AppCompatActivity implements View.O
 		}
 	}
 	
-	/**
-	 * 用 Steam 模式播放
-	 */
-	private void playInModeStream() {
-		Log.d(TAG, "playInModeStream");
-		int channelConfig = AudioFormat.CHANNEL_OUT_MONO;
-		final int minBufferSize = AudioTrack.getMinBufferSize(SAMPLE_RATE_INHX, channelConfig,
-				AUDIO_FORMAT);
-		audioTrack = new AudioTrack(new AudioAttributes.Builder()
-				                            .setUsage(AudioAttributes.USAGE_MEDIA)
-				                            .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-				                            .build(),
-				new AudioFormat.Builder().setSampleRate(SAMPLE_RATE_INHX)
-						.setEncoding(AUDIO_FORMAT)
-						.setChannelMask(channelConfig)
-						.build(),
-				minBufferSize,
-				AudioTrack.MODE_STREAM,
-				AudioManager.AUDIO_SESSION_ID_GENERATE);
-		audioTrack.play();
-		
-		File file = new File(getFilesDir(), "audio_test.pcm");
-		try {
-			final FileInputStream fileInputStream = new FileInputStream(file);
-			new Thread(new Runnable() {
-				@Override
-				public void run() {
-					try {
-						byte[] tmpBuffer = new byte[minBufferSize];
-						while (fileInputStream.available() > 0) {
-							int readCount = fileInputStream.read(tmpBuffer);
-							if (readCount == AudioTrack.ERROR_BAD_VALUE ||
-									    readCount == AudioTrack.ERROR_INVALID_OPERATION) {
-								continue;
-							}
-							if (readCount != 0 && readCount != -1) {
-								audioTrack.write(tmpBuffer, 0, readCount);
-							}
-							
+	private void startRecord() {
+		threadHandler.post(() -> {
+			final int minBufferSize = AudioRecord.getMinBufferSize(SAMPLE_RATE_INHX, CHANNEL_CONFIG,
+					AUDIO_FORMAT);
+			audioRecord = new AudioRecord(MediaRecorder.AudioSource.MIC, SAMPLE_RATE_INHX,
+					CHANNEL_CONFIG, AUDIO_FORMAT, minBufferSize);
+			final byte data[] = new byte[minBufferSize];
+			final File file = new File(getFilesDir(), "audio_test.pcm");
+			Log.d(TAG, file.getAbsolutePath() + " created");
+			// if (!file.mkdir()) {
+			// 	Log.e(TAG, "Directory not created");
+			// }
+			if (file.exists()) {
+				file.delete();
+			}
+			
+			audioRecord.startRecording();
+			isRecording = true;
+			FileOutputStream os = null;
+			try {
+				os = new FileOutputStream(file);
+			} catch (FileNotFoundException e) {
+				e.printStackTrace();
+			}
+			
+			if (os != null) {
+				while (isRecording) {
+					int read = audioRecord.read(data, 0, minBufferSize);
+					if (AudioRecord.ERROR_INVALID_OPERATION != read) {
+						try {
+							os.write(data);
+						} catch (IOException e) {
+							e.printStackTrace();
 						}
-						Log.d(TAG, "finish play");
-					} catch (IOException e) {
-						e.printStackTrace();
 					}
-					
 				}
-			}).start();
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-		}
+				try {
+					Log.i(TAG, "run: close file ouput stream!");
+					os.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+				
+				// ui线程更新button
+				// 等待convert转码
+				mainHandler.post(() -> {
+					Log.d(TAG, "stop recording");
+					btnRecod.setEnabled(false);
+					btnRecod.setText(getString(R.string.audio_start_play));
+					btnConvert.setEnabled(true);
+				});
+			}
+			
+		});
 	}
 	
-	private void stopPlay() {
-		if (audioTrack != null) {
-			audioTrack.stop();
-			audioTrack.release();
-			audioTrack = null;
-		}
+	private void convert() {
+		threadHandler.post(() -> {
+			
+			Log.d(TAG, "start convert");
+			PcmToWav pcmToWav = new PcmToWav(SAMPLE_RATE_INHX, CHANNEL_CONFIG, AUDIO_FORMAT);
+			File pcmFile = new File(getFilesDir(),
+					"audio_test.pcm");
+			File wavFile = new File(getFilesDir(), "audio_test.wav");
+			// if (!wavFile.mkdirs()) {
+			// 	Log.e(TAG, "wavFile Directory not crated");
+			// }
+			if (wavFile.exists()) {
+				wavFile.delete();
+			}
+			boolean result = pcmToWav.pcmToWav(pcmFile.getAbsolutePath(),
+					wavFile.getAbsolutePath());
+			if (result) {
+				mainHandler.post(() -> {
+					Log.d(TAG, "stop convert, converted file=" + wavFile.getAbsolutePath());
+					btnConvert.setEnabled(false);
+					btnPlay.setEnabled(true);
+				});
+			}
+		});
+	}
+	
+	/**
+	 * 用 stream 模式播放
+	 */
+	private void playInModeStream() {
+		threadHandler.post(() -> {
+			Log.d(TAG, "start play int stream mode");
+			int channelConfig = AudioFormat.CHANNEL_OUT_MONO;
+			final int minBufferSize = AudioTrack.getMinBufferSize(SAMPLE_RATE_INHX, channelConfig,
+					AUDIO_FORMAT);
+			audioTrack = new AudioTrack(new AudioAttributes.Builder()
+					                            .setUsage(AudioAttributes.USAGE_MEDIA)
+					                            .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+					                            .build(),
+					new AudioFormat.Builder().setSampleRate(SAMPLE_RATE_INHX)
+							.setEncoding(AUDIO_FORMAT)
+							.setChannelMask(channelConfig)
+							.build(),
+					minBufferSize,
+					AudioTrack.MODE_STREAM,
+					AudioManager.AUDIO_SESSION_ID_GENERATE);
+			audioTrack.play();
+			
+			File file = new File(getFilesDir(), "audio_test.pcm");
+			try {
+				final FileInputStream fileInputStream = new FileInputStream(file);
+				try {
+					byte[] tmpBuffer = new byte[minBufferSize];
+					while (fileInputStream.available() > 0) {
+						int readCount = fileInputStream.read(tmpBuffer);
+						if (readCount == AudioTrack.ERROR_BAD_VALUE ||
+								    readCount == AudioTrack.ERROR_INVALID_OPERATION) {
+							continue;
+						}
+						if (readCount != 0 && readCount != -1) {
+							audioTrack.write(tmpBuffer, 0, readCount);
+						}
+						
+					}
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			} catch (FileNotFoundException e) {
+				e.printStackTrace();
+			}
+			mainHandler.post(() -> {
+				stopPlay();
+				Log.d(TAG, "finish play in stream mode");
+			});
+		});
 	}
 	
 	private void checkPermissions() {
@@ -270,5 +294,20 @@ public class AudioRecordPlayActivity extends AppCompatActivity implements View.O
 			}
 		}
 		// TODO: 2019-11-22 运行时权限的申请
+	}
+	
+	private void stopPlay() {
+		mainHandler.post(() -> {
+			if (audioTrack != null) {
+				audioTrack.stop();
+				audioTrack.release();
+				audioTrack = null;
+			}
+			
+			btnPlay.setEnabled(false);
+			btnPlay.setText(getString(R.string.audio_start_play));
+			btnRecod.setText(getString(R.string.audio_start_record));
+			btnRecod.setEnabled(true);
+		});
 	}
 }
