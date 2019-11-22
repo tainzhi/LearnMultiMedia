@@ -10,6 +10,7 @@ import android.media.AudioTrack;
 import android.media.MediaRecorder;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -45,6 +46,7 @@ public class AudioRecordPlayActivity extends AppCompatActivity implements View.O
 			Manifest.permission.RECORD_AUDIO,
 			Manifest.permission.WRITE_EXTERNAL_STORAGE
 	};
+	
 	private List<String> unGrantedPermissionList = new ArrayList<>();
 	private Button btnRecod;
 	private Button btnConvert;
@@ -93,23 +95,27 @@ public class AudioRecordPlayActivity extends AppCompatActivity implements View.O
 				break;
 			case R.id.btn_convert:
 				PcmToWav pcmToWav = new PcmToWav(SAMPLE_RATE_INHX, CHANNEL_CONFIG, AUDIO_FORMAT);
-				File pcmFile = new File(getExternalCacheDir(), "audio_test.pcm");
-				File wavFile = new File(getExternalCacheDir(), "audio_test.wav");
-				if (!wavFile.mkdirs()) {
-					Log.e(TAG, "wavFile Directory not crated");
-					
-				}
+				File pcmFile = new File(getFilesDir(),
+						"audio_test.pcm");
+				File wavFile = new File(getFilesDir(), "audio_test.wav");
+				// if (!wavFile.mkdirs()) {
+				// 	Log.e(TAG, "wavFile Directory not crated");
+				// }
 				if (wavFile.exists()) {
 					wavFile.delete();
 				}
-				pcmToWav.pcmToWav(pcmFile.getAbsolutePath(), wavFile.getAbsolutePath());
+				boolean result = pcmToWav.pcmToWav(pcmFile.getAbsolutePath(),
+					wavFile.getAbsolutePath());
+				if (result) {
+					btnPlay.setEnabled(true);
+				}
 				break;
 			case R.id.btn_play:
 				if (button.getText().toString().equals(R.string.audio_start_play)) {
 					button.setText(getString(R.string.audio_stop_play));
 					playInModeStream();
 				} else {
-					button.setText(getString(R.string.audio_stop_play));
+					button.setText(getString(R.string.audio_start_play));
 					stopPlay();
 				}
 				break;
@@ -124,10 +130,11 @@ public class AudioRecordPlayActivity extends AppCompatActivity implements View.O
 		audioRecord = new AudioRecord(MediaRecorder.AudioSource.MIC, SAMPLE_RATE_INHX,
 				CHANNEL_CONFIG, AUDIO_FORMAT, minBufferSize);
 		final byte data[] = new byte[minBufferSize];
-		final File file = new File(getExternalCacheDir(), "audio_test.pcm");
-		if (!file.mkdir()) {
-			Log.e(TAG, "Directory not created");
-		}
+		final File file = new File(getFilesDir(), "audio_test.pcm");
+		Log.d(TAG, file.getAbsolutePath() + " created");
+		// if (!file.mkdir()) {
+		// 	Log.e(TAG, "Directory not created");
+		// }
 		if (file.exists()) {
 			file.delete();
 		}
@@ -181,6 +188,7 @@ public class AudioRecordPlayActivity extends AppCompatActivity implements View.O
 	 * 用 Steam 模式播放
 	 */
 	private void playInModeStream() {
+		Log.d(TAG, "playInModeStream");
 		int channelConfig = AudioFormat.CHANNEL_OUT_MONO;
 		final int minBufferSize = AudioTrack.getMinBufferSize(SAMPLE_RATE_INHX, channelConfig,
 				AUDIO_FORMAT);
@@ -197,7 +205,7 @@ public class AudioRecordPlayActivity extends AppCompatActivity implements View.O
 				AudioManager.AUDIO_SESSION_ID_GENERATE);
 		audioTrack.play();
 		
-		File file = new File(getCacheDir(), "audio_test.pcm");
+		File file = new File(getFilesDir(), "audio_test.pcm");
 		try {
 			final FileInputStream fileInputStream = new FileInputStream(file);
 			new Thread(new Runnable() {
@@ -216,6 +224,7 @@ public class AudioRecordPlayActivity extends AppCompatActivity implements View.O
 							}
 							
 						}
+						Log.d(TAG, "finish play");
 					} catch (IOException e) {
 						e.printStackTrace();
 					}
@@ -244,7 +253,7 @@ public class AudioRecordPlayActivity extends AppCompatActivity implements View.O
 				}
 			}
 		}
-		if (unGrantedPermissionList.isEmpty()) {
+		if (!unGrantedPermissionList.isEmpty()) {
 			String[] tmpPermissions =
 					unGrantedPermissionList.toArray(new String[unGrantedPermissionList.size()]);
 			ActivityCompat.requestPermissions(this, tmpPermissions, MY_PERMISSIONS_REQUEST);

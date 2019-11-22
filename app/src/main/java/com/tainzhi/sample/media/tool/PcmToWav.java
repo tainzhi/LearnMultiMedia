@@ -27,7 +27,7 @@ public class PcmToWav {
 		this.bufferSize = AudioRecord.getMinBufferSize(sampleRate, channel, encodeFormat);
 	}
 	
-	public void pcmToWav(String inFileName, String outFileName) {
+	public boolean pcmToWav(String inFileName, String outFileName) {
 		FileInputStream in;
 		FileOutputStream out;
 		long totalAudioLen;
@@ -54,6 +54,7 @@ public class PcmToWav {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+		return true;
 	}
 	
 	private void addWavFileHeader(FileOutputStream out, long totalAudioLen,
