@@ -40,7 +40,7 @@ public class DrawImageActivity extends AppCompatActivity implements SurfaceHolde
 		Toolbar toolbar = findViewById(R.id.toolbar);
 		setSupportActionBar(toolbar);
 		
-		imageView = findViewById(R.id.iamgeview);
+		imageView = findViewById(R.id.imageview);
 		surfaceView = findViewById(R.id.surfaceView);
 		customImageView = findViewById(R.id.customview);
 		

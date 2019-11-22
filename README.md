@@ -9,6 +9,8 @@
 ### AudioRecod录制音频文件，AudioTrack播放音频文件
 - AudioRecod录制音频PCM文件，比MediaRecord更底层
 - PCM文件需要添加wav文件头，才能被AudioTrack播放
+- AudioTrack有stream和staic两种播放方式
 - [参考：使用 AudioRecord 采集音频PCM并保存到文件](https://www.cnblogs.com/renhui/p/7457321.html
 ), [参考：使用 AudioTrack 播放PCM音频](https
 ://www.cnblogs.com/renhui/p/7463287.html)
+

@@ -32,7 +32,11 @@ public class MainActivity extends AppCompatActivity implements ListView.OnItemCl
 					"DrawImageActivity"},
 			{"录制音频, 播放音频",
 					"AudioRecord采集音频PCM, AudioTrack播放",
-					"AudioRecordPlayActivity"}
+					"AudioRecordPlayActivity"},
+			{"录制camera, 转码264, 混合音频",
+					"camera预览数据,转码成h264,再混合音频",
+					"VideoRecordActivity"
+			}
 	};
 	
 	/**
