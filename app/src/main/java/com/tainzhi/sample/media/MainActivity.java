@@ -36,7 +36,13 @@ public class MainActivity extends AppCompatActivity implements ListView.OnItemCl
 			{"录制camera, 转码264, 混合音频",
 					"camera预览数据,转码成h264,再混合音频",
 					"VideoRecordActivity"
-			}
+			},
+			{"OpenGLES draw triangle", "绘制基本三角形", "opengl2.TriangleActivity"},
+			{"OpenGLES 绘制立方体", "绘制立方体， 并缩放，位移，旋转等", "opengl2.SquareActivity"},
+			{"OpenGLES draw oval", "绘制基本圆形", "opengl2.OvalActivity"},
+			{"OpenGLES 绘制圆锥", "绘制基本圆锥体", "opengl2.ConeActivity"},
+			{"OpenGLES 绘制圆柱体", "绘制基本圆柱体", "opengl2.CylinderActivity"},
+			{"OpenGLES 绘制球体", "绘制发光小球", "opengl2.BallActivity"},
 	};
 	
 	/**
