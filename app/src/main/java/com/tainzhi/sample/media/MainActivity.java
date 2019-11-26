@@ -11,7 +11,6 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -43,21 +42,8 @@ public class MainActivity extends AppCompatActivity implements ListView.OnItemCl
 			{"OpenGLES 绘制圆锥", "绘制基本圆锥体", "opengl2.ConeActivity"},
 			{"OpenGLES 绘制圆柱体", "绘制基本圆柱体", "opengl2.CylinderActivity"},
 			{"OpenGLES 绘制球体", "绘制发光小球", "opengl2.BallActivity"},
-			{"OpenGLES 绘制画笔点", "绘制画笔点", "opengl2.PaintPointActivity"},
+			{"OpenGLES 绘制画笔点", "响应触摸事件，并在触摸出绘制点", "opengl2.PaintPointActivity"},
 	};
-	
-	/**
-	 * Compares two list items.
-	 */
-	private static final Comparator<Map<String, Object>> TEST_LIST_COMPARATOR =
-			new Comparator<Map<String, Object>>() {
-				@Override
-				public int compare(Map<String, Object> map1, Map<String, Object> map2) {
-					String title1 = (String) map1.get(TITLE);
-					String title2 = (String) map2.get(TITLE);
-					return title1.compareTo(title2);
-				}
-			};
 	
 	private ListView listView;
 	
@@ -81,10 +67,10 @@ public class MainActivity extends AppCompatActivity implements ListView.OnItemCl
 	 * Creates the list of activities from the string arrays.
 	 */
 	private List<Map<String, Object>> createActivityList() {
-		List<Map<String, Object>> testList = new ArrayList<Map<String, Object>>();
+		List<Map<String, Object>> testList = new ArrayList<>();
 		
 		for (String[] test : TESTS) {
-			Map<String, Object> tmp = new HashMap<String, Object>();
+			Map<String, Object> tmp = new HashMap<>();
 			tmp.put(TITLE, test[0]);
 			tmp.put(DESCRIPTION, test[1]);
 			Intent intent = new Intent();

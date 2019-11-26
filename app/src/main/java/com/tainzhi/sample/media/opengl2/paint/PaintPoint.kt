@@ -14,6 +14,19 @@ class PaintPoint : PPgles{
     private var mUFragmentColor = 0
     private val mPosition = floatArrayOf(0.0f, 0.0f)
     private val mColor = floatArrayOf(1.0f, 0.0f, 0.0f, 1.0f)
+    override val vertexShader = """
+            attribute vec4 a_Position;
+            void main() {
+                gl_Position = a_Position;
+                gl_PointSize = 50.0;
+            }
+            """
+    override val fragmentShader = ("precision mediump float;"
+            + "uniform vec4 u_FragmentColor;"
+            + "void main() {"
+            + "    gl_FragColor = u_FragmentColor;"
+            + "}")
+
     override fun init(program: Int, vertexShader: Int, fragmentShader: Int) {
         mAPosition = GLES20.glGetAttribLocation(program, "a_Position")
         mUFragmentColor = GLES20.glGetUniformLocation(program, "u_FragmentColor")
@@ -40,16 +53,6 @@ class PaintPoint : PPgles{
 
     companion object {
         private const val TAG = "CZPoint"
-        val vertexShader = ("attribute vec4 a_Position;"
-                + "void main() {"
-                + "    gl_Position = a_Position;"
-                + "    gl_PointSize = 50.0;"
-                + "}")
-        val fragmentShader = ("precision mediump float;"
-                + "uniform vec4 u_FragmentColor;"
-                + "void main() {"
-                + "    gl_FragColor = u_FragmentColor;"
-                + "}")
     }
 }
 

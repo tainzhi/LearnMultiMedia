@@ -1,7 +1,7 @@
-import com.tainzhi.sample.media.R
+package com.tainzhi.sample.media.opengl2
 
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import androidx.appcompat.app.AppCompatActivity
 import com.tainzhi.sample.media.opengl2.glsv.PaintPointGLSurfaceView
 
 class PaintPointActivity : AppCompatActivity() {
