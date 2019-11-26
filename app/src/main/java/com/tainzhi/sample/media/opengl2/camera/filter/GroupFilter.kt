@@ -65,7 +65,8 @@ class GroupFilter : BaseFilter() {
 
     private fun updateFilter() {
         var f: BaseFilter
-        while (mFilterQueue.poll().also { f = it } != null) {
+        while (mFilterQueue.size > 0) {
+            f = mFilterQueue.poll()
             f.create()
             f.setSize(width, height)
             mFilters.add(f)

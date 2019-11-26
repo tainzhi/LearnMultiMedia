@@ -12,7 +12,6 @@ class TextureFilter : BaseFilter() {
     private val fTexture = IntArray(1)
     private val mCameraTexture = IntArray(1)
     var texture: SurfaceTexture? = null
-        private set
     private val mCoordOM = FloatArray(16)
     fun setCoordMatrix(matrix: FloatArray?) {
         mFilter.setCoordMatrix(matrix!!)
