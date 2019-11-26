@@ -2,7 +2,7 @@ package com.tainzhi.sample.media.opengl2.base
 
 import android.content.Context
 import android.opengl.GLSurfaceView
-import java.util.jar.Attributes
+import android.util.AttributeSet
 
 /**
  * @author:       tainzhi
@@ -12,7 +12,7 @@ import java.util.jar.Attributes
  **/
 
 open class BaseGLSurfaceView(context: Context?) : GLSurfaceView(context) {
-    constructor(context: Context?, attributes: Attributes) : this(context) {
+    constructor(context: Context?, attributes: AttributeSet) : this(context) {
     }
 
     init {

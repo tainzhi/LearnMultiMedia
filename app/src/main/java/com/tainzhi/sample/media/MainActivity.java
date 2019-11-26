@@ -45,6 +45,7 @@ public class MainActivity extends AppCompatActivity implements ListView.OnItemCl
 			{"OpenGLES 绘制画笔点", "响应触摸事件，并在触摸出绘制点", "opengl2.PaintPointActivity"},
 			{"OpenGLES 旋转三角形", "响应触摸事件，旋转三角形", "opengl2.RotateTriangleActivity"},
 			{"OpenGLES 渲染图片", "渲染图片", "opengl2.ImageGLRendererActivity"},
+			{"OpenGLES 预览相机", "预览相机", "opengl2.camera.CameraPreviewActivity"},
 	};
 	
 	private ListView listView;
