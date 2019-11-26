@@ -43,6 +43,7 @@ public class MainActivity extends AppCompatActivity implements ListView.OnItemCl
 			{"OpenGLES 绘制圆锥", "绘制基本圆锥体", "opengl2.ConeActivity"},
 			{"OpenGLES 绘制圆柱体", "绘制基本圆柱体", "opengl2.CylinderActivity"},
 			{"OpenGLES 绘制球体", "绘制发光小球", "opengl2.BallActivity"},
+			{"OpenGLES 绘制画笔点", "绘制画笔点", "opengl2.PaintPointActivity"},
 	};
 	
 	/**
