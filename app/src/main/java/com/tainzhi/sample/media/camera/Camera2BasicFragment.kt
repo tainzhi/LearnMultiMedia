@@ -14,10 +14,12 @@ import android.util.Log
 import android.util.Size
 import android.util.SparseIntArray
 import android.view.*
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.FragmentActivity
 import com.tainzhi.sample.media.R
 import com.tainzhi.sample.media.widget.AutoFitTextureView
 import java.io.File
@@ -544,7 +546,17 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
     }
 
     override fun onClick(p0: View?) {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        when (p0?.id) {
+            R.id.picture -> lockFocus()
+            R.id.info -> {
+                if (activity != null) {
+                    AlertDialog.Builder(activity as FragmentActivity)
+                            .setMessage("information")
+                            .setPositiveButton(android.R.string.ok, null)
+                            .show()
+                }
+            }
+        }
     }
 
     private fun setAutoFlash(requestBuilder: CaptureRequest.Builder) {
