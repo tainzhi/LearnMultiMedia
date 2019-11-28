@@ -2,14 +2,17 @@ package com.tainzhi.sample.media.camera
 
 import android.Manifest
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.graphics.*
 import android.hardware.camera2.*
 import android.media.ImageReader
+import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.HandlerThread
+import android.os.Message
 import android.util.Log
 import android.util.Size
 import android.util.SparseIntArray
@@ -22,6 +25,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
 import com.tainzhi.sample.media.R
 import com.tainzhi.sample.media.widget.AutoFitTextureView
+import com.tainzhi.sample.media.widget.CircleImageView
 import java.io.File
 import java.util.*
 import java.util.concurrent.Semaphore
@@ -39,7 +43,10 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
 
 
     private lateinit var textureView: AutoFitTextureView
+    // 预览拍照的图片，用于相册打开
+    private lateinit var picturePreview: CircleImageView
     private lateinit var file: File
+    private lateinit var fileUri: Uri
     private var surfaceTextureListener = object : TextureView.SurfaceTextureListener {
         override fun onSurfaceTextureSizeChanged(p0: SurfaceTexture?, width: Int, height: Int) {
             configureTransform(width, height)
@@ -56,6 +63,8 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
 
     private var backgroundThread: HandlerThread? = null
     private var backgroundHandler: Handler? = null
+    // 用于子线程给主线程通信
+    private var mainHandler: Handler? = null
 
     // a [Semaphore] to prevent the app from exiting before closing the camera
     private val cameraOpenCloseLock = Semaphore(1)
@@ -100,7 +109,7 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
      * still image is ready to be saved.
      */
     private val onImageAvailableListener = ImageReader.OnImageAvailableListener {
-        backgroundHandler?.post(ImageSaver(it.acquireNextImage(), file))
+        backgroundHandler?.post(ImageSaver(it.acquireNextImage(), file, mainHandler))
     }
 
     /**
@@ -177,13 +186,16 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         view.findViewById<View>(R.id.picture).setOnClickListener(this)
+        view.findViewById<View>(R.id.iv_preview).setOnClickListener(this)
         view.findViewById<View>(R.id.info).setOnClickListener(this)
         textureView = view.findViewById(R.id.texture)
+        picturePreview = view.findViewById(R.id.iv_preview)
     }
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         super.onActivityCreated(savedInstanceState)
         file = File(activity?.getExternalFilesDir(null), PIC_FILE_NAME)
+        fileUri = Uri.parse(file.toString())
     }
 
     override fun onResume() {
@@ -242,6 +254,14 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
     private fun startBackgroundThread() {
         backgroundThread = HandlerThread("CameraBackground").also { it.start() }
         backgroundHandler = Handler(backgroundThread?.looper)
+        mainHandler = object : Handler() {
+            override fun handleMessage(msg: Message) {
+                when (msg.what) {
+                    CAMERA_UPDATE_PREVIEW_PICTURE -> updatePreviewPicture()
+                }
+                super.handleMessage(msg)
+            }
+        }
     }
 
     private fun stopBackgroundThread() {
@@ -548,6 +568,7 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
     override fun onClick(p0: View?) {
         when (p0?.id) {
             R.id.picture -> lockFocus()
+            R.id.iv_preview -> viewPicture()
             R.id.info -> {
                 if (activity != null) {
                     AlertDialog.Builder(activity as FragmentActivity)
@@ -566,11 +587,23 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
         }
     }
 
+    private fun viewPicture() {
+        var intent = Intent()
+        intent.setAction(Intent.ACTION_VIEW)
+        intent.setDataAndType(fileUri, "image/*")
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        startActivity(intent)
+    }
+
+    private fun updatePreviewPicture() {
+        picturePreview.setImageURI(fileUri)
+    }
+
     companion object {
         @JvmStatic
         fun newInstance(): Camera2BasicFragment = Camera2BasicFragment()
 
-        private val TAG = "Camera2BasicFragment";
+        private val TAG = "Camera2BasicFragment"
         private val OREIENTATIONS = SparseIntArray()
 
         init {

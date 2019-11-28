@@ -14,3 +14,6 @@ package com.tainzhi.sample.media.camera
 val REQUEST_CAMERA_PERMISSION = 1
 @JvmField
 val PIC_FILE_NAME = "pic.jpg"
+
+@JvmField
+val CAMERA_UPDATE_PREVIEW_PICTURE = 1

@@ -1,6 +1,7 @@
 package com.tainzhi.sample.media.camera
 
 import android.media.Image
+import android.os.Handler
 import android.util.Log
 import java.io.File
 import java.io.FileOutputStream
@@ -15,7 +16,8 @@ import java.io.IOException
 
 internal class ImageSaver(
         private val image: Image,
-        private val file: File
+        private val file: File,
+        private val handler: Handler?
 ) : Runnable {
     override fun run() {
         val buffer = image.planes[0].buffer
@@ -26,6 +28,9 @@ internal class ImageSaver(
             output = FileOutputStream(file).apply {
                 write(bytes)
             }
+
+            handler?.sendEmptyMessage(CAMERA_UPDATE_PREVIEW_PICTURE)
+
         } catch (e: IOException) {
             Log.e(TAG, e.toString())
         } finally {
