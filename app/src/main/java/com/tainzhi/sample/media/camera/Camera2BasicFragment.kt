@@ -283,11 +283,11 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
                     setOnImageAvailableListener(onImageAvailableListener, backgroundHandler)
                 }
 
+                val displayRotation = activity?.windowManager?.defaultDisplay?.rotation
                 sensorOrientation = characteristics.get(CameraCharacteristics.SENSOR_ORIENTATION)
                         ?: 0
 
-                val displayOrientation = characteristics.get(CameraCharacteristics.SENSOR_ORIENTATION)
-                val swappedDimensions = areDimensionsSwapped(displayOrientation)
+                val swappedDimensions = areDimensionsSwapped(displayRotation)
 
                 val displaySize = Point()
                 activity?.windowManager?.defaultDisplay?.getSize(displaySize)
@@ -502,7 +502,7 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
                         (OREIENTATIONS.get(rotation) + sensorOrientation + 270) % 360)
                 set(CaptureRequest.CONTROL_AF_MODE,
                         CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
-            }?.also { setAutoFlash(it) }
+            }.also { setAutoFlash(it) }
 
             val captureCallback = object : CameraCaptureSession.CaptureCallback() {
                 override fun onCaptureCompleted(session: CameraCaptureSession, request: CaptureRequest, result: TotalCaptureResult) {
