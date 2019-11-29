@@ -17,12 +17,10 @@ import android.util.Log
 import android.util.Size
 import android.util.SparseIntArray
 import android.view.*
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.FragmentActivity
 import com.tainzhi.sample.media.R
 import com.tainzhi.sample.media.widget.AutoFitTextureView
 import com.tainzhi.sample.media.widget.CircleImageView
@@ -101,6 +99,8 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
     private var sensorOrientation = 0
 
     private var cameraState = STATE_PREVIEW
+
+    private var camera = FRONT_CAMERA
 
     // handles still image capture
     private var imageReader: ImageReader? = null
@@ -221,7 +221,7 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
         }
         setUpCameraOutputs(width, height)
         configureTransform(width, height)
-        var manager = activity?.getSystemService(Context.CAMERA_SERVICE) as CameraManager
+        val manager = activity?.getSystemService(Context.CAMERA_SERVICE) as CameraManager
         try {
             // Wait for camera to open - 2.5 seconds is sufficient
             if (!cameraOpenCloseLock.tryAcquire(2500, TimeUnit.MILLISECONDS)) {
@@ -289,7 +289,12 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
 
                 val cameraDirection = characteristics.get(CameraCharacteristics.LENS_FACING)
                 if (cameraDirection != null &&
-                        cameraDirection == CameraCharacteristics.LENS_FACING_FRONT) {
+                        cameraDirection == CameraCharacteristics.LENS_FACING_FRONT &&
+                        camera == BACK_CAMERA) {
+                    continue
+                } else if (cameraDirection != null &&
+                        cameraDirection == CameraCharacteristics.LENS_FACING_BACK &&
+                        camera == FRONT_CAMERA) {
                     continue
                 }
 
@@ -465,7 +470,7 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
         if (requestCode == REQUEST_CAMERA_PERMISSION) {
             if (grantResults.size != 1 || grantResults[0] != PackageManager.PERMISSION_GRANTED) {
                 ErrorDialog.newInstance("This app needs camera permission")
-                        .show(childFragmentManager, "fragment_dialog");
+                        .show(childFragmentManager, "fragment_dialog")
             } else {
                 super.onRequestPermissionsResult(requestCode, permissions, grantResults)
             }
@@ -570,11 +575,16 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
             R.id.picture -> lockFocus()
             R.id.iv_preview -> viewPicture()
             R.id.info -> {
-                if (activity != null) {
-                    AlertDialog.Builder(activity as FragmentActivity)
-                            .setMessage("information")
-                            .setPositiveButton(android.R.string.ok, null)
-                            .show()
+//                if (activity != null) {
+//                    AlertDialog.Builder(activity as FragmentActivity)
+//                            .setMessage("information")
+//                            .setPositiveButton(android.R.string.ok, null)
+//                            .show()
+//                }
+                closeCamera()
+                if (textureView.isAvailable) {
+                    camera = if (camera == FRONT_CAMERA) BACK_CAMERA else FRONT_CAMERA
+                    openCamera(textureView.width, textureView.height)
                 }
             }
         }
@@ -588,7 +598,7 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
     }
 
     private fun viewPicture() {
-        var intent = Intent()
+        val intent = Intent()
         intent.setAction(Intent.ACTION_VIEW)
         intent.setDataAndType(fileUri, "image/*")
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -650,6 +660,8 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
          */
         private val MAX_PREVIEW_HEIGHT = 1080
 
+        private val FRONT_CAMERA = 0
+        private val BACK_CAMERA = 1
 
         /**
          * Given `choices` of `Size`s supported by a camera, choose the smallest one that
