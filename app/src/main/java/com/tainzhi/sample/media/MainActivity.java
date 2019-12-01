@@ -45,7 +45,7 @@ public class MainActivity extends AppCompatActivity implements ListView.OnItemCl
 			{"OpenGLES 绘制球体", "绘制发光小球", "opengl2.BallActivity"},
 			{"OpenGLES 绘制画笔点", "响应触摸事件，并在触摸出绘制点", "opengl2.PaintPointActivity"},
 			{"OpenGLES 旋转三角形", "响应触摸事件，旋转三角形", "opengl2.RotateTriangleActivity"},
-			{"OpenGLES 渲染图片", "渲染图片", "opengl2.ImageGLRendererActivity"},
+			{"OpenGLES 渲染图片", "渲染效果: 黑白, 冷色, 暖色, 模糊, 放大", "opengl2.ImageGLRendererActivity"},
 			{"OpenGLES 预览相机", "预览相机", "opengl2.camera.CameraPreviewActivity"},
 			{"OpenGLES 相机拍照", "相机拍照", "opengl2.camera.TakePictureActivity"},
 	};

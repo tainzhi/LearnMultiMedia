@@ -31,7 +31,7 @@ class ImageTransformRenderer(private val mContext: Context, private val mFilter:
     private val mMVPMatrix = FloatArray(16)
     private var mProgram: Int
     private var uXY = 0f
-    private val mBitmap: Bitmap?
+    private var mBitmap: Bitmap?
     private val bPos: FloatBuffer
     private val bCoord: FloatBuffer
     override fun onSurfaceCreated(gl: GL10, config: EGLConfig) {
@@ -50,7 +50,7 @@ class ImageTransformRenderer(private val mContext: Context, private val mFilter:
     override fun onSurfaceChanged(gl: GL10, width: Int, height: Int) {
         GLES20.glViewport(0, 0, width, height)
         val w = mBitmap!!.width
-        val h = mBitmap.height
+        val h = mBitmap!!.height
         val sWH = w / h.toFloat()
         val sWidthHeight = width / height.toFloat()
         uXY = sWidthHeight
@@ -93,7 +93,7 @@ class ImageTransformRenderer(private val mContext: Context, private val mFilter:
 
     private fun createTexture(): Int {
         val texture = IntArray(1)
-        if (mBitmap != null && !mBitmap.isRecycled) { //生成纹理
+        if (mBitmap != null && !mBitmap!!.isRecycled) { //生成纹理
             GLES20.glGenTextures(1, texture, 0)
             //生成纹理
             GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, texture[0])

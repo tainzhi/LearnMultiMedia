@@ -5,8 +5,6 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.hardware.Camera
 import android.os.Bundle
-import android.os.Environment
-import android.os.Environment.DIRECTORY_DCIM
 import android.util.Log
 import android.view.SurfaceHolder
 import android.view.SurfaceView
@@ -98,7 +96,7 @@ class TakePictureActivity : Activity(), FrameCallback {
     }
 
     protected val sD: String
-        protected get() = Environment.getExternalStoragePublicDirectory(DIRECTORY_DCIM).absolutePath
+        protected get() = getExternalFilesDir(null).toString();
 
     //图片保存
     fun saveBitmap(b: Bitmap) {

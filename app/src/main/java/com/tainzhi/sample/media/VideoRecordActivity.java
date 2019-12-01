@@ -96,7 +96,7 @@ public class VideoRecordActivity extends AppCompatActivity {
 	/**
 	 * 销毁线程方法
 	 */
-	private void destroyThread() {
+	private void destroyRecordThread() {
 		try {
 			isStart = false;
 			if (null != recordThread && Thread.State.RUNNABLE == recordThread.getState()) {
@@ -118,8 +118,8 @@ public class VideoRecordActivity extends AppCompatActivity {
 	/**
 	 * 启动录音线程
 	 */
-	private void startThread() {
-		destroyThread();
+	private void startRecordThread() {
+		destroyRecordThread();
 		isStart = true;
 		if (recordThread == null) {
 			recordThread = new Thread(recordRunnable);
@@ -132,7 +132,7 @@ public class VideoRecordActivity extends AppCompatActivity {
 	 */
 	public void startRecord() {
 		try {
-			startThread();
+			startRecordThread();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -143,7 +143,7 @@ public class VideoRecordActivity extends AppCompatActivity {
 	 */
 	public void stopRecord() {
 		try {
-			destroyThread();
+			destroyRecordThread();
 			if (mAudioRecord != null) {
 				if (mAudioRecord.getState() == AudioRecord.STATE_INITIALIZED) {
 					mAudioRecord.stop();

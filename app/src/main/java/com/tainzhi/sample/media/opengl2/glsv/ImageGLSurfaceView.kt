@@ -2,7 +2,7 @@ package com.tainzhi.sample.media.opengl2.glsv
 
 import android.content.Context
 import com.tainzhi.sample.media.opengl2.base.BaseGLSurfaceView
-import com.tainzhi.sample.media.opengl2.image.ImageRenderer
+import com.tainzhi.sample.media.opengl2.image.ImageTransformRenderer
 
 /**
  * @author:       tainzhi
@@ -13,8 +13,9 @@ import com.tainzhi.sample.media.opengl2.image.ImageRenderer
 
 class ImageGLSurfaceView(context: Context) : BaseGLSurfaceView(context) {
     init {
-        setRenderer(ImageRenderer(context)) // 展示图片渲染器
-//        setRenderer(ImageTransformRenderer(context, ImageTransformRenderer.Filter.MAGN));  // 展示图片处理渲染器
+//        setRenderer(ImageRenderer(context)) // 展示图片渲染器
+        setRenderer(ImageTransformRenderer(context, ImageTransformRenderer.Filter.COOL));  //
+        // 展示图片处理渲染器
         renderMode = RENDERMODE_WHEN_DIRTY
         requestRender()
     }
