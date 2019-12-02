@@ -757,7 +757,8 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
     } ?: choices[choices.size - 1]
 
     private fun getVideoFilePath(): String {
-        val filename = "${System.currentTimeMillis()}.mp4"
+//        val filename = "${System.currentTimeMillis()}.mp4"
+        val filename = "record.mp4"
         val dir = context?.getExternalFilesDir(null)
 
         return if (dir == null) {

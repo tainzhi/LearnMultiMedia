@@ -33,6 +33,7 @@ public class MainActivity extends AppCompatActivity implements ListView.OnItemCl
 					"AudioRecord采集音频PCM, AudioTrack播放",
 					"AudioRecordPlayActivity"},
 			{"kotlin用Camera2拍照", "kotlin用Camera2拍照", "camera.CameraActivity"},
+			{"视频播放器", "MediaCodec实现的播放器", "player.PlayActivity"},
 			{"录制camera, 转码264, 混合音频",
 					"camera预览数据,转码成h264,再混合音频",
 					"VideoRecordActivity"
