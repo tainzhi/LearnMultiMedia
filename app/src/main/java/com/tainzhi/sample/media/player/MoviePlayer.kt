@@ -16,7 +16,7 @@ import java.io.FileNotFoundException
  **/
 
 class MoviePlayer(val sourceFile: File, val outputSurface: Surface, internal var frameCallback:
-FrameCallback?) {
+FrameCallback) {
     private val bufferInfo = MediaCodec.BufferInfo()
 
     var isStopRequested = false
@@ -67,7 +67,7 @@ FrameCallback?) {
     }
 
     private fun doExtract(extractor: MediaExtractor, trackIndex: Int, decoder: MediaCodec,
-                          frameCallback: FrameCallback?) {
+                          frameCallback: FrameCallback) {
         // operates efficiently without delays on the output side.
         //
         // To avoid delays on the output side, we need to keep the codec's input buffers
@@ -126,7 +126,7 @@ FrameCallback?) {
         // in logcat.  Use "logcat -v threadtime" to see sub-second timing.
 
         val timeout_usec = 10000
-        val decoderInputBuffer = decoder!!.inputBuffers
+        val decoderInputBuffer = decoder!!.getInputBuffers()
         var inputChunk = 0
         var firstInputImeNsec: Long = -1
         var outputDone = false
@@ -189,7 +189,7 @@ FrameCallback?) {
                                 " ms")
                         firstInputImeNsec = 0
                     }
-                    var doLoop = true
+                    var doLoop = false
                     if (VERBOSE) Log.d(TAG, "surface decoder given buffer " + decoderStatus +
                             " (size=" + bufferInfo.size + ")")
                     if (bufferInfo.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) {
@@ -219,7 +219,7 @@ FrameCallback?) {
                         inputDone = false
                         // reset decoder state
                         decoder.flush()
-//                        frameCallback!!.loopReset()
+                        frameCallback!!.loopReset()
                     }
                 }
             }

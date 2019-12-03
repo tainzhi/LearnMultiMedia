@@ -57,7 +57,7 @@ class PlayActivity : AppCompatActivity(), TextureView.SurfaceTextureListener, Pl
             val surfaceTexture = textureView?.surfaceTexture
             val surface = Surface(surfaceTexture)
             var player: MoviePlayer? = null
-            val callback: SpeedControlCallback? = null
+            val callback: SpeedControlCallback = SpeedControlCallback()
             val filePath = getExternalFilesDir(null)?.absolutePath + "/record.mp4"
             player = try {
                 MoviePlayer(File(filePath), surface, callback)
