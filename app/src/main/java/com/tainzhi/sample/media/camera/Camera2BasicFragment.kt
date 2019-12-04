@@ -1,6 +1,7 @@
 package com.tainzhi.sample.media.camera
 
 import android.Manifest
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -44,6 +45,13 @@ import kotlin.collections.ArrayList
 class Camera2BasicFragment : Fragment(), View.OnClickListener,
         ActivityCompat.OnRequestPermissionsResultCallback {
 
+    private val permissions = arrayListOf<String>(
+            Manifest.permission.RECORD_AUDIO,
+            Manifest.permission.CAMERA,
+            Manifest.permission.WRITE_EXTERNAL_STORAGE
+    )
+
+    private val unGrantedPermissionList = arrayListOf<String>()
 
     private lateinit var textureView: AutoFitTextureView
     // 预览拍照的图片，用于相册打开
@@ -239,12 +247,9 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
     }
 
     private fun openCamera(width: Int, height: Int) {
-        val permission = ContextCompat.checkSelfPermission(activity as Context, Manifest.permission
-                .CAMERA)
-        if (permission != PackageManager.PERMISSION_GRANTED) {
-            requestCameraPermission()
-            return
-        }
+
+        checkPermissions()
+
         setUpCameraOutputs(width, height)
         configureTransform(width, height)
         val manager = activity?.getSystemService(Context.CAMERA_SERVICE) as CameraManager
@@ -767,6 +772,24 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
             "${dir.absolutePath}/$filename"
         }
     }
+
+    private fun checkPermissions() {
+        for (permission in permissions) {
+            if (ContextCompat.checkSelfPermission(activity as Context, permission) != PackageManager
+                            .PERMISSION_GRANTED) {
+                unGrantedPermissionList.add(permission)
+            }
+        }
+        val arrayString = arrayOfNulls<String>(unGrantedPermissionList.size)
+        unGrantedPermissionList.toArray(arrayString)
+        if (unGrantedPermissionList.isNotEmpty()) {
+            ActivityCompat.requestPermissions(activity as Activity,
+                    arrayString,
+                    10001)
+        }
+    }
+
+
 
 
     companion object {

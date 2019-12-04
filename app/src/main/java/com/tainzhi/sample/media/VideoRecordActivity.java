@@ -4,7 +4,6 @@ import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
 import android.os.Bundle;
-import android.os.Environment;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -73,10 +72,7 @@ public class VideoRecordActivity extends AppCompatActivity {
 		if (mRecorder == null) {
 			Toast.makeText(this, "start record...", Toast.LENGTH_SHORT).show();
 			startRecord();
-			path =
-					Environment.getExternalStorageDirectory() +
-							"/record-" + System.currentTimeMillis() +
-							".mp4";
+			String path = getExternalFilesDir("") + "/record.mp4";
 			mRecorder = new VideoRecorder(path);
 			mRecorder.start();
 		} else {

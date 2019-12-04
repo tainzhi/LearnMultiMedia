@@ -25,7 +25,7 @@ import kotlin.math.absoluteValue
  *
  *
  * Thread restrictions are noted in the method descriptions.  The FrameCallback overrides should
- * only be called from the MoviePlayer.
+ * only be called from the VideoDecoder.
  */
 class SpeedControlCallback : FrameCallback {
     var prevPresentUsec: Long = 0

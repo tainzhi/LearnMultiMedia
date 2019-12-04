@@ -5,21 +5,17 @@ import android.media.MediaExtractor
 import android.media.MediaFormat
 import android.util.Log
 import android.view.Surface
-import java.io.File
-import java.io.FileNotFoundException
+import java.io.IOException
 
 /**
  * @author:       tainzhi
  * @mail:         qfq61@qq.com
  * @date:         2019-12-02 19:28
- * @description:
+ * @description:  使用 MediaCodec的自定义 video decoder
  **/
 
-class MoviePlayer(private val sourceFile: File, private val outputSurface: Surface, private
-var frameCallback:
-FrameCallback) {
-    private val bufferInfo = MediaCodec.BufferInfo()
-
+class VideoDecoder(private val filePath: String, private val outputSurface: Surface,
+                   private var frameCallback: FrameCallback) {
     var isStopRequested = false
     var loop = false
 
@@ -37,15 +33,13 @@ FrameCallback) {
     fun play() {
         var extractor: MediaExtractor? = null
         var decoder: MediaCodec? = null
-        if (!sourceFile.canRead()) {
-            throw FileNotFoundException("Unable to read $sourceFile")
-        }
+
         try {
             extractor = MediaExtractor()
-            extractor.setDataSource(sourceFile.toString())
+            extractor.setDataSource(filePath)
             val trackIndex = selectTrack(extractor)
             if (trackIndex < 0) {
-                throw RuntimeException("No video track found in $sourceFile")
+                throw RuntimeException("No video track found in $filePath")
             }
             extractor.selectTrack(trackIndex)
             val format = extractor.getTrackFormat(trackIndex)
@@ -54,16 +48,8 @@ FrameCallback) {
             decoder.configure(format, outputSurface, null, 0)
             decoder.start()
             doExtract(extractor, trackIndex, decoder, frameCallback)
-        } finally {
-            if (decoder != null) {
-                decoder.stop()
-                decoder.release()
-                decoder = null
-            }
-            if (extractor != null) {
-                extractor.release()
-                extractor = null
-            }
+        } catch (e: IOException) {
+            throw java.lang.RuntimeException(e)
         }
     }
 
@@ -126,11 +112,12 @@ FrameCallback) {
         // If you want to experiment, set the VERBOSE flag to true and watch the behavior
         // in logcat.  Use "logcat -v threadtime" to see sub-second timing.
 
-        val timeout_usec = 10000
+        val timeoutUsec = 10000
         var inputChunk = 0
         var firstInputImeNsec: Long = -1
         var outputDone = false
         var inputDone = false
+        val bufferInfo = MediaCodec.BufferInfo()
         while (!outputDone) {
             if (VERBOSE) Log.d(TAG, "loop")
             if (isStopRequested) {
@@ -139,7 +126,7 @@ FrameCallback) {
             }
 
             if (!inputDone) {
-                val inputBufferIndex = decoder.dequeueInputBuffer(timeout_usec.toLong())
+                val inputBufferIndex = decoder.dequeueInputBuffer(timeoutUsec.toLong())
                 Log.d(TAG, "inputBufferIndex=$inputBufferIndex")
                 if (inputBufferIndex >= 0) {
                     if (firstInputImeNsec == -1L) {
@@ -174,7 +161,7 @@ FrameCallback) {
                 }
             }
             if (!outputDone) {
-                val decoderStatus = decoder.dequeueOutputBuffer(bufferInfo, timeout_usec.toLong())
+                val decoderStatus = decoder.dequeueOutputBuffer(bufferInfo, timeoutUsec.toLong())
                 if (decoderStatus == MediaCodec.INFO_TRY_AGAIN_LATER) { // no output available yet
                     if (VERBOSE) Log.d(TAG, "no output from decoder available")
                 } else if (decoderStatus == MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED) { // not important for us, since we're using Surface
@@ -228,11 +215,15 @@ FrameCallback) {
                 }
             }
         }
+
+        extractor.release()
+        decoder.stop()
+        decoder.release()
     }
 
     private fun selectTrack(extractor: MediaExtractor): Int {
         val numTracks = extractor.trackCount
-        for (i in 0 until numTracks - 1) {
+        for (i in 0 until numTracks) {
             val format = extractor.getTrackFormat(i)
             val mime = format.getString(MediaFormat.KEY_MIME)
             if (mime!!.startsWith("video/")) {
@@ -246,7 +237,7 @@ FrameCallback) {
     }
 
     companion object {
-        private const val TAG: String = "MoviePlayer"
+        private const val TAG: String = "VideoDecoder"
         private val VERBOSE = false
     }
 
@@ -258,10 +249,10 @@ FrameCallback) {
         var extractor: MediaExtractor? = null
         try {
             extractor = MediaExtractor()
-            extractor!!.setDataSource(sourceFile.toString())
+            extractor!!.setDataSource(filePath)
             val trackIndex = selectTrack(extractor!!)
             if (trackIndex < 0) {
-                throw RuntimeException("No video track found in $sourceFile")
+                throw RuntimeException("No video track found in $filePath")
             }
             extractor!!.selectTrack(trackIndex)
             val format = extractor!!.getTrackFormat(trackIndex)

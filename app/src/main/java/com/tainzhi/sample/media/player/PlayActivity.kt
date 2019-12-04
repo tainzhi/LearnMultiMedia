@@ -9,20 +9,18 @@ import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.tainzhi.sample.media.R
-import java.io.File
-import java.io.IOException
 
 class PlayActivity : AppCompatActivity(), TextureView.SurfaceTextureListener, PlayerFeedback,
         View.OnClickListener {
 
     private var textureView: TextureView? = null
 
-    private lateinit var playTask: PlayTask
-    private lateinit var speedControl: SpeedControlCallback
     private var surfaceTextureReady = false
-    private val filePath: String? = null
     // 帧率 30
     private var current_fps = 30
+
+    private lateinit var surface: Surface
+    private lateinit var videoPlayer: VideoPlayer
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -49,13 +47,13 @@ class PlayActivity : AppCompatActivity(), TextureView.SurfaceTextureListener, Pl
             R.id.ib_play_slow -> {
                 Log.d(TAG, "play slow")
                 if (current_fps > 30) current_fps -= 30
-                speedControl.setFixedPlaybackRate(current_fps)
+                videoPlayer.setSpeed(current_fps)
                 showToast(current_fps)
             }
             R.id.ib_play_fast -> {
                 Log.d(TAG, "play fast")
                 if (current_fps < 120) current_fps += 30
-                speedControl.setFixedPlaybackRate(current_fps)
+                videoPlayer.setSpeed(current_fps)
                 showToast(current_fps)
             }
             else -> Unit
@@ -65,26 +63,17 @@ class PlayActivity : AppCompatActivity(), TextureView.SurfaceTextureListener, Pl
     override fun onPause() {
         Log.d(TAG, "onPause")
         super.onPause()
-        if (::playTask.isInitialized) playTask.requestStop()
+        videoPlayer.stop()
     }
 
     private fun play() {
         if (surfaceTextureReady) {
             val surfaceTexture = textureView?.surfaceTexture
-            val surface = Surface(surfaceTexture)
-            val player: MoviePlayer
-            speedControl = SpeedControlCallback()
-            val filePath = getExternalFilesDir(null)?.absolutePath + "/record.mp4"
-            player = try {
-                MoviePlayer(File(filePath), surface, speedControl)
-            } catch (e: IOException) {
-                Log.e(TAG, "Unable to play movie $e")
-                surface.release()
-                return
-            }
-            player.setLoopMode(true)
-            playTask = PlayTask(player, this)
-            playTask.execute()
+            surface = Surface(surfaceTexture)
+            val videoPath = getExternalFilesDir(null)?.absolutePath + "/record.mp4"
+            videoPlayer = VideoPlayer(videoPath, surface)
+            videoPlayer.setLoop(true)
+            videoPlayer.start()
         }
     }
 
