@@ -19,7 +19,7 @@ import java.io.IOException
  * The PlayerFeedback callbacks will execute on the thread that creates the object,
  * assuming that thread has a looper.  Otherwise, they will execute on the main looper.
  */
-class PlayTask(val player: MoviePlayer, val feedback: PlayerFeedback) : Runnable {
+class PlayTask(private val player: MoviePlayer, private val feedback: PlayerFeedback) : Runnable {
     private var doLoop = false
     private var thread: Thread? = null
     private val localHandler: LocalHandler

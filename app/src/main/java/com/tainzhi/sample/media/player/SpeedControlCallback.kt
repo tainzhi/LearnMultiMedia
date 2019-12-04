@@ -1,6 +1,7 @@
 package com.tainzhi.sample.media.player
 
 import android.util.Log
+import kotlin.math.absoluteValue
 
 /**
  * @author:       tainzhi
@@ -99,7 +100,7 @@ class SpeedControlCallback : FrameCallback {
                         Thread.sleep(sleepTimeUsec / 1000, (sleepTimeUsec % 1000).toInt() * 1000)
                         val actualSleepNsec = System.nanoTime() - startNsec
                         Log.d(TAG, "sleep=" + sleepTimeUsec + " actual=" + actualSleepNsec / 1000 +
-                                " diff=" + Math.abs(actualSleepNsec / 1000 - sleepTimeUsec) +
+                                " diff=" + (actualSleepNsec / 1000 - sleepTimeUsec).absoluteValue +
                                 " (usec)")
 
                     } else {
@@ -125,7 +126,7 @@ class SpeedControlCallback : FrameCallback {
 
     companion object {
         private const val TAG: String = "SpeedControlCallback"
-        private const val CHECK_SLEEP_TIME = false
+        private const val CHECK_SLEEP_TIME = true
         private const val ONE_MILLION = 1000000L
     }
 }

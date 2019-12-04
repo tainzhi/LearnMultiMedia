@@ -12,13 +12,33 @@
 		android:layout_height="match_parent" />
 	
 	<ImageButton
-		android:id="@+id/control"
+		android:id="@+id/ib_play_slow"
 		android:layout_width="48dp"
 		android:layout_height="48dp"
-		android:layout_marginBottom="50dp"
-		android:src="@drawable/ic_play"
-		app:layout_constraintBottom_toBottomOf="@+id/textureView"
-		app:layout_constraintEnd_toEndOf="parent"
+		android:layout_marginBottom="48dp"
+		android:src="@drawable/ic_fast_rewind_black_24dp"
+		app:layout_constraintBottom_toBottomOf="parent"
+		app:layout_constraintEnd_toStartOf="@id/ib_play"
+		app:layout_constraintHorizontal_chainStyle="spread"
 		app:layout_constraintStart_toStartOf="parent" />
+	
+	<ImageButton
+		android:id="@+id/ib_play"
+		android:layout_width="48dp"
+		android:layout_height="48dp"
+		android:src="@drawable/ic_play_arrow_black_24dp"
+		app:layout_constraintBottom_toBottomOf="@+id/ib_play_slow"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintEnd_toStartOf="@id/ib_play_fast"
+		app:layout_constraintStart_toEndOf="@+id/ib_play_slow" />
+	
+	<ImageButton
+		android:id="@+id/ib_play_fast"
+		android:layout_width="48dp"
+		android:layout_height="48dp"
+		android:src="@drawable/ic_fast_forward_black_24dp"
+		app:layout_constraintBottom_toBottomOf="@+id/ib_play"
+		app:layout_constraintEnd_toEndOf="parent"
+		app:layout_constraintStart_toEndOf="@+id/ib_play" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

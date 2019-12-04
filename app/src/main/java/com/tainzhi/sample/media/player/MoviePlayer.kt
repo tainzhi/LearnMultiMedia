@@ -15,7 +15,8 @@ import java.io.FileNotFoundException
  * @description:
  **/
 
-class MoviePlayer(val sourceFile: File, val outputSurface: Surface, internal var frameCallback:
+class MoviePlayer(private val sourceFile: File, private val outputSurface: Surface, private
+var frameCallback:
 FrameCallback) {
     private val bufferInfo = MediaCodec.BufferInfo()
 
@@ -126,7 +127,6 @@ FrameCallback) {
         // in logcat.  Use "logcat -v threadtime" to see sub-second timing.
 
         val timeout_usec = 10000
-        val decoderInputBuffer = decoder!!.getInputBuffers()
         var inputChunk = 0
         var firstInputImeNsec: Long = -1
         var outputDone = false
@@ -139,13 +139,17 @@ FrameCallback) {
             }
 
             if (!inputDone) {
-                var inputBufferIndex = decoder.dequeueInputBuffer(timeout_usec.toLong())
+                val inputBufferIndex = decoder.dequeueInputBuffer(timeout_usec.toLong())
+                Log.d(TAG, "inputBufferIndex=$inputBufferIndex")
                 if (inputBufferIndex >= 0) {
                     if (firstInputImeNsec == -1L) {
                         firstInputImeNsec = System.nanoTime()
                     }
-                    val inputBuf = decoderInputBuffer[inputBufferIndex]
-                    val chunkSize = extractor.readSampleData(inputBuf, 0)
+                    val inputBuf = decoder.getInputBuffer(inputBufferIndex)
+                    var chunkSize = 0
+                    if (inputBuf != null) {
+                        chunkSize = extractor.readSampleData(inputBuf, 0)
+                    }
                     if (chunkSize < 0) {
                         decoder.queueInputBuffer(inputBufferIndex, 0, 0, 0L,
                                 MediaCodec.BUFFER_FLAG_END_OF_STREAM)
@@ -160,7 +164,7 @@ FrameCallback) {
                         decoder.queueInputBuffer(inputBufferIndex, 0, chunkSize,
                                 presentationTimeUs, 0)
                         if (VERBOSE) {
-                            Log.d(TAG, "submitted frame " + inputChunk + " do dec, size=" + chunkSize)
+                            Log.d(TAG, "submitted frame $inputChunk do dec, size=$chunkSize")
                         }
                         inputChunk++
                         extractor.advance()
@@ -219,7 +223,7 @@ FrameCallback) {
                         inputDone = false
                         // reset decoder state
                         decoder.flush()
-                        frameCallback!!.loopReset()
+                        frameCallback.loopReset()
                     }
                 }
             }
@@ -231,18 +235,18 @@ FrameCallback) {
         for (i in 0 until numTracks - 1) {
             val format = extractor.getTrackFormat(i)
             val mime = format.getString(MediaFormat.KEY_MIME)
-            if (mime.startsWith("video/")) {
+            if (mime!!.startsWith("video/")) {
                 if (VERBOSE) {
                     Log.d(TAG, "Extractor selected track $i ($mime): $format")
                 }
-                return i;
+                return i
             }
         }
-        return -1;
+        return -1
     }
 
     companion object {
-        private val TAG: String = "MoviePlayer"
+        private const val TAG: String = "MoviePlayer"
         private val VERBOSE = false
     }
 
