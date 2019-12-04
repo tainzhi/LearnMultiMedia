@@ -63,7 +63,7 @@ class PlayActivity : AppCompatActivity(), TextureView.SurfaceTextureListener, Pl
     override fun onPause() {
         Log.d(TAG, "onPause")
         super.onPause()
-        videoPlayer.stop()
+        if (::videoPlayer.isInitialized) videoPlayer.stop()
     }
 
     private fun play() {
