@@ -12,7 +12,8 @@
 	
 	<application
 		android:allowBackup="true" android:icon="@mipmap/ic_launcher" android:label="@string/app_name" android:roundIcon="@mipmap/ic_launcher_round" android:supportsRtl="true" android:theme="@style/AppTheme">
-		<activity android:name=".player.PlayActivity"></activity>
+		<activity
+			android:name=".player.PlayActivity" android:theme="@android:style/Theme.Holo.NoActionBar.Fullscreen" />
 		<activity
 			android:name=".camera.CameraActivity" android:theme="@style/AppTheme.NoActionBar" />
 		<activity android:name=".opengl2.camera.TakePictureActivity" />

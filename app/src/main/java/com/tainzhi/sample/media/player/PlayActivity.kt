@@ -1,5 +1,7 @@
 package com.tainzhi.sample.media.player
 
+import android.app.Activity
+import android.graphics.Matrix
 import android.graphics.SurfaceTexture
 import android.os.Bundle
 import android.util.Log
@@ -7,11 +9,15 @@ import android.view.Surface
 import android.view.TextureView
 import android.view.View
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
 import com.tainzhi.sample.media.R
 
-class PlayActivity : AppCompatActivity(), TextureView.SurfaceTextureListener, PlayerFeedback,
-        View.OnClickListener {
+class PlayActivity : Activity(), TextureView.SurfaceTextureListener, PlayerFeedback,
+        View.OnClickListener,
+        VideoPlayer.OnSizeChangedListener {
+
+    companion object {
+        private const val TAG: String = "PlayActivity"
+    }
 
     private var textureView: TextureView? = null
 
@@ -66,21 +72,6 @@ class PlayActivity : AppCompatActivity(), TextureView.SurfaceTextureListener, Pl
         if (::videoPlayer.isInitialized) videoPlayer.stop()
     }
 
-    private fun play() {
-        if (surfaceTextureReady) {
-            val surfaceTexture = textureView?.surfaceTexture
-            surface = Surface(surfaceTexture)
-            val videoPath = getExternalFilesDir(null)?.absolutePath + "/record.mp4"
-            videoPlayer = VideoPlayer(videoPath, surface)
-            videoPlayer.setLoop(true)
-            videoPlayer.start()
-        }
-    }
-
-    private fun showToast(fps: Int) {
-        Toast.makeText(this@PlayActivity, "当前帧率为$fps", Toast.LENGTH_SHORT).show()
-    }
-
     override fun onSurfaceTextureSizeChanged(surface: SurfaceTexture?, width: Int, height: Int) {
     }
 
@@ -100,7 +91,47 @@ class PlayActivity : AppCompatActivity(), TextureView.SurfaceTextureListener, Pl
     override fun playbackStopped() {
     }
 
-    companion object {
-        private const val TAG: String = "PlayActivity"
+    override fun onSizeChanged(width: Int, height: Int) {
+        adjustAspectRatio(textureView!!, width, height)
+    }
+
+    private fun play() {
+        if (surfaceTextureReady) {
+            val surfaceTexture = textureView?.surfaceTexture
+            surface = Surface(surfaceTexture)
+            val videoPath = getExternalFilesDir(null)?.absolutePath + "/record.mp4"
+            videoPlayer = VideoPlayer(videoPath, surface)
+            videoPlayer.setLoop(true)
+            videoPlayer.start()
+        }
+    }
+
+    private fun showToast(fps: Int) {
+        Toast.makeText(this@PlayActivity, "当前帧率为$fps", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun adjustAspectRatio(textureView: TextureView, videoWidth: Int, videoHeight: Int) {
+        val viewWidth = textureView.width
+        val viewHeight = textureView.height
+        val aspectRatio = videoHeight.toDouble() / videoWidth
+        val newWidth: Int
+        val newHeight: Int
+        // limited by narrow width
+        if (viewHeight > (viewWidth * aspectRatio).toInt()) {
+            newWidth = viewWidth
+            newHeight = (viewWidth * aspectRatio).toInt()
+            // limited by narrow height
+        } else {
+            newWidth = (viewHeight / aspectRatio).toInt()
+            newHeight = viewHeight
+        }
+        val xoff = (viewWidth - newWidth) / 2
+        val yoff = (viewHeight - newHeight) / 2
+        val txform = Matrix()
+        textureView.getTransform(txform)
+        txform.setScale(newWidth.toFloat() / viewWidth, newHeight.toFloat() / viewHeight)
+        txform.postTranslate(xoff.toFloat(), yoff.toFloat())
+        textureView.setTransform(txform)
+
     }
 }

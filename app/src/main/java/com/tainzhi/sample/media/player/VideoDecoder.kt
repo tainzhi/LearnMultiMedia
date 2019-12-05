@@ -19,8 +19,8 @@ class VideoDecoder(private val filePath: String, private val outputSurface: Surf
     var isStopRequested = false
     var loop = false
 
-    private var videoWidth = 0
-    private var videoHeight = 0
+    var videoWidth = 0
+    var videoHeight = 0
 
     fun setLoopMode(loopMode: Boolean) {
         loop = loopMode

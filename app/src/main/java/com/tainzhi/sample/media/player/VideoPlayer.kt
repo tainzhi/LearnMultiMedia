@@ -31,6 +31,8 @@ class VideoPlayer(private val sourceFile: String, private val surface: Surface) 
     private var audioHandler: Handler
     private var speedControlCallback: SpeedControlCallback
 
+    private var onSizeChangedListener: OnSizeChangedListener? = null
+
     init {
         speedControlCallback = SpeedControlCallback()
         videoDecoder = VideoDecoder(sourceFile, surface, speedControlCallback)
@@ -51,6 +53,7 @@ class VideoPlayer(private val sourceFile: String, private val surface: Surface) 
 
     fun start() {
         Log.d(TAG, "start()")
+        onSizeChangedListener?.onSizeChanged(videoDecoder.videoWidth, videoDecoder.videoHeight)
         handler.post(Runnable {
             videoDecoder.play()
         })
@@ -83,6 +86,14 @@ class VideoPlayer(private val sourceFile: String, private val surface: Surface) 
                 }
             }
         }
+    }
+
+    fun setSizeChangedListener(onSizeChangedListener: OnSizeChangedListener) {
+        this@VideoPlayer.onSizeChangedListener = onSizeChangedListener
+    }
+
+    interface OnSizeChangedListener {
+        fun onSizeChanged(videoWidth: Int, videoHeight: Int)
     }
 
     companion object {
