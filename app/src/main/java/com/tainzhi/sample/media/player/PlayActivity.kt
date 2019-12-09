@@ -10,6 +10,7 @@ import android.view.TextureView
 import android.view.View
 import android.widget.Toast
 import com.tainzhi.sample.media.R
+import kotlinx.android.synthetic.main.activity_play.*
 
 class PlayActivity : Activity(), TextureView.SurfaceTextureListener, PlayerFeedback,
         View.OnClickListener,
@@ -32,12 +33,12 @@ class PlayActivity : Activity(), TextureView.SurfaceTextureListener, PlayerFeedb
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_play)
 
-        textureView = findViewById<View>(R.id.textureView) as TextureView
+        textureView = tv_textureView
         textureView?.surfaceTextureListener = this
 
-        findViewById<View>(R.id.ib_play_slow).setOnClickListener(this)
-        findViewById<View>(R.id.ib_play).setOnClickListener(this)
-        findViewById<View>(R.id.ib_play_fast).setOnClickListener(this)
+        ib_play.setOnClickListener(this)
+        ib_play_slow.setOnClickListener(this)
+        ib_play_slow.setOnClickListener(this)
     }
 
     override fun onResume() {

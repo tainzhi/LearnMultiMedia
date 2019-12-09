@@ -7,7 +7,7 @@
 	tools:context=".player.PlayActivity">
 	
 	<TextureView
-		android:id="@+id/textureView"
+		android:id="@+id/tv_textureView"
 		android:layout_width="match_parent"
 		android:layout_height="match_parent" />
 	

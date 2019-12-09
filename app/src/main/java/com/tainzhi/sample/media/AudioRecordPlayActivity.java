@@ -59,7 +59,6 @@ public class AudioRecordPlayActivity extends AppCompatActivity implements View.O
 	
 	private HandlerThread handlerThread;
 	private Handler threadHandler;
-	private Handler mainHandler;
 	
 	
 	@Override
@@ -69,7 +68,6 @@ public class AudioRecordPlayActivity extends AppCompatActivity implements View.O
 		handlerThread = new HandlerThread(TAG);
 		handlerThread.start();
 		threadHandler = new Handler(handlerThread.getLooper());
-		mainHandler = new Handler();
 		
 		setContentView(R.layout.activity_audio_record_play);
 		Toolbar toolbar = findViewById(R.id.toolbar);
@@ -180,7 +178,7 @@ public class AudioRecordPlayActivity extends AppCompatActivity implements View.O
 				
 				// ui线程更新button
 				// 等待convert转码
-				mainHandler.post(() -> {
+				runOnUiThread(() -> {
 					Log.d(TAG, "stop recording");
 					btnRecod.setEnabled(false);
 					btnRecod.setText(getString(R.string.audio_start_play));
@@ -208,7 +206,7 @@ public class AudioRecordPlayActivity extends AppCompatActivity implements View.O
 			boolean result = pcmToWav.pcmToWav(pcmFile.getAbsolutePath(),
 					wavFile.getAbsolutePath());
 			if (result) {
-				mainHandler.post(() -> {
+				runOnUiThread(() -> {
 					Log.d(TAG, "stop convert, converted file=" + wavFile.getAbsolutePath());
 					btnConvert.setEnabled(false);
 					btnPlay.setEnabled(true);
@@ -261,7 +259,7 @@ public class AudioRecordPlayActivity extends AppCompatActivity implements View.O
 			} catch (FileNotFoundException e) {
 				e.printStackTrace();
 			}
-			mainHandler.post(() -> {
+			runOnUiThread(() -> {
 				stopPlay();
 				Log.d(TAG, "finish play in stream mode");
 			});
@@ -297,7 +295,7 @@ public class AudioRecordPlayActivity extends AppCompatActivity implements View.O
 	}
 	
 	private void stopPlay() {
-		mainHandler.post(() -> {
+		runOnUiThread(() -> {
 			if (audioTrack != null) {
 				audioTrack.stop();
 				audioTrack.release();
