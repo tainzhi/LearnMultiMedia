@@ -19,7 +19,7 @@ import android.view.Surface
  * The PlayerFeedback callbacks will execute on the thread that creates the object,
  * assuming that thread has a looper.  Otherwise, they will execute on the main looper.
  */
-class VideoPlayer(private val sourceFile: String, private val surface: Surface) {
+class VideoPlayer(sourceFile: String, surface: Surface) {
     private val stopLock = java.lang.Object()
     private var stopped = false
 
@@ -29,12 +29,11 @@ class VideoPlayer(private val sourceFile: String, private val surface: Surface) 
     private var handler: Handler
     private var audioThread: HandlerThread
     private var audioHandler: Handler
-    private var speedControlCallback: SpeedControlCallback
+    private var speedControlCallback = SpeedControlCallback()
 
     private var onSizeChangedListener: OnSizeChangedListener? = null
 
     init {
-        speedControlCallback = SpeedControlCallback()
         videoDecoder = VideoDecoder(sourceFile, surface, speedControlCallback)
         audioDecoder = AudioDecoder(sourceFile, speedControlCallback)
         thread = HandlerThread("VideoPlayer")
