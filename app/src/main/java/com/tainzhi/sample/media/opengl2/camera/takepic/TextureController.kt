@@ -70,22 +70,6 @@ class TextureController(private val mContext: Context) : GLSurfaceView.Renderer 
         mGLView!!.surfaceDestroyed(null)
     }
 
-    private fun init() {
-        mGLView = GLView(mContext)
-        //避免GLView的attachToWindow和detachFromWindow崩溃
-        val v: ViewGroup = object : ViewGroup(mContext) {
-            override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {}
-        }
-        v.addView(mGLView)
-        v.visibility = View.GONE
-        mEffectFilter = TextureFilter()
-        mShowFilter = NoFilter()
-        mGroupFilter = GroupFilter()
-        //设置默认的DateSize
-        mDataSize = Point(1080, 1920)
-        mWindowSize = Point(1080, 1920)
-    }
-
     //在Surface创建前，应该被调用
     fun setDataSize(width: Int?, height: Int?) {
         mDataSize!!.x = width ?: -1
@@ -246,7 +230,16 @@ class TextureController(private val mContext: Context) : GLSurfaceView.Renderer 
      * 存在Parent
      */
     private inner class GLView(context: Context?) : GLSurfaceView(context) {
-        private fun init() {
+
+        fun attachedToWindow() {
+            super.onAttachedToWindow()
+        }
+
+        fun detachedFromWindow() {
+            super.onDetachedFromWindow()
+        }
+
+        init {
             holder.addCallback(null)
             setEGLWindowSurfaceFactory(object : EGLWindowSurfaceFactory {
                 override fun createWindowSurface(egl: EGL10, display: EGLDisplay, config: EGLConfig, window: Any): EGLSurface {
@@ -262,21 +255,22 @@ class TextureController(private val mContext: Context) : GLSurfaceView.Renderer 
             renderMode = RENDERMODE_WHEN_DIRTY
             preserveEGLContextOnPause = true
         }
-
-        fun attachedToWindow() {
-            super.onAttachedToWindow()
-        }
-
-        fun detachedFromWindow() {
-            super.onDetachedFromWindow()
-        }
-
-        init {
-            init()
-        }
     }
 
     init {
-        init()
+        mGLView = GLView(mContext)
+        //避免GLView的attachToWindow和detachFromWindow崩溃
+        val v: ViewGroup = object : ViewGroup(mContext) {
+            override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {}
+        }
+        v.addView(mGLView)
+        v.visibility = View.GONE
+        mEffectFilter = TextureFilter()
+        mShowFilter = NoFilter()
+        mGroupFilter = GroupFilter()
+        //设置默认的DateSize
+        mDataSize = Point(1080, 1920)
+        mWindowSize = Point(1080, 1920)
     }
+
 }

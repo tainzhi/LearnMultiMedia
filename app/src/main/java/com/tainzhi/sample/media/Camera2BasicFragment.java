@@ -865,8 +865,7 @@ public class Camera2BasicFragment extends Fragment
 	public void onClick(View view) {
 		switch (view.getId()) {
 			case R.id.picture: {
-				//                takePicture();
-				
+				   takePicture();
 				((VideoRecordActivity) getActivity()).click();
 				
 				break;
