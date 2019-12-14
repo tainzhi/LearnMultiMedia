@@ -41,6 +41,7 @@
 
 // for __android_log_print(ANDROID_LOG_INFO, "YourApp", "formatted message");
 #include <android/log.h>
+
 #define TAG "NativeCodec"
 #define LOGV(...) __android_log_print(ANDROID_LOG_VERBOSE, TAG, __VA_ARGS__)
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, TAG, __VA_ARGS__)
@@ -52,8 +53,8 @@
 
 typedef struct {
     int fd;
-    ANativeWindow* window;
-    AMediaExtractor* ex;
+    ANativeWindow *window;
+    AMediaExtractor *ex;
     AMediaCodec *codec;
     int64_t renderstart;
     bool sawInputEOS;
@@ -74,9 +75,8 @@ enum {
 };
 
 
-
-class mylooper: public looper {
-    virtual void handle(int what, void* obj);
+class mylooper : public looper {
+    virtual void handle(int what, void *obj);
 };
 
 static mylooper *mlooper = NULL;
@@ -105,7 +105,8 @@ void doCodecWork(workerdata *d) {
             auto presentationTimeUs = AMediaExtractor_getSampleTime(d->ex);
 
             AMediaCodec_queueInputBuffer(d->codec, bufidx, 0, sampleSize, presentationTimeUs,
-                                         d->sawInputEOS ? AMEDIACODEC_BUFFER_FLAG_END_OF_STREAM : 0);
+                                         d->sawInputEOS ? AMEDIACODEC_BUFFER_FLAG_END_OF_STREAM
+                                                        : 0);
             AMediaExtractor_advance(d->ex);
         }
     }
@@ -149,10 +150,10 @@ void doCodecWork(workerdata *d) {
     }
 }
 
-extern  "C" {
+extern "C" {
 // rewind the streaming media player
-void Java_com_example_nativecodec_NativeCodec_rewindStreamingMediaPlayer(JNIEnv *env, jclass clazz)
-{
+void
+Java_com_example_nativecodec_NativeCodec_rewindStreamingMediaPlayer(JNIEnv *env, jclass clazz) {
     LOGV("@@@ rewind");
     if (mlooper) {
         mlooper->post(kMsgSeek, &data);
@@ -173,7 +174,7 @@ Java_com_tainzhi_sample_media_native_1codec_NativeCodecActivity_createStreamingM
 
     off_t outStart, outLen;
     int fd = AAsset_openFileDescriptor(AAssetManager_open(AAssetManager_fromJava(env, asset_mgr),
-            utf8, 0), &outStart, &outLen);
+                                                          utf8, 0), &outStart, &outLen);
     env->ReleaseStringChars(filename, utf8);
     if (fd < 0) {
         LOGE("failed to open file: %s %d (%s)", utf8, fd, strerror(errno));
@@ -190,7 +191,7 @@ Java_com_tainzhi_sample_media_native_1codec_NativeCodecActivity_createStreamingM
                                                          static_cast<off64_t>(outLen));
 
     close(d->fd);
-    if (err!=AMEDIA_OK) {
+    if (err != AMEDIA_OK) {
         LOGV()
     }
 }
@@ -199,21 +200,21 @@ extern "C"
 JNIEXPORT void JNICALL
 Java_com_tainzhi_sample_media_native_1codec_NativeCodecActivity_setPlayingStreamingMediaPlayer(
         JNIEnv *env, jobject thiz, jboolean is_playing) {
-    // TODO: implement setPlayingStreamingMediaPlayer()
+
 }extern "C"
 JNIEXPORT void JNICALL
 Java_com_tainzhi_sample_media_native_1codec_NativeCodecActivity_shutdown(JNIEnv *env,
                                                                          jobject thiz) {
-    // TODO: implement shutdown()
+
 }extern "C"
 JNIEXPORT void JNICALL
 Java_com_tainzhi_sample_media_native_1codec_NativeCodecActivity_setSurface(JNIEnv *env,
                                                                            jobject thiz,
                                                                            jobject surface) {
-    // TODO: implement setSurface()
+
 }extern "C"
 JNIEXPORT void JNICALL
 Java_com_tainzhi_sample_media_native_1codec_NativeCodecActivity_rewindStreamingMediaPlayer(
         JNIEnv *env, jobject thiz) {
-    // TODO: implement rewindStreamingMediaPlayer()
+
 }
