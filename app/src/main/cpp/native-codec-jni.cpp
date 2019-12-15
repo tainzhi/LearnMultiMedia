@@ -205,16 +205,13 @@ Java_com_tainzhi_sample_media_native_1codec_NativeCodecActivity_setPlayingStream
 JNIEXPORT void JNICALL
 Java_com_tainzhi_sample_media_native_1codec_NativeCodecActivity_shutdown(JNIEnv *env,
                                                                          jobject thiz) {
-
 }extern "C"
 JNIEXPORT void JNICALL
 Java_com_tainzhi_sample_media_native_1codec_NativeCodecActivity_setSurface(JNIEnv *env,
                                                                            jobject thiz,
                                                                            jobject surface) {
-
 }extern "C"
 JNIEXPORT void JNICALL
 Java_com_tainzhi_sample_media_native_1codec_NativeCodecActivity_rewindStreamingMediaPlayer(
         JNIEnv *env, jobject thiz) {
-
 }
