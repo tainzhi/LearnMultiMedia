@@ -49,6 +49,8 @@ public class MainActivity extends AppCompatActivity implements ListView.OnItemCl
 			{"OpenGLES 渲染图片", "渲染效果: 黑白, 冷色, 暖色, 模糊, 放大", "opengl2.ImageGLRendererActivity"},
 			{"OpenGLES 预览相机", "预览相机", "opengl2.camera.CameraPreviewActivity"},
 			{"OpenGLES 相机拍照", "相机拍照", "opengl2.camera.TakePictureActivity"},
+			{"OpenGLES && Native MediaCodec",
+					"cpp层MediaCodec和GLSurfaceView", "native_codec.NativeCodecActivity"}
 	};
 	
 	private ListView listView;

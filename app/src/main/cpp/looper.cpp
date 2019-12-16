@@ -1,5 +1,8 @@
+#include "looper.h"
+
 #include <assert.h>
 #include <jni.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -8,170 +11,122 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <limits.h>
-
-#include "looper.h"
-#include "media/NdkMediaCodec.h"
-#include "media/NdkMediaExtractor.h"
+#include <semaphore.h>
 
 // for __android_log_print(ANDROID_LOG_INFO, "YourApp", "formatted message");
 #include <android/log.h>
-#define TAG "NativeCodec"
+
+#define TAG "NativeCodec-looper"
 #define LOGV(...) __android_log_print(ANDROID_LOG_VERBOSE, TAG, __VA_ARGS__)
-#define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, TAG, __VA_ARGS__)
 
-#include "looper.h"
-#include "media/NdkMediaCodec.h"
-#include "media/NdkMediaExtractor.h"
 
-// for __android_log_print(ANDROID_LOG_INFO, "YourApp", "formatted message");
-#include <android/log.h>
-#define TAG "NativeCodec"
-#define LOGV(...) __android_log_print(ANDROID_LOG_VERBOSE, TAG, __VA_ARGS__)
-#define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, TAG, __VA_ARGS__)
+struct loopermessage;
+typedef struct loopermessage loopermessage;
 
-// for native window JNI
-#include <android/native_window_jni.h>
-#include <android/asset_manager.h>
-#include <android/asset_manager_jni.h>
-
-typedef struct {
-    int fd;
-    ANativeWindow *window;
-    AMediaExtractor * ex;
-    AMediaCodec *codec;
-    int64_t renderstart;
-    bool sawInputEOS;
-    bool sawOutputEOS;
-    bool isPlaying;
-    bool renderonce;
-} workerdata;
-
-workerdata data = {-1, NULL, NULL, NULL, 0, false, false, false, false};
-
-enum {
-    KMsgCodecBuffer,
-    KMsgPause,
-    KMsgResume,
-    KMsgPauseAck,
-    KMsgDecodeDone,
-    KMsgSeek,
+struct loopermessage {
+    int what;
+    void *obj;
+    loopermessage *next;
+    bool quit;
 };
 
-class mylooper: public looper {
-    virtual void handle(int what, void* obj);
-};
-
-static mylooper * mlooper = NULL;
-
-int64_t systemnanotime() {
-    timespec now;
-    clock_gettime(CLOCK_MONOTONIC, &now);
-    return now.tv_sec * 1000000000LL + now.tv_nsec;
+void *looper::trampoline(void *p) {
+    ((looper *) p)->loop();
+    return NULL;
 }
 
-void doCodecWork(workerdata *d) {
-    ssize_t bufidx = -1;
-    if (!d->sawInputEOS) {
-        bufidx = AMediaCodec_dequeueInputBuffer(d->codec, 2000);
-        LOGV("input buffer &zd", bufidx);
-        if (bufidx >= 0) {
-            size_t bufsize;
-            auto buf = AMediaCodec_getInputBuffer(d->codec, bufidx, &bufsize);
-            auto sampleSize = AMediaExtractor_readSampleData(d->ex, buf, bufsize);
-            if (sampleSize < 0) {
-                sampleSize = 0;
-                d->sawInputEOS = true;
-                LOGV("EOS");
-            }
-            auto presentationTimeUs = AMediaExtractor_getSampleTime(d->ex);
+looper::looper() {
+    sem_init(&headdataavailable, 0, 0);
+    sem_init(&headwriteprotect, 0, 1);
+    pthread_attr_t attr;
+    pthread_attr_init(&attr);
 
-            AMediaCodec_queueInputBuffer(d->codec, bufidx, 0, sampleSize, presentationTimeUs,
-                    d->sawInputEOS ? AMEDIACODEC_BUFFER_FLAG_END_OF_STREAM : 0);
-            AMediaExtractor_advance(d->ex);
+    pthread_create(&worker, &attr, trampoline, this);
+    running = true;
+}
 
-        }
-    }
-
-    if (!d->sawOutputEOS) {
-        AMediaCodecBufferInfo info;
-        auto status = AMediaCodec_dequeueOutputBuffer(d->codec, &info, 0);
-        if (status >= 0) {
-            if (info.flags & AMEDIACODEC_BUFFER_FLAG_END_OF_STREAM) {
-                LOGV("output EOS");
-                d->sawOutputEOS = true;
-            }
-            int64_t presentationNano = info.presentationTimeUs * 1000;
-            if (d->renderstart < 0) {
-                d->renderstart = systemnanotime() - presentationNano;
-            }
-            int64_t delay = (d->renderstart + presentationNano) - systemnanotime();
-            if (delay > 0) {
-                usleep(delay/1000);
-            }
-            AMediaCodec_releaseOutputBuffer(d->codec, status, info.size != 0);
-            if (d->renderonce) {
-                d->renderonce = false;
-                return;
-            }
-        } else if (status == AMEDIACODEC_INFO_OUTPUT_BUFFERS_CHANGED) {
-            LOGV("output buffers changed");
-        } else if (status == AMEDIACODEC_INFO_OUTPUT_FORMAT_CHANGED) {
-            auto format = AMediaCodec_getOutputFormat(d->codec);
-            LOGV("format changed to: %s", AMediaFormat_toString(format));
-            AMediaFormat_delete(format);
-        } else if (status == AMEDIACODEC_INFO_TRY_AGAIN_LATER) {
-            LOGV("no output buffer right now");
-        } else {
-            LOGV("unexpected info code: %zd", status);
-        }
-    }
-
-    if (!d->sawInputEOS || !d->sawOutputEOS) {
-        mlooper->post(kMsgCodecBuffer, d);
+looper::~looper() {
+    if (running) {
+        LOGV("Looper deleted while still running. Some messages will not be processed");
+        quit();
     }
 }
 
-void mylooper::handle(int what, void *obj) {
-    switch (what) {
-        case KMsgCodecBuffer:
-            doCodecWork((workerdata *) obj);
-            break;
+void looper::post(int what, void *data, bool flush) {
+    loopermessage *msg = new loopermessage();
+    msg->what = what;
+    msg->obj = data;
+    msg->next = NULL;
+    msg->quit = false;
+    addmsg(msg, flush);
+}
 
-        case KMsgDecodeDone: {
-            workerdata *d = (workerdata *) obj;
-            AMediaCodec_stop(d->codec);
-            AMediaCodec_delete(d->codec);
-            AMediaExtractor_delete(d->ex);
-            d->sawInputEOS = true;
-            d->sawOutputEOS = true;
+void looper::addmsg(loopermessage *msg, bool flush) {
+    sem_wait(&headwriteprotect);
+    loopermessage *h = head;
+
+    if (flush) {
+        while (h) {
+            loopermessage *next = h->next;
+            delete h;
+            h = next;
         }
-            break;
-
-        case KMsgSeek: {
-            workerdata *d = (workerdata *) obj;
-            AMediaExtractor_seekTo(d->ex, 0, AMEDIAEXTRACTOR_SEEK_NEXT_SYNC);
-            AMediaCodec_flush(d->codec);
-            d->renderstart = -1;
-            d->sawInputEOS = false;
-            d->sawOutputEOS = false;
-            if (!d->isPlaying) {
-                d->renderonce = true;
-                post(KMsgCodecBuffer, d);
-            }
-            LOGV("seeked");
-        }
-            break;
-
-        case KMsgPause:
-        {
-            workerdata *d = (workerdata *) obj;
-            if (d->isPlaying) {
-                d->isPlaying = false;
-                post(KMsgPauseAck, NULL, true);
-            }
-        }
-        break;
-
-
+        h = NULL;
     }
+
+    if (h) {
+        while (h->next) {
+            h = h->next;
+        }
+        h->next = msg;
+    } else {
+        head = msg;
+    }
+    LOGV("post msg %d", msg->what);
+    sem_post(&headwriteprotect);
+    sem_post(&headdataavailable);
+}
+
+void looper::loop() {
+    while (true) {
+        sem_wait(&headdataavailable);
+
+        sem_wait(&headwriteprotect);
+        loopermessage *msg = head;
+        if (msg == NULL) {
+            LOGV("no msg");
+            sem_post(&headwriteprotect);
+            continue;
+        }
+        head = msg->next;
+        sem_post(&headwriteprotect);
+
+        if (msg->quit) {
+            LOGV("quitting");
+            delete msg;
+            return;
+        }
+        LOGV("processing msg %d", msg->what);
+        handle(msg->what, msg->obj);
+        delete msg;
+    }
+}
+
+void looper::quit() {
+    LOGV("quit");
+    loopermessage *msg = new loopermessage();
+    msg->what = 0;
+    msg->obj = NULL;
+    msg->next = NULL;
+    msg->quit = true;
+    addmsg(msg, false);
+    void *retval;
+    pthread_join(worker, &retval);
+    sem_destroy(&headdataavailable);
+    sem_destroy(&headwriteprotect);
+    running = false;
+}
+
+void looper::handle(int what, void *obj) {
+    LOGV("dropping msg %d %p", what, obj);
 }

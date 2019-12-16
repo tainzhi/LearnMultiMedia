@@ -150,6 +150,59 @@ void doCodecWork(workerdata *d) {
     }
 }
 
+void mylooper::handle(int what, void *obj) {
+    switch (what) {
+        case kMsgCodecBuffer:
+            doCodecWork((workerdata *) obj);
+            break;
+
+        case kMsgDecodeDone: {
+            workerdata *d = (workerdata *) obj;
+            AMediaCodec_stop(d->codec);
+            AMediaCodec_delete(d->codec);
+            AMediaExtractor_delete(d->ex);
+            d->sawInputEOS = true;
+            d->sawOutputEOS = true;
+        }
+            break;
+
+        case kMsgSeek: {
+            workerdata *d = (workerdata *) obj;
+            AMediaExtractor_seekTo(d->ex, 0, AMEDIAEXTRACTOR_SEEK_NEXT_SYNC);
+            AMediaCodec_flush(d->codec);
+            d->renderstart = -1;
+            d->sawInputEOS = false;
+            d->sawOutputEOS = false;
+            if (!d->isPlaying) {
+                d->renderonce = true;
+                post(kMsgCodecBuffer, d);
+            }
+            LOGV("seeked");
+        }
+            break;
+
+        case kMsgPause: {
+            workerdata *d = (workerdata *) obj;
+            if (d->isPlaying) {
+                // flush all outstanding codecbuffer messages with a no-op message
+                d->isPlaying = false;
+                post(kMsgPauseAck, NULL, true);
+            }
+        }
+            break;
+
+        case kMsgResume: {
+            workerdata *d = (workerdata *) obj;
+            if (!d->isPlaying) {
+                d->renderstart = -1;
+                d->isPlaying = true;
+                post(kMsgCodecBuffer, d);
+            }
+        }
+            break;
+    }
+}
+
 extern "C" {
 // rewind the streaming media player
 void
@@ -175,7 +228,7 @@ Java_com_tainzhi_sample_media_native_1codec_NativeCodecActivity_createStreamingM
     off_t outStart, outLen;
     int fd = AAsset_openFileDescriptor(AAssetManager_open(AAssetManager_fromJava(env, asset_mgr),
                                                           utf8, 0), &outStart, &outLen);
-    env->ReleaseStringChars(filename, utf8);
+    env->ReleaseStringUTFChars(filename, utf8);
     if (fd < 0) {
         LOGE("failed to open file: %s %d (%s)", utf8, fd, strerror(errno));
         return JNI_FALSE;
@@ -203,7 +256,7 @@ Java_com_tainzhi_sample_media_native_1codec_NativeCodecActivity_createStreamingM
     LOGV("input has %d tracks", numtracks);
 
     for (int i = 0; i < numtracks; i++) {
-        AMediaFormat * format = AMediaExtractor_getTrackFormat(ex, i);
+        AMediaFormat *format = AMediaExtractor_getTrackFormat(ex, i);
         const char *s = AMediaFormat_toString(format);
         LOGV("track %d format: %s", i, s);
         const char *mime;
@@ -284,6 +337,6 @@ Java_com_tainzhi_sample_media_native_1codec_NativeCodecActivity_rewindStreamingM
         JNIEnv *env, jobject thiz) {
     LOGV("@@@ rewind");
     if (mlooper) {
-        mlooper ->post(kMsgSeek, &data);
+        mlooper->post(kMsgSeek, &data);
     }
 }

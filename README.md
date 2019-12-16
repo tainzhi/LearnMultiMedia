@@ -14,3 +14,15 @@
 ), [参考：使用 AudioTrack 播放PCM音频](https
 ://www.cnblogs.com/renhui/p/7463287.html)
 
+### 相机录制视频
+
+## OpenGL
+### 绘制图形
+### 绘制纹理图
+### 添加滤镜
+### 相机预览图片添加滤镜
+
+## Native cpp
+### Native codec
+c++层MediaCodec的使用
+

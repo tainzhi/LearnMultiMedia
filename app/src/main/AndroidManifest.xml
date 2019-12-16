@@ -16,6 +16,7 @@
 			android:name=".player.PlayActivity" android:theme="@android:style/Theme.Holo.NoActionBar.Fullscreen" />
 		<activity
 			android:name=".camera.CameraActivity" android:theme="@style/AppTheme.NoActionBar" />
+		<activity android:name=".native_codec.NativeCodecActivity" />
 		<activity android:name=".opengl2.camera.TakePictureActivity" />
 		<activity android:name=".opengl2.camera.CameraPreviewActivity" />
 		<activity android:name=".opengl2.ImageGLRendererActivity" />
