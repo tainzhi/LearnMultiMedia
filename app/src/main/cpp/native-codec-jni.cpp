@@ -192,26 +192,98 @@ Java_com_tainzhi_sample_media_native_1codec_NativeCodecActivity_createStreamingM
 
     close(d->fd);
     if (err != AMEDIA_OK) {
-        LOGV()
+        LOGV("setDataSource error: %d", err);
+        return JNI_FALSE;
     }
+
+    int numtracks = AMediaExtractor_getTrackCount(ex);
+
+    AMediaCodec *codec = NULL;
+
+    LOGV("input has %d tracks", numtracks);
+
+    for (int i = 0; i < numtracks; i++) {
+        AMediaFormat * format = AMediaExtractor_getTrackFormat(ex, i);
+        const char *s = AMediaFormat_toString(format);
+        LOGV("track %d format: %s", i, s);
+        const char *mime;
+        if (!AMediaFormat_getString(format, AMEDIAFORMAT_KEY_MIME, &mime)) {
+            LOGV("no mime type");
+            return JNI_FALSE;
+        } else if (!strncmp(mime, "video/", 6)) {
+            AMediaExtractor_selectTrack(ex, i);
+            codec = AMediaCodec_createDecoderByType(mime);
+            AMediaCodec_configure(codec, format, d->window, NULL, 0);
+            d->ex = ex;
+            d->codec = codec;
+            d->renderstart = -1;
+            d->sawInputEOS = false;
+            d->sawOutputEOS = false;
+            d->isPlaying = false;
+            d->renderonce = true;
+            AMediaCodec_start(codec);
+        }
+
+        AMediaFormat_delete(format);
+    }
+
+    mlooper = new mylooper();
+    mlooper->post(kMsgCodecBuffer, d);
+
+    return JNI_TRUE;
 }
 
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_tainzhi_sample_media_native_1codec_NativeCodecActivity_setPlayingStreamingMediaPlayer(
         JNIEnv *env, jobject thiz, jboolean is_playing) {
+    LOGV("@@@ playpause: %d", is_playing);
+    if (mlooper) {
+        if (is_playing) {
+            mlooper->post(kMsgResume, &data);
+        } else {
+            mlooper->post(kMsgPause, &data);
+        }
+    }
 
-}extern "C"
+}
+
+extern "C"
 JNIEXPORT void JNICALL
 Java_com_tainzhi_sample_media_native_1codec_NativeCodecActivity_shutdown(JNIEnv *env,
                                                                          jobject thiz) {
-}extern "C"
+    LOGV("@@@ shutdown");
+    if (mlooper) {
+        mlooper->post(kMsgDecodeDone, &data, true);
+        mlooper->quit();
+        delete mlooper;
+        mlooper = NULL;
+    }
+    if (data.window) {
+        ANativeWindow_release(data.window);
+        data.window = NULL;
+    }
+}
+
+extern "C"
 JNIEXPORT void JNICALL
 Java_com_tainzhi_sample_media_native_1codec_NativeCodecActivity_setSurface(JNIEnv *env,
                                                                            jobject thiz,
                                                                            jobject surface) {
-}extern "C"
+    if (data.window) {
+        ANativeWindow_release(data.window);
+        data.window = NULL;
+    }
+    data.window = ANativeWindow_fromSurface(env, surface);
+    LOGV("@@@ setsurface %p", data.window);
+}
+
+extern "C"
 JNIEXPORT void JNICALL
 Java_com_tainzhi_sample_media_native_1codec_NativeCodecActivity_rewindStreamingMediaPlayer(
         JNIEnv *env, jobject thiz) {
+    LOGV("@@@ rewind");
+    if (mlooper) {
+        mlooper ->post(kMsgSeek, &data);
+    }
 }
