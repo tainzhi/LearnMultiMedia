@@ -6,6 +6,8 @@
 - `SurfaceHolder.Callback`的`onSurfaceCreated`之后会调用`onSurfaceChanged`
 - [参考:Android 音视频开发(一) : 通过三种方式绘制图片](https://www.cnblogs.com/renhui/p/7456956.html)
 
+### 加载超级大图100M图片不OOM
+
 ### AudioRecod录制音频文件，AudioTrack播放音频文件
 - AudioRecod录制音频PCM文件，比MediaRecord更底层
 - PCM文件需要添加wav文件头，才能被AudioTrack播放

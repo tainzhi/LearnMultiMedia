@@ -2,6 +2,7 @@ package com.tainzhi.sample.media;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ListView;
@@ -21,14 +22,19 @@ public class MainActivity extends AppCompatActivity implements ListView.OnItemCl
 	private static final String DESCRIPTION = "description";
 	private static final String CLASS_NAME = "class_name";
 	
+	private static final String TAG = "MainActivity";
+	
 	/**
 	 * Each entry has three strings: the test title, the test description, and the name of
 	 * the activity class.
 	 */
 	private static final String[][] TESTS = {
-			{ "通过三种方式绘制图片",
+			{"通过三种方式绘制图片",
 					"ImageView, SurfaceView, 自定义图片",
 					"DrawImageActivity"},
+			{"加载超级大图",
+					"加载超级大图, 加载100M的图片不崩溃, 缩放等",
+					"LargeImageActivity"},
 			{"录制音频, 播放音频",
 					"AudioRecord采集音频PCM, AudioTrack播放",
 					"AudioRecordPlayActivity"},
@@ -101,8 +107,39 @@ public class MainActivity extends AppCompatActivity implements ListView.OnItemCl
 	
 	@Override
 	public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-		Map<String, Object> map = (Map<String, Object>)listView.getItemAtPosition(position);
+		Map<String, Object> map = (Map<String, Object>) listView.getItemAtPosition(position);
 		Intent intent = (Intent) map.get(CLASS_NAME);
 		startActivity(intent);
+		finish();
+	}
+	
+	@Override
+	protected void onResume() {
+		super.onResume();
+		Log.d(TAG, "onResume()");
+	}
+	
+	@Override
+	protected void onStart() {
+		super.onStart();
+		Log.d(TAG, "onStart()");
+	}
+	
+	@Override
+	protected void onStop() {
+		super.onStop();
+		Log.d(TAG, "onStop()");
+	}
+	
+	@Override
+	protected void onDestroy() {
+		super.onDestroy();
+		Log.d(TAG, "onDestory()");
+	}
+	
+	@Override
+	protected void onRestart() {
+		super.onRestart();
+		Log.d(TAG, "onRestart()");
 	}
 }
