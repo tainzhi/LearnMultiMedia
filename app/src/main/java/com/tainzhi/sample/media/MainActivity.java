@@ -110,7 +110,6 @@ public class MainActivity extends AppCompatActivity implements ListView.OnItemCl
 		Map<String, Object> map = (Map<String, Object>) listView.getItemAtPosition(position);
 		Intent intent = (Intent) map.get(CLASS_NAME);
 		startActivity(intent);
-		finish();
 	}
 	
 	@Override

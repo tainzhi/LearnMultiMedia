@@ -7,9 +7,11 @@
 	tools:context=".DrawImageActivity">
 	
 	<ImageView
-        android:id="@+id/imageview"
+		android:id="@+id/imageview"
 		android:layout_width="match_parent"
 		android:layout_height="0dp"
+		android:adjustViewBounds="false"
+		android:scaleType="fitXY"
 		app:layout_constraintBottom_toTopOf="@+id/surfaceView"
 		app:layout_constraintTop_toTopOf="parent" />
 
