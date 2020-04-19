@@ -13,6 +13,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.util.Log;
+import android.util.LruCache;
 import android.view.View;
 import android.widget.Button;
 
@@ -30,6 +31,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 
 public class AudioRecordPlayActivity extends AppCompatActivity implements View.OnClickListener {
@@ -59,6 +61,7 @@ public class AudioRecordPlayActivity extends AppCompatActivity implements View.O
 	
 	private HandlerThread handlerThread;
 	private Handler threadHandler;
+	private LinkedHashMap
 	
 	
 	@Override
