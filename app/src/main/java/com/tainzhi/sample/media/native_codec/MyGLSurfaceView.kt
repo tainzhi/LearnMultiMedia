@@ -215,29 +215,34 @@ class MyRenderer : GLSurfaceView.Renderer, OnFrameAvailableListener {
             throw RuntimeException("$op: glError $error")
         }
     }
-
+    
     private val mVerticesData = floatArrayOf( // X, Y, Z, U, V
             -1.25f, -1.0f, 0f, 0f, 0f,
             1.25f, -1.0f, 0f, 1f, 0f,
             -1.25f, 1.0f, 0f, 0f, 1f,
             1.25f, 1.0f, 0f, 1f, 1f)
     private val mVertices: FloatBuffer
-    private val mVertexShader = "uniform mat4 uMVPMatrix;\n" +
-            "uniform mat4 uSTMatrix;\n" +
-            "attribute vec4 aPosition;\n" +
-            "attribute vec4 aTextureCoord;\n" +
-            "varying vec2 vTextureCoord;\n" +
-            "void main() {\n" +
-            "  gl_Position = uMVPMatrix * aPosition;\n" +
-            "  vTextureCoord = (uSTMatrix * aTextureCoord).xy;\n" +
-            "}\n"
-    private val mFragmentShader = "#extension GL_OES_EGL_image_external : require\n" +
-            "precision mediump float;\n" +
-            "varying vec2 vTextureCoord;\n" +
-            "uniform samplerExternalOES sTexture;\n" +
-            "void main() {\n" +
-            "  gl_FragColor = texture2D(sTexture, vTextureCoord);\n" +
-            "}\n"
+    private val mVertexShader =
+            """
+            uniform mat4 uMVPMatrix;
+            uniform mat4 uSTMatrix;
+            attribute vec4 aPosition;
+            attribute vec4 aTextureCoord;
+            varying vec2 vTextureCoord;
+            void main() {
+              gl_Position = uMVPMatrix * aPosition;
+              vTextureCoord = (uSTMatrix * aTextureCoord).xy;
+            }
+            """
+    private val mFragmentShader = """
+            #extension GL_OES_EGL_image_external : require
+            precision mediump float;
+            varying vec2 vTextureCoord;
+            uniform samplerExternalOES sTexture;
+            void main() {
+              gl_FragColor = texture2D(sTexture, vTextureCoord);
+            }
+            """
     private val mMVPMatrix = FloatArray(16)
     private val mProjMatrix = FloatArray(16)
     private val mMMatrix = FloatArray(16)
