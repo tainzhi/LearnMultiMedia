@@ -26,6 +26,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import com.tainzhi.sample.media.R
+import com.tainzhi.sample.media.util.showToast
 import com.tainzhi.sample.media.widget.AutoFitTextureView
 import com.tainzhi.sample.media.widget.CircleImageView
 import java.io.File
