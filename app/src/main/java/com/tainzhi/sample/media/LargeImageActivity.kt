@@ -90,7 +90,7 @@ class LargeView @JvmOverloads constructor(
         rect.left = 0
         rect.right = viewWidth.toInt()
         rect.bottom = viewHeight.toInt()
-        scale = viewWidth / imageWidth
+        scale = viewHeight / imageHeight
         currentScale = scale
     }
 
@@ -106,7 +106,6 @@ class LargeView @JvmOverloads constructor(
     }
 
     override fun onTouchEvent(event: MotionEvent?): Boolean {
-        return super.onTouchEvent(event)
         scaleGestureDetector.onTouchEvent(event)
         gestureDetector.onTouchEvent(event)
         return true
@@ -134,28 +133,32 @@ class LargeView @JvmOverloads constructor(
     }
 
     override fun onScroll(e1: MotionEvent?, e2: MotionEvent?, distanceX: Float, distanceY: Float): Boolean {
-        rect.offset(distanceX.toInt(), distanceY.toInt())
+        // rect.offset(distanceX.toInt(), distanceY.toInt())
+        rect.offset(distanceX.toInt(), 0)
         handleBorder()
         invalidate()
         return false
     }
 
     private fun handleBorder() {
-        if (rect.left < 0) {
-            rect.left = 0
-            rect.right = (viewWidth / currentScale).toInt()
-        }
+        // if (rect.left < 0) {
+        //     rect.left = 0
+        //     rect.right = (viewWidth / currentScale).toInt()
+        // }
+        // if (rect.right > imageWidth) {
+        //     rect.right = imageWidth.toInt()
+        //     rect.left = ((imageWidth - viewWidth) / currentScale).toInt()
+        // }
+        // if (rect.top < 0) {
+        //     rect.top = 0
+        //     rect.bottom = (viewHeight / currentScale).toInt()
+        // }
+        // if (rect.bottom > imageHeight) {
+        //     rect.bottom = imageHeight.toInt()
+        //     rect.top = ((imageHeight - viewHeight) / currentScale).toInt()
+        // }
         if (rect.right > imageWidth) {
             rect.right = imageWidth.toInt()
-            rect.left = ((imageWidth - viewWidth) / currentScale).toInt()
-        }
-        if (rect.top < 0) {
-            rect.top = 0
-            rect.bottom = (viewHeight / currentScale).toInt()
-        }
-        if (rect.bottom > imageHeight) {
-            rect.bottom = imageHeight.toInt()
-            rect.top = ((imageHeight - viewHeight) / currentScale).toInt()
         }
     }
 
