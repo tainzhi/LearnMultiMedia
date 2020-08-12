@@ -19,14 +19,16 @@ import com.tainzhi.sample.media.player.PlayActivity
 class MainActivity : AppCompatActivity() {
     
     private val datas = arrayListOf(
-            ActivityItem("通过三种方式绘制图片", "ImageView, SurfaceView, 自定义图片", DrawImageActivity::class.java),
+            ActivityItem("三种方式绘制图片",
+                         "ImageView, SurfaceView, 自定义图片",
+                         DrawImageActivity::class.java),
             ActivityItem("加载超级大图", "加载超级大图, 加载100M的图片不崩溃, 缩放等", LargeImageActivity::class.java),
             ActivityItem("录制音频, 播放音频", "AudioRecord采集音频PCM, AudioTrack播放", AudioRecordPlayActivity::class.java),
-            ActivityItem("kotlin用Camera2拍照", "kotlin用Camera2拍照", CameraActivity::class.java),
-            ActivityItem("视频播放器", "MediaCodec实现的播放器", PlayActivity::class.java),
-            ActivityItem("录制camera, 转码264, 混合音频", "camera预览数据,转码成h264,再混合音频", VideoRecordActivity::class.java),
+            ActivityItem("硬解码视频播放器", "硬解码MediaCodec实现的播放器", PlayActivity::class.java),
+            ActivityItem("Camera2拍照录制音频视频", "Camera2拍照, MediaRecorder录制音视频", CameraActivity::class.java),
+            ActivityItem("Camera拍照, java层h264,aac编码并混淆", "camera预览数据,java层转码成h264,再java层混合音频", VideoRecordActivity::class.java),
             ActivityItem("OpenGLES draw triangle", "绘制基本三角形", TriangleActivity::class.java),
-            ActivityItem("OpenGLES 绘制立方体", "绘制立方体， 并缩放，位移，旋转等", SquareActivity::class.java),
+            ActivityItem("OpenGLES draw Square", "绘制立方体， 并缩放，位移，旋转等", SquareActivity::class.java),
             ActivityItem("OpenGLES draw oval", "绘制基本圆形", OvalActivity::class.java),
             ActivityItem("OpenGLES 绘制圆锥", "绘制基本圆锥体", ConeActivity::class.java),
             ActivityItem("OpenGLES 绘制圆柱体", "绘制基本圆柱体", CylinderActivity::class.java),
