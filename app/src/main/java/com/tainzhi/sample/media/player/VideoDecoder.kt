@@ -1,10 +1,13 @@
 package com.tainzhi.sample.media.player
 
+import android.content.res.AssetFileDescriptor
 import android.media.MediaCodec
 import android.media.MediaExtractor
 import android.media.MediaFormat
+import android.os.Build
 import android.util.Log
 import android.view.Surface
+import androidx.annotation.RequiresApi
 import java.io.IOException
 
 /**
@@ -14,14 +17,15 @@ import java.io.IOException
  * @description:  使用 MediaCodec的自定义 video decoder
  **/
 
-class VideoDecoder(private val filePath: String, private val outputSurface: Surface,
-                   private var frameCallback: FrameCallback) {
+class VideoDecoder(
+        val video: AssetFileDescriptor, private val outputSurface: Surface,
+        private var frameCallback: FrameCallback) {
     var isStopRequested = false
     var loop = false
-
+    
     var videoWidth = 0
     var videoHeight = 0
-
+    
     fun setLoopMode(loopMode: Boolean) {
         loop = loopMode
     }
@@ -29,17 +33,18 @@ class VideoDecoder(private val filePath: String, private val outputSurface: Surf
     fun requestStop() {
         isStopRequested = true
     }
-
+    
+    @RequiresApi(Build.VERSION_CODES.N)
     fun play() {
         var extractor: MediaExtractor? = null
         var decoder: MediaCodec? = null
-
+        
         try {
             extractor = MediaExtractor()
-            extractor.setDataSource(filePath)
+            extractor.setDataSource(video)
             val trackIndex = selectTrack(extractor)
             if (trackIndex < 0) {
-                throw RuntimeException("No video track found in $filePath")
+                throw RuntimeException("No video track found in asset file")
             }
             extractor.selectTrack(trackIndex)
             val format = extractor.getTrackFormat(trackIndex)
@@ -249,10 +254,10 @@ class VideoDecoder(private val filePath: String, private val outputSurface: Surf
         var extractor: MediaExtractor? = null
         try {
             extractor = MediaExtractor()
-            extractor!!.setDataSource(filePath)
+            extractor!!.setDataSource(video)
             val trackIndex = selectTrack(extractor!!)
             if (trackIndex < 0) {
-                throw RuntimeException("No video track found in $filePath")
+                throw RuntimeException("No video track found in asset file")
             }
             extractor!!.selectTrack(trackIndex)
             val format = extractor!!.getTrackFormat(trackIndex)

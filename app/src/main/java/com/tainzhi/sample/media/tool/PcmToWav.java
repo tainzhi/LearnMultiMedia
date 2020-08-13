@@ -13,7 +13,7 @@ import java.io.IOException;
  * @author: tainzhi
  * @mail: qfq61@qq.com
  * @date: 2019-11-22 06:26
- * @description: 将音频数据转换成 wav 格式
+ * @description: 将音频数据 pcm 转换成 wav 格式
  **/
 
 public class PcmToWav {

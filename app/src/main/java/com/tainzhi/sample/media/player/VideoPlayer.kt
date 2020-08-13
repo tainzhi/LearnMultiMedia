@@ -1,9 +1,12 @@
 package com.tainzhi.sample.media.player
 
+import android.content.res.AssetFileDescriptor
+import android.os.Build
 import android.os.Handler
 import android.os.HandlerThread
 import android.util.Log
 import android.view.Surface
+import androidx.annotation.RequiresApi
 
 /**
  * @author:       tainzhi
@@ -19,27 +22,29 @@ import android.view.Surface
  * The PlayerFeedback callbacks will execute on the thread that creates the object,
  * assuming that thread has a looper.  Otherwise, they will execute on the main looper.
  */
-class VideoPlayer(sourceFile: String, surface: Surface) {
-    private val stopLock = java.lang.Object()
+class VideoPlayer(video: AssetFileDescriptor, surface: Surface) {
+    private val stopLock = Object()
     private var stopped = false
-
-    private lateinit var audioDecoder: AudioDecoder
+    
+    private var audioDecoder: AudioDecoder
     private var videoDecoder: VideoDecoder
     private var thread: HandlerThread
     private var handler: Handler
     private var audioThread: HandlerThread
     private var audioHandler: Handler
     private var speedControlCallback = SpeedControlCallback()
-
+    
     private var onSizeChangedListener: OnSizeChangedListener? = null
-
+    
+    var isPlaying = true
+    
     init {
-        videoDecoder = VideoDecoder(sourceFile, surface, speedControlCallback)
-        audioDecoder = AudioDecoder(sourceFile, speedControlCallback)
+        videoDecoder = VideoDecoder(video, surface, speedControlCallback)
+        audioDecoder = AudioDecoder(video, speedControlCallback)
         thread = HandlerThread("VideoPlayer")
         thread.start()
         handler = Handler(thread.looper)
-
+        
         audioThread = HandlerThread("VideoPlayer")
         audioThread.start()
         audioHandler = Handler(audioThread.looper)
@@ -49,21 +54,24 @@ class VideoPlayer(sourceFile: String, surface: Surface) {
         videoDecoder.setLoopMode(loopMode)
         audioDecoder.setLoopMode(loopMode)
     }
-
+    
+    @RequiresApi(Build.VERSION_CODES.N)
     fun start() {
         Log.d(TAG, "start()")
         onSizeChangedListener?.onSizeChanged(videoDecoder.videoWidth, videoDecoder.videoHeight)
         handler.post(Runnable {
             videoDecoder.play()
         })
-
+        
         audioHandler.post(Runnable {
             audioDecoder.play()
         })
+        isPlaying = true
     }
 
     fun stop() {
         Log.d(TAG, "stop()")
+        isPlaying = false
         videoDecoder.requestStop()
         thread.quitSafely()
         audioDecoder.requestStop()

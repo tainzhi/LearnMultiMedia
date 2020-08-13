@@ -26,7 +26,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import com.tainzhi.sample.media.R
-import com.tainzhi.sample.media.util.showToast
+import com.tainzhi.sample.media.util.toast
 import com.tainzhi.sample.media.widget.AutoFitTextureView
 import com.tainzhi.sample.media.widget.CircleImageView
 import java.io.File
@@ -431,7 +431,7 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
             cameraDevice?.createCaptureSession(Arrays.asList(surface, imageReader?.surface),
                     object : CameraCaptureSession.StateCallback() {
                         override fun onConfigureFailed(p0: CameraCaptureSession) {
-                            activity?.showToast("Failed")
+                            activity?.toast("Failed")
                         }
 
                         override fun onConfigured(cameraCaptureSession: CameraCaptureSession) {
@@ -571,7 +571,7 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
             val captureCallback = object : CameraCaptureSession.CaptureCallback() {
                 override fun onCaptureCompleted(session: CameraCaptureSession, request: CaptureRequest, result: TotalCaptureResult) {
                     super.onCaptureCompleted(session, request, result)
-                    activity?.showToast("Saved: $file")
+                    activity?.toast("Saved: $file")
                     Log.d(TAG, file.toString())
                     unlockFocus()
                 }
@@ -698,7 +698,7 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
                         }
 
                         override fun onConfigureFailed(p0: CameraCaptureSession) {
-                            if (activity != null) activity?.showToast("Failed")
+                            if (activity != null) activity?.toast("Failed")
                         }
                     }, backgroundHandler)
         } catch (e: CameraAccessException) {
@@ -745,7 +745,7 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
             stop()
             reset()
         }
-        if (activity != null) activity?.showToast("Video saved: $videoPath")
+        if (activity != null) activity?.toast("Video saved: $videoPath")
         videoPath = null
         startPreview()
     }

@@ -1,7 +1,10 @@
 package com.tainzhi.sample.media.player
 
+import android.content.res.AssetFileDescriptor
 import android.media.*
+import android.os.Build
 import android.util.Log
+import androidx.annotation.RequiresApi
 import java.io.IOException
 
 /**
@@ -10,15 +13,15 @@ import java.io.IOException
  * @date:         2019-12-04 11:36
  * @description:  使用 MediaCodec的自定义 audio decoder
  **/
-class AudioDecoder(private val filePath: String, private val callback: FrameCallback) {
-
+class AudioDecoder(private val video: AssetFileDescriptor, private val callback: FrameCallback) {
+    
     var isStopRequested = false
     var loop = false
-
+    
     var inputBufferSize = 0
-
-    private lateinit var frameCallback: FrameCallback
-
+    
+    private var frameCallback: FrameCallback
+    
     init {
         frameCallback = callback
     }
@@ -30,18 +33,20 @@ class AudioDecoder(private val filePath: String, private val callback: FrameCall
     fun requestStop() {
         isStopRequested = true
     }
-
+    
+    @RequiresApi(Build.VERSION_CODES.N)
     fun play() {
         Log.d(TAG, "play")
         val audioExtractor = MediaExtractor()
         try {
-            audioExtractor.setDataSource(filePath)
+            audioExtractor.setDataSource(video)
         } catch (e: IOException) {
-            Log.e(TAG, "open $filePath with IOException:${e.toString()}")
+            Log.e(TAG, "open asset file with IOException:${e.toString()}")
         }
+        // step 1: select track: audio track
         val trackIndex = selectTrack(audioExtractor)
         if (trackIndex < 0) {
-            throw RuntimeException("No video track found in $filePath")
+            throw RuntimeException("No audio track found in asset file")
         }
         audioExtractor.selectTrack(trackIndex)
         val mediaFormat = audioExtractor.getTrackFormat(trackIndex)
@@ -49,51 +54,58 @@ class AudioDecoder(private val filePath: String, private val callback: FrameCall
         val audioChannels = mediaFormat.getInteger(MediaFormat.KEY_CHANNEL_COUNT)
         val audioSampleRate = mediaFormat.getInteger(MediaFormat.KEY_SAMPLE_RATE)
         val minBufferSize = AudioTrack.getMinBufferSize(audioSampleRate,
-                if (audioChannels == 1) AudioFormat.CHANNEL_OUT_MONO else AudioFormat
-                        .CHANNEL_OUT_STEREO,
-                AudioFormat.ENCODING_PCM_16BIT);
+                                                        if (audioChannels == 1) AudioFormat.CHANNEL_OUT_MONO else AudioFormat
+                                                                .CHANNEL_OUT_STEREO,
+                                                        AudioFormat.ENCODING_PCM_16BIT);
         val maxInputSize = mediaFormat.getInteger(MediaFormat.KEY_MAX_INPUT_SIZE)
         inputBufferSize = if (minBufferSize > 0) minBufferSize else maxInputSize
         val frameSizeInBytes = audioChannels * 2
         inputBufferSize = (inputBufferSize / frameSizeInBytes) * frameSizeInBytes
         val audioTrack = AudioTrack.Builder()
                 .setAudioAttributes(AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_MEDIA)
-                        .setContentType(AudioAttributes.CONTENT_TYPE_MOVIE)
-                        .build())
+                                            .setUsage(AudioAttributes.USAGE_MEDIA)
+                                            .setContentType(AudioAttributes.CONTENT_TYPE_MOVIE)
+                                            .build())
                 .setAudioFormat(AudioFormat.Builder()
-                        .setSampleRate(audioSampleRate)
-                        .setChannelMask(if (audioChannels == 1) AudioFormat.CHANNEL_OUT_MONO else AudioFormat.CHANNEL_OUT_STEREO)
-                        .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-                        .build())
+                                        .setSampleRate(audioSampleRate)
+                                        .setChannelMask(if (audioChannels == 1) AudioFormat.CHANNEL_OUT_MONO else AudioFormat.CHANNEL_OUT_STEREO)
+                                        .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                                        .build())
                 .setBufferSizeInBytes(inputBufferSize)
                 .setSessionId(AudioManager.AUDIO_SESSION_ID_GENERATE)
                 .setTransferMode(AudioTrack.MODE_STREAM)
                 .build()
-
+        
+        // step 2: generate AudioTrack
         audioTrack.play()
         try {
             val audioDecoder = MediaCodec.createDecoderByType(mime)
             audioDecoder.configure(mediaFormat, null, null, 0)
+            // step 3: create MediaCodec for AudioDecoder
             audioDecoder.start()
             doExtract(audioExtractor, trackIndex, audioDecoder, audioTrack)
         } catch (e: IOException) {
             throw java.lang.RuntimeException(e)
         }
-
-
+        
+        
     }
-
+    
+    // step 4: extract
     private fun doExtract(extractor: MediaExtractor, trackIndex: Int, decoder: MediaCodec,
                           audioTrack: AudioTrack) {
-
+        
+        // 1 ms = 10^3 us微妙 = 10^6 ns纳秒 = 10^9 ps皮秒
+        // 1s = 10^3 ms毫秒 millisecond
+        // 1ms = 10^3 us微妙 microsecond
+        // 1us = 10^3 ns纳秒 nanosecond
         val timeoutUsec = 10000
         var inputChunk = 0
         var firstInputImeNsec: Long = -1
         var outputDone = false
         var inputDone = false
         val bufferInfo = MediaCodec.BufferInfo()
-
+        
         while (!outputDone) {
             Log.d(TAG, "loop")
             if (VERBOSE) Log.d(TAG, "loop")
@@ -101,7 +113,7 @@ class AudioDecoder(private val filePath: String, private val callback: FrameCall
                 Log.d(TAG, "Stop requested")
                 return
             }
-
+            
             if (!inputDone) {
                 val inputBufferIndex = decoder.dequeueInputBuffer(timeoutUsec.toLong())
                 Log.d(TAG, "inputBufferIndex=$inputBufferIndex")
@@ -116,7 +128,7 @@ class AudioDecoder(private val filePath: String, private val callback: FrameCall
                     }
                     if (chunkSize < 0) {
                         decoder.queueInputBuffer(inputBufferIndex, 0, 0, 0L,
-                                MediaCodec.BUFFER_FLAG_END_OF_STREAM)
+                                                 MediaCodec.BUFFER_FLAG_END_OF_STREAM)
                         inputDone = true
                         if (VERBOSE) Log.d(TAG, "send input EOS")
                     } else {
@@ -126,7 +138,7 @@ class AudioDecoder(private val filePath: String, private val callback: FrameCall
                         }
                         val presentationTimeUs = extractor.sampleTime
                         decoder.queueInputBuffer(inputBufferIndex, 0, chunkSize,
-                                presentationTimeUs, 0)
+                                                 presentationTimeUs, 0)
                         if (VERBOSE) {
                             Log.d(TAG, "submitted frame $inputChunk do dec, size=$chunkSize")
                         }
@@ -167,7 +179,7 @@ class AudioDecoder(private val filePath: String, private val callback: FrameCall
                         } else {
                             outputDone = true
                         }
-
+                        
                     }
                     val doRender = bufferInfo.size != 0
                     // As soon as we call releaseOutputBuffer, the buffer will be forwarded
@@ -198,7 +210,7 @@ class AudioDecoder(private val filePath: String, private val callback: FrameCall
                 }
             }
         }
-
+        
         extractor.release()
         decoder.stop()
         decoder.release()
