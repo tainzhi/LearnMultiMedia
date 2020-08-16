@@ -2,6 +2,7 @@ package com.tainzhi.sample.media.camera
 
 import android.Manifest
 import android.app.Activity
+import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -11,10 +12,8 @@ import android.hardware.camera2.*
 import android.media.ImageReader
 import android.media.MediaRecorder
 import android.net.Uri
-import android.os.Bundle
-import android.os.Handler
-import android.os.HandlerThread
-import android.os.Message
+import android.os.*
+import android.provider.MediaStore
 import android.util.Log
 import android.util.Size
 import android.util.SparseIntArray
@@ -258,6 +257,16 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
             // Wait for camera to open - 2.5 seconds is sufficient
             if (!cameraOpenCloseLock.tryAcquire(2500, TimeUnit.MILLISECONDS)) {
                 throw RuntimeException("Time out waiting to lock camera opening.")
+            }
+            if (ActivityCompat.checkSelfPermission(requireContext(), Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+                // TODO: Consider calling
+                //    ActivityCompat#requestPermissions
+                // here to request the missing permissions, and then overriding
+                //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+                //                                          int[] grantResults)
+                // to handle the case where the user grants the permission. See the documentation
+                // for ActivityCompat#requestPermissions for more details.
+                return
             }
             manager.openCamera(cameraId, stateCallback, backgroundHandler)
         } catch (e: CameraAccessException) {
@@ -647,15 +656,47 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
     }
 
     private fun viewPicture() {
-        val intent = Intent()
-        intent.setAction(Intent.ACTION_VIEW)
-        intent.setDataAndType(fileUri, "image/*")
-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        startActivity(intent)
+        try {
+            val intent = Intent().apply {
+                action = Intent.ACTION_VIEW
+                setDataAndType(fileUri, "image/*")
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            startActivity(intent)
+        
+            // 打开系统相册或者系统文件夹, 前提是文件已经保存到系统MediaStore中
+            // startActivityForResult(Intent(Intent.ACTION_PICK, fileUri).apply {
+            //     type = "image/*"
+            // },
+            //         1000
+            // )
+        } catch (e: Exception) {
+            Log.e("Camemra", e.message)
+        }
     }
 
     private fun updatePreviewPicture() {
         picturePreview.setImageURI(fileUri)
+        // MediaScannerConnection.scanFile(requireContext(), arrayOf(file.toString()),arrayOf( file.name),
+        //         object: MediaScannerConnection.OnScanCompletedListener {
+        //             override fun onScanCompleted(path: String?, uri: Uri?) {
+        //             }
+        //         }
+        // )
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            MediaStore.Images.Media.insertImage(requireActivity().contentResolver,
+                    fileUri.path,
+                    "pic.jpg",
+                    "insert_image"
+            )
+        } else {
+            ContentValues().apply {
+                put(MediaStore.MediaColumns.DISPLAY_NAME, System.currentTimeMillis().toString())
+                put(MediaStore.MediaColumns.MIME_TYPE, "image/*")
+                put(MediaStore.MediaColumns.RELATIVE_PATH, requireContext().getExternalFilesDir(null)!!.path)
+                put(MediaStore.MediaColumns.IS_PENDING, 1)
+            }
+        }
     }
 
     private fun closePreviewSession() {
