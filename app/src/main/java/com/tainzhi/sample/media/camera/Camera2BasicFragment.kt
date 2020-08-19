@@ -11,6 +11,7 @@ import android.graphics.*
 import android.hardware.camera2.*
 import android.media.ImageReader
 import android.media.MediaRecorder
+import android.media.MediaScannerConnection
 import android.net.Uri
 import android.os.*
 import android.provider.MediaStore
@@ -244,8 +245,13 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
     override fun onPause() {
         super.onPause()
         stopBackgroundThread()
+        closeCamera()
     }
-
+    
+    override fun onDestroy() {
+        super.onDestroy()
+    }
+    
     private fun openCamera(width: Int, height: Int) {
 
         checkPermissions()
@@ -571,8 +577,8 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
             val captureBuilder = cameraDevice!!.createCaptureRequest(
                     CameraDevice.TEMPLATE_STILL_CAPTURE).apply {
                 addTarget(imageReader!!.surface)
-                set(CaptureRequest.JPEG_ORIENTATION,
-                        (OREIENTATIONS.get(rotation) + sensorOrientation + 270) % 360)
+                // set(CaptureRequest.JPEG_ORIENTATION, (OREIENTATIONS.get(rotation) + sensorOrientation + 270) % 360)
+                set(CaptureRequest.JPEG_ORIENTATION, OREIENTATIONS.get(rotation) )
                 set(CaptureRequest.CONTROL_AF_MODE,
                         CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
             }.also { setAutoFlash(it) }
@@ -690,12 +696,15 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
                     "insert_image"
             )
         } else {
-            ContentValues().apply {
+            // FIXME: 2020/8/17 android Q以上可能有问题
+            val relativePath = requireContext().getExternalFilesDir(null)!!.path
+            val contentValues =  ContentValues().apply {
                 put(MediaStore.MediaColumns.DISPLAY_NAME, System.currentTimeMillis().toString())
                 put(MediaStore.MediaColumns.MIME_TYPE, "image/*")
                 put(MediaStore.MediaColumns.RELATIVE_PATH, requireContext().getExternalFilesDir(null)!!.path)
                 put(MediaStore.MediaColumns.IS_PENDING, 1)
             }
+            requireContext().contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
         }
     }
 
