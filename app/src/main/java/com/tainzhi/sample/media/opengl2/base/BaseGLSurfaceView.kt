@@ -11,10 +11,8 @@ import android.util.AttributeSet
  * @description:
  **/
 
-open class BaseGLSurfaceView(context: Context?) : GLSurfaceView(context) {
-    constructor(context: Context?, attributes: AttributeSet) : this(context) {
-    }
-
+open class BaseGLSurfaceView(context: Context, attributes: AttributeSet? = null) : GLSurfaceView(context, attributes) {
+    
     init {
         setEGLContextClientVersion(2)
     }

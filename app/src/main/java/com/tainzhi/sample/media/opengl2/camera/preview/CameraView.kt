@@ -12,22 +12,18 @@ import javax.microedition.khronos.opengles.GL10
 /**
  * 摄像头展示界面
  */
-class CameraView : BaseGLSurfaceView, GLSurfaceView.Renderer {
+class CameraView(context: Context) : BaseGLSurfaceView(context), GLSurfaceView.Renderer {
     private var mCamera: GLCamera
     private var mCameraDrawer: GLCameraDrawer
-
-    constructor(context: Context?) : super(context) {
+    
+    constructor(context: Context, attr: AttributeSet) : this(context)
+    
+    init {
         setRenderer(this) // 设置渲染器
         mCamera = GLCamera() // 创建摄像头资源
         mCameraDrawer = GLCameraDrawer()
     }
-
-    constructor(context: Context?, attr: AttributeSet) : super(context, attr) {
-        setRenderer(this) // 设置渲染器
-        mCamera = GLCamera() // 创建摄像头资源
-        mCameraDrawer = GLCameraDrawer()
-    }
-
+    
     // 切换摄像头
     fun switchCamera() {
         cameraId = if (cameraId == 1) 0 else 1

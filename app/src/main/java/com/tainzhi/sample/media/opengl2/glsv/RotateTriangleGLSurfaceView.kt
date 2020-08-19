@@ -12,14 +12,14 @@ import com.tainzhi.sample.media.opengl2.rotate.RotateTriangleRenderer
  * @description:
  **/
 
-class RotateTriangleGLSurfaceView(context: Context?) : BaseGLSurfaceView(context) {
+class RotateTriangleGLSurfaceView(context: Context) : BaseGLSurfaceView(context) {
     private val mRenderer: RotateTriangleRenderer
     private val TOUCH_SCALE_FACTOR = 180.0f / 320
     private var mPreviousX = 0f
     private var mPreviousY = 0f
     override fun onTouchEvent(e: MotionEvent): Boolean { // MotionEvent reports input details from the touch screen
-// and other input controls. In this case, you are only
-// interested in events where the touch position changed.
+        // and other input controls. In this case, you are only
+        // interested in events where the touch position changed.
         val x = e.x
         val y = e.y
         when (e.action) {

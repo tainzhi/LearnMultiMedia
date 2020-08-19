@@ -15,13 +15,13 @@ import javax.microedition.khronos.opengles.GL10
  * @description:
  **/
 
-class SquareGLSurfaceView(context: Context?) : BaseGLSurfaceView(context) {
+class SquareGLSurfaceView(context: Context) : BaseGLSurfaceView(context) {
     internal inner class SquareRenderer : Renderer {
         var square: Square? = null
         override fun onSurfaceCreated(gl: GL10, config: EGLConfig) {
             square = Square()
         }
-
+        
         override fun onSurfaceChanged(gl: GL10, width: Int, height: Int) {
             square!!.onSurfaceChanged(width, height)
         }

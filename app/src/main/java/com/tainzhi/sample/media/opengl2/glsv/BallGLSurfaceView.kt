@@ -15,7 +15,7 @@ import javax.microedition.khronos.opengles.GL10
  * @description:  绘制圆形的GLSurfaceView
  **/
 
-class BallGLSurfaceView(context: Context?) : BaseGLSurfaceView(context) {
+class BallGLSurfaceView(context: Context) : BaseGLSurfaceView(context) {
     /**
      * 球体渲染器
      */
@@ -24,7 +24,7 @@ class BallGLSurfaceView(context: Context?) : BaseGLSurfaceView(context) {
         override fun onSurfaceCreated(gl: GL10, config: EGLConfig) {
             ball.onSurfaceCreated()
         }
-
+        
         override fun onSurfaceChanged(gl: GL10, width: Int, height: Int) {
             ball.onSurfaceChanged(width, height)
         }

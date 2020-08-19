@@ -14,8 +14,8 @@ import javax.microedition.khronos.opengles.GL10
  * @description:  绘制圆形的GLSurfaceView
  **/
 
-class CylinderGLSurfaceView(context: Context?) : BaseGLSurfaceView(context) {
-
+class CylinderGLSurfaceView(context: Context) : BaseGLSurfaceView(context) {
+    
     /**
      * 圆柱体渲染器
      */

@@ -16,7 +16,7 @@ import com.tainzhi.sample.media.opengl2.paint.PaintPointRenderer
 /**
  * 画笔点 GLSurfaceView
  */
-class PaintPointGLSurfaceView(context: Context?) : BaseGLSurfaceView(context) {
+class PaintPointGLSurfaceView(context: Context) : BaseGLSurfaceView(context) {
     var mPoint = PaintPoint()
     override fun onTouchEvent(event: MotionEvent): Boolean { // 获取touch的事件
         val x = event.x

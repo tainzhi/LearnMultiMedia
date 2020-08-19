@@ -15,15 +15,16 @@ import java.nio.FloatBuffer
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
 
-class MyGLSurfaceView @JvmOverloads constructor(context: Context?, attributeSet: AttributeSet? = null) : GLSurfaceView(context, attributeSet) {
+class MyGLSurfaceView @JvmOverloads constructor(context: Context, attributeSet: AttributeSet? = null) : GLSurfaceView(context, attributeSet) {
     var mRenderer: MyRenderer? = null
-    private fun init() {
+    
+    init {
         setEGLContextClientVersion(2)
         mRenderer = MyRenderer()
         setRenderer(mRenderer)
         Log.i("@@@", "setrenderer")
     }
-
+    
     override fun onPause() {
         mRenderer!!.onPause()
         super.onPause()
@@ -36,10 +37,6 @@ class MyGLSurfaceView @JvmOverloads constructor(context: Context?, attributeSet:
 
     val surfaceTexture: SurfaceTexture?
         get() = mRenderer!!.surfaceTexture
-
-    init {
-        init()
-    }
 }
 
 class MyRenderer : GLSurfaceView.Renderer, OnFrameAvailableListener {

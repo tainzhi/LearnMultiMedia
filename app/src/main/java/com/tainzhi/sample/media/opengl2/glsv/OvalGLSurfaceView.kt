@@ -14,13 +14,13 @@ import javax.microedition.khronos.opengles.GL10
  * @description:  绘制圆形的GLSurfaceView
  **/
 
-class OvalGLSurfaceView(context: Context?) : BaseGLSurfaceView(context) {
+class OvalGLSurfaceView(context: Context) : BaseGLSurfaceView(context) {
     internal inner class OvalRenderer : Renderer {
         var oval: Oval? = null
         override fun onSurfaceCreated(gl: GL10, config: EGLConfig) {
             oval = Oval()
         }
-
+        
         override fun onSurfaceChanged(gl: GL10, width: Int, height: Int) {
             oval!!.onSurfaceChanged(width, height)
         }

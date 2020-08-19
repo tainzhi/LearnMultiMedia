@@ -16,13 +16,13 @@ import javax.microedition.khronos.opengles.GL10
  * @description:
  **/
 
-class TriangleGLSurfaceView(context: Context?) : BaseGLSurfaceView(context) {
+class TriangleGLSurfaceView(context: Context) : BaseGLSurfaceView(context) {
     internal inner class TriangleRenderer : Renderer {
         var triangle: Triangle? = null
         override fun onDrawFrame(p0: GL10?) {
             triangle!!.draw()
         }
-
+        
         override fun onSurfaceChanged(p0: GL10?, width: Int, height: Int) {
             GLES20.glViewport(0, 0, width, height)
         }
