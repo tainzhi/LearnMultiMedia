@@ -14,7 +14,7 @@ public class VideoRecordActivity extends AppCompatActivity {
 	
 	private VideoRecorder mRecorder;
 	private String path;
-	private Thread recordThread;
+	private Thread audioPcmRecordThread;
 	private boolean isStart = false;
 	private int bufferSize = AudioRecord.getMinBufferSize(44100, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
 	private AudioRecord mAudioRecord = new AudioRecord(MediaRecorder.AudioSource.MIC, 44100, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, bufferSize * 2);
@@ -92,34 +92,34 @@ public class VideoRecordActivity extends AppCompatActivity {
 	/**
 	 * 销毁线程方法
 	 */
-	private void destroyRecordThread() {
+	private void destroyaudioPcmRecordThread() {
 		try {
 			isStart = false;
-			if (null != recordThread && Thread.State.RUNNABLE == recordThread.getState()) {
+			if (null != audioPcmRecordThread && Thread.State.RUNNABLE == audioPcmRecordThread.getState()) {
 				try {
 					Thread.sleep(500);
-					recordThread.interrupt();
+					audioPcmRecordThread.interrupt();
 				} catch (Exception e) {
-					recordThread = null;
+					audioPcmRecordThread = null;
 				}
 			}
-			recordThread = null;
+			audioPcmRecordThread = null;
 		} catch (Exception e) {
 			e.printStackTrace();
 		} finally {
-			recordThread = null;
+			audioPcmRecordThread = null;
 		}
 	}
 	
 	/**
 	 * 启动录音线程
 	 */
-	private void startRecordThread() {
-		destroyRecordThread();
+	private void startaudioPcmRecordThread() {
+		destroyaudioPcmRecordThread();
 		isStart = true;
-		if (recordThread == null) {
-			recordThread = new Thread(recordRunnable);
-			recordThread.start();
+		if (audioPcmRecordThread == null) {
+			audioPcmRecordThread = new Thread(recordRunnable);
+			audioPcmRecordThread.start();
 		}
 	}
 	
@@ -128,7 +128,7 @@ public class VideoRecordActivity extends AppCompatActivity {
 	 */
 	public void startRecord() {
 		try {
-			startRecordThread();
+			startaudioPcmRecordThread();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -139,7 +139,7 @@ public class VideoRecordActivity extends AppCompatActivity {
 	 */
 	public void stopRecord() {
 		try {
-			destroyRecordThread();
+			destroyaudioPcmRecordThread();
 			if (mAudioRecord != null) {
 				if (mAudioRecord.getState() == AudioRecord.STATE_INITIALIZED) {
 					mAudioRecord.stop();
