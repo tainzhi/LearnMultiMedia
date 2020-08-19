@@ -73,7 +73,7 @@
             android:layout_marginStart="30dp"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
-            android:background="@android:color/white" />
+            android:background="@drawable/bg_round_white" />
 
         <ImageView
             android:id="@+id/picture"
