@@ -1,6 +1,7 @@
 package com.tainzhi.sample.media.camera
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.ContentValues
 import android.content.Context
@@ -63,9 +64,6 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
     private lateinit var cbChooseTakePicture: RadioButton
     private lateinit var cbChooseRecord: RadioButton
     
-    
-    private lateinit var file: File
-    private lateinit var fileUri: Uri
     private var surfaceTextureListener = object : TextureView.SurfaceTextureListener {
         override fun onSurfaceTextureSizeChanged(p0: SurfaceTexture?, width: Int, height: Int) {
             configureTransform(width, height)
@@ -140,7 +138,7 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
      * still image is ready to be saved.
      */
     private val onImageAvailableListener = ImageReader.OnImageAvailableListener {
-        backgroundHandler?.post(ImageSaver(it.acquireNextImage(), file, mainHandler))
+        backgroundHandler?.post(ImageSaver(it.acquireNextImage(), mainHandler))
     
         // val data = YUVTool.getBytesFromImageReader(it)
         // val myMediaRecorder =  MyMediaRecorder()
@@ -235,12 +233,6 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
         cbChooseRecord = view.findViewById(R.id.cb_record)
     }
     
-    override fun onActivityCreated(savedInstanceState: Bundle?) {
-        super.onActivityCreated(savedInstanceState)
-        file = File(activity?.getExternalFilesDir(null), PIC_FILE_NAME)
-        fileUri = Uri.parse(file.toString())
-    }
-    
     override fun onResume() {
         super.onResume()
         startBackgroundThread()
@@ -306,14 +298,16 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
             cameraOpenCloseLock.release()
         }
     }
-    
     private fun startBackgroundThread() {
         backgroundThread = HandlerThread("CameraBackground").also { it.start() }
         backgroundHandler = Handler(backgroundThread?.looper)
         mainHandler = object : Handler() {
             override fun handleMessage(msg: Message) {
                 when (msg.what) {
-                    CAMERA_UPDATE_PREVIEW_PICTURE -> updatePreviewPicture()
+                    CAMERA_UPDATE_PREVIEW_PICTURE -> {
+                        val picPath = msg.arg1
+                        updatePreviewPicture(picPath)
+                    }
                 }
                 super.handleMessage(msg)
             }
@@ -595,8 +589,6 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
             val captureCallback = object : CameraCaptureSession.CaptureCallback() {
                 override fun onCaptureCompleted(session: CameraCaptureSession, request: CaptureRequest, result: TotalCaptureResult) {
                     super.onCaptureCompleted(session, request, result)
-                    activity?.toast("Saved: $file")
-                    Log.d(TAG, file.toString())
                     unlockFocus()
                 }
             }
@@ -691,31 +683,25 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
         requireActivity().startActivity<ImageGLRendererActivity>()
     }
     
-    private fun updatePreviewPicture() {
-        picturePreview.setImageURI(fileUri)
-        // MediaScannerConnection.scanFile(requireContext(), arrayOf(file.toString()),arrayOf( file.name),
-        //         object: MediaScannerConnection.OnScanCompletedListener {
-        //             override fun onScanCompleted(path: String?, uri: Uri?) {
-        //             }
-        //         }
-        // )
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
-            MediaStore.Images.Media.insertImage(requireActivity().contentResolver,
-                                                fileUri.path,
-                                                "pic.jpg",
-                                                "insert_image"
-            )
-        } else {
-            // FIXME: 2020/8/17 android Q以上可能有问题
-            val relativePath = requireContext().getExternalFilesDir(null)!!.path
-            val contentValues = ContentValues().apply {
-                put(MediaStore.MediaColumns.DISPLAY_NAME, System.currentTimeMillis().toString())
-                put(MediaStore.MediaColumns.MIME_TYPE, "image/*")
-                put(MediaStore.MediaColumns.RELATIVE_PATH, requireContext().getExternalFilesDir(null)!!.path)
-                put(MediaStore.MediaColumns.IS_PENDING, 1)
-            }
-            requireContext().contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
-        }
+    private fun updatePreviewPicture(picPath: String) {
+        picturePreview.setImageURI(Uri.parse(picPath))
+        // if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+        //     MediaStore.Images.Media.insertImage(requireActivity().contentResolver,
+        //                                         fileUri.path,
+        //                                         "pic.jpg",
+        //                                         "insert_image"
+        //     )
+        // } else {
+        //     // FIXME: 2020/8/17 android Q以上可能有问题
+        //     val relativePath = requireContext().getExternalFilesDir(null)!!.path
+        //     val contentValues = ContentValues().apply {
+        //         put(MediaStore.MediaColumns.DISPLAY_NAME, "pic")
+        //         put(MediaStore.MediaColumns.MIME_TYPE, "image/jpg")
+        //         put(MediaStore.MediaColumns.RELATIVE_PATH, requireContext().getExternalFilesDir(null)!!.path)
+        //         put(MediaStore.MediaColumns.IS_PENDING, 1)
+        //     }
+        //     requireContext().contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
+        // }
     }
     
     private fun closePreviewSession() {
