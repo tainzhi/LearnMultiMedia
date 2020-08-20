@@ -1,7 +1,7 @@
 package com.tainzhi.sample.media.encodemp4;
 
 import android.annotation.SuppressLint;
-import android.media.AudioFormat;
+import android.media.AudioRecord;
 import android.media.MediaCodec;
 import android.media.MediaCodecInfo;
 import android.media.MediaCodecList;
@@ -21,34 +21,7 @@ import java.util.concurrent.LinkedBlockingQueue;
  **/
 
 public class AACEncodeConsumer extends Thread {
-	/**
-	 * 默认采样率
-	 */
-	public static final int DEFAULT_SAMPLE_RATE = 44100;
-	/**
-	 * 通道数为1
-	 */
-	public static final int CHANNEL_COUNT_MONO = 1;
-	/**
-	 * 通道数为2
-	 */
-	public static final int CHANNEL_COUNT_STEREO = 2;
-	/**
-	 * 单声道
-	 */
-	public static final int CHANNEL_IN_MONO = AudioFormat.CHANNEL_IN_MONO;
-	/**
-	 * 立体声
-	 */
-	public static final int CHANNEL_IN_STEREO = AudioFormat.CHANNEL_IN_STEREO;
-	/**
-	 * 16位采样精度
-	 */
-	public static final int ENCODING_PCM_16BIT = AudioFormat.ENCODING_PCM_16BIT;
-	/**
-	 * 8位采样精度
-	 */
-	public static final int ENCODING_PCM_8BIT = AudioFormat.ENCODING_PCM_8BIT;
+	
 	/**
 	 * 音频源为MIC
 	 */
@@ -57,13 +30,11 @@ public class AACEncodeConsumer extends Thread {
 	private static final String MIME_TYPE = "audio/mp4a-latm";
 	private static final int TIMES_OUT = 10000;
 	private static final int ACC_PROFILE = MediaCodecInfo.CodecProfileLevel.AACObjectLC;
-	private static final int BUFFER_SIZE = 3584;//1600;
 	private static final int AUDIO_BUFFER_SIZE = 1024;
 	// 编码器
 	private boolean isExit = false;
 	private boolean isEncoderStarted = false;
-	private WeakReference<MediaMuxerUtil> mMuxerRef;
-	private EncoderParams mParams;
+	private WeakReference<MyMediaMuxer> mMuxerRef;
 	private MediaCodec mAudioEncoder;
 	private MediaFormat newFormat;
 	private long prevPresentationTimes = 0;
@@ -71,11 +42,23 @@ public class AACEncodeConsumer extends Thread {
 	private LinkedBlockingQueue<RawData> queue = new LinkedBlockingQueue<>();
 	private RawData bigShip;
 	
-	synchronized void setTmpuMuxer(MediaMuxerUtil mMuxer, EncoderParams mParams) {
+	private int audioSampleRate;
+	private int audioChannelConfig;
+	private int audioBitRate;
+	private int bufferSize = 3584;//1600;
+	
+	private AACEncodeConsumer(Builder builder) {
+		this.audioSampleRate = builder.audioSampleRate;
+		this.audioChannelConfig = builder.audioChannelConfig;
+		this.audioBitRate = builder.audioBitRate;
+		this.bufferSize = AudioRecord.getMinBufferSize(audioSampleRate, audioChannelConfig, audioBitRate);
+	}
+	
+	
+	synchronized void setTmpuMuxer(MyMediaMuxer mMuxer) {
 		this.mMuxerRef = new WeakReference<>(mMuxer);
-		this.mParams = mParams;
 		
-		MediaMuxerUtil muxer = mMuxerRef.get();
+		MyMediaMuxer muxer = mMuxerRef.get();
 		if (muxer != null && newFormat != null) {
 			muxer.addTrack(newFormat, false);
 		}
@@ -126,7 +109,7 @@ public class AACEncodeConsumer extends Thread {
 						synchronized (AACEncodeConsumer.this) {
 							newFormat = mAudioEncoder.getOutputFormat();
 							if (mMuxerRef != null) {
-								MediaMuxerUtil muxer = mMuxerRef.get();
+								MyMediaMuxer muxer = mMuxerRef.get();
 								if (muxer != null) {
 									muxer.addTrack(newFormat, false);
 								}
@@ -147,7 +130,7 @@ public class AACEncodeConsumer extends Thread {
 								throw new RuntimeException("encodecOutputBuffer" + outputBufferIndex + "was null");
 							}
 							if (mMuxerRef != null) {
-								MediaMuxerUtil muxer = mMuxerRef.get();
+								MyMediaMuxer muxer = mMuxerRef.get();
 								if (muxer != null) {
 									Log.i(TAG, "------编码混合音频数据------------" + mBufferInfo.presentationTimeUs / 1000);
 									muxer.pumpStream(outputBuffer, mBufferInfo, false);
@@ -196,11 +179,11 @@ public class AACEncodeConsumer extends Thread {
 			mAudioEncoder = MediaCodec.createByCodecName(mCodecInfo.getName());
 			MediaFormat mediaFormat = new MediaFormat();
 			mediaFormat.setString(MediaFormat.KEY_MIME, MIME_TYPE);
-			mediaFormat.setInteger(MediaFormat.KEY_BIT_RATE, mParams.getAudioBitRate());
-			mediaFormat.setInteger(MediaFormat.KEY_SAMPLE_RATE, mParams.getAudioSampleRate());
+			mediaFormat.setInteger(MediaFormat.KEY_BIT_RATE, audioBitRate);
+			mediaFormat.setInteger(MediaFormat.KEY_SAMPLE_RATE, audioSampleRate);
 			mediaFormat.setInteger(MediaFormat.KEY_AAC_PROFILE, ACC_PROFILE);
-			mediaFormat.setInteger(MediaFormat.KEY_CHANNEL_COUNT, mParams.getAudioChannelCount());
-			mediaFormat.setInteger(MediaFormat.KEY_MAX_INPUT_SIZE, BUFFER_SIZE);
+			mediaFormat.setInteger(MediaFormat.KEY_CHANNEL_COUNT, audioChannelConfig);
+			mediaFormat.setInteger(MediaFormat.KEY_MAX_INPUT_SIZE, bufferSize * 2);
 			if (mAudioEncoder != null) {
 				mAudioEncoder.configure(mediaFormat, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
 				mAudioEncoder.start();
@@ -256,7 +239,7 @@ public class AACEncodeConsumer extends Thread {
 		long timeStamp;
 		
 		RawData() {
-			buf = new byte[BUFFER_SIZE];
+			buf = new byte[3584];
 		}
 		
 		void merge(ByteBuffer byteBuffer, int length) {
@@ -267,6 +250,32 @@ public class AACEncodeConsumer extends Thread {
 		
 		boolean canMerge(int length) {
 			return readBytes + length < buf.length;
+		}
+		
+	}
+	
+	public static class Builder {
+		private int audioSampleRate;
+		private int audioChannelConfig;
+		private int audioBitRate;
+		
+		public Builder audioSampleRate(int audioSampleRate) {
+			this.audioSampleRate = audioSampleRate;
+			return this;
+		}
+		
+		public Builder audioChannelConfig(int audioChannelCount) {
+			this.audioChannelConfig = audioChannelCount;
+			return this;
+		}
+		
+		public Builder audioBitRate(int audioBitRate) {
+			this.audioBitRate = audioBitRate;
+			return this;
+		}
+		
+		public AACEncodeConsumer build() {
+			return new AACEncodeConsumer(this);
 		}
 		
 	}

@@ -1,12 +1,5 @@
 package com.tainzhi.sample.media.encodemp4;
 
-/**
- * @author: tainzhi
- * @mail: qfq61@qq.com
- * @date: 2019-11-22 18:18
- * @description:
- **/
-
 import android.annotation.TargetApi;
 import android.media.MediaCodec;
 import android.media.MediaCodecInfo;
@@ -21,8 +14,10 @@ import java.util.HashSet;
 import java.util.concurrent.LinkedBlockingQueue;
 
 /**
- * 对YUV视频流进行编码
- * Created by chao on 2017/5/6.
+ * @author: tainzhi
+ * @mail: qfq61@qq.com
+ * @date: 2019-11-22 18:18
+ * @description: 对YUV视频流进行编码
  */
 
 public class H264EncodeConsumer extends Thread {
@@ -39,17 +34,27 @@ public class H264EncodeConsumer extends Thread {
 	private boolean isEncoderStart = false;
 	
 	private boolean isAddKeyFrame = false;
-	private EncoderParams mParams;
 	private MediaFormat newFormat;
-	private WeakReference<MediaMuxerUtil> mMuxerRef;
+	private WeakReference<MyMediaMuxer> mMuxerRef;
 	private int mColorFormat;
 	private long nanoTime = 0;//System.nanoTime();
 	private LinkedBlockingQueue<RawData> queue = new LinkedBlockingQueue<>();
 	
-	synchronized void setTmpuMuxer(MediaMuxerUtil mMuxer, EncoderParams mParams) {
+	private int videoFrameWidth;
+	private int videoFrameHeight;
+	private int videoBitRate;
+	private int videoFrameRate;
+	
+	private H264EncodeConsumer(Builder builder) {
+		this.videoFrameWidth = builder.videoFrameWidth;
+		this.videoFrameHeight = builder.videoFrameHeight;
+		this.videoBitRate = builder.videoBitRate;
+		this.videoFrameRate = builder.videoFrameRate;
+	}
+	
+	synchronized void setTmpuMuxer(MyMediaMuxer mMuxer) {
 		this.mMuxerRef = new WeakReference<>(mMuxer);
-		this.mParams = mParams;
-		MediaMuxerUtil muxer = mMuxerRef.get();
+		MyMediaMuxer muxer = mMuxerRef.get();
 		
 		if (muxer != null && newFormat != null) {
 			muxer.addTrack(newFormat, true);
@@ -65,9 +70,9 @@ public class H264EncodeConsumer extends Thread {
 			}
 			mColorFormat = selectSupportColorFormat(mCodecInfo, MIME_TYPE);
 			mVideoEncodec = MediaCodec.createByCodecName(mCodecInfo.getName());
-			MediaFormat mFormat = MediaFormat.createVideoFormat(MIME_TYPE, mParams.getFrameHeight(), mParams.getFrameWidth());
-			mFormat.setInteger(MediaFormat.KEY_BIT_RATE, mParams.getBitRate());
-			mFormat.setInteger(MediaFormat.KEY_FRAME_RATE, mParams.getFrameRate());
+			MediaFormat mFormat = MediaFormat.createVideoFormat(MIME_TYPE, videoFrameWidth, videoFrameHeight);
+			mFormat.setInteger(MediaFormat.KEY_BIT_RATE, videoBitRate);
+			mFormat.setInteger(MediaFormat.KEY_FRAME_RATE, videoFrameRate);
 			mFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, mColorFormat);         // 颜色格式
 			mFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, FRAME_INTERVAL);
 			if (mVideoEncodec != null) {
@@ -105,11 +110,11 @@ public class H264EncodeConsumer extends Thread {
 	}
 	
 	private void handleData(byte[] yuvData, long timeStamp) {
-		if (!isEncoderStart || mParams == null)
+		if (!isEncoderStart)
 			return;
 		try {
-			int mWidth = mParams.getFrameWidth();
-			int mHeight = mParams.getFrameHeight();
+			int mWidth = videoFrameWidth;
+			int mHeight = videoFrameHeight;
 			
 			byte[] resultBytes = new byte[yuvData.length];
 			if (mColorFormat == MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Planar) { // I420
@@ -164,7 +169,7 @@ public class H264EncodeConsumer extends Thread {
 						synchronized (H264EncodeConsumer.this) {
 							newFormat = mVideoEncodec.getOutputFormat();
 							if (mMuxerRef != null) {
-								MediaMuxerUtil muxer = mMuxerRef.get();
+								MyMediaMuxer muxer = mMuxerRef.get();
 								if (muxer != null) {
 									muxer.addTrack(newFormat, true);
 								}
@@ -183,7 +188,7 @@ public class H264EncodeConsumer extends Thread {
 							mBufferInfo.size = 0;
 						} else if (type == 5) {
 							if (mMuxerRef != null) {
-								MediaMuxerUtil muxer = mMuxerRef.get();
+								MyMediaMuxer muxer = mMuxerRef.get();
 								if (muxer != null) {
 									Log.i(TAG, "------编码混合  视频关键帧数据-----" + mBufferInfo.presentationTimeUs / 1000);
 									muxer.pumpStream(outputBuffer, mBufferInfo, true);
@@ -193,7 +198,7 @@ public class H264EncodeConsumer extends Thread {
 						} else {
 							if (isAddKeyFrame) {
 								if (isAddKeyFrame && mMuxerRef != null) {
-									MediaMuxerUtil muxer = mMuxerRef.get();
+									MyMediaMuxer muxer = mMuxerRef.get();
 									if (muxer != null) {
 										Log.i(TAG, "------编码混合  视频普通帧数据-----" + mBufferInfo.presentationTimeUs / 1000);
 										muxer.pumpStream(outputBuffer, mBufferInfo, true);
@@ -258,6 +263,37 @@ public class H264EncodeConsumer extends Thread {
 		RawData(byte[] buf, long timeStamp) {
 			this.buf = buf;
 			this.timeStamp = timeStamp;
+		}
+	}
+	
+	public static class Builder {
+		private int videoFrameWidth;
+		private int videoFrameHeight;
+		private int videoBitRate;
+		private int videoFrameRate;
+		
+		public Builder videoFrameWidth(int videoFrameWidth) {
+			this.videoFrameWidth = videoFrameWidth;
+			return this;
+		}
+		
+		public Builder videoFrameHeight(int videoFrameHeight) {
+			this.videoFrameHeight = videoFrameHeight;
+			return this;
+		}
+		
+		public Builder videoBitRate(int videoBitRate) {
+			this.videoBitRate = videoBitRate;
+			return this;
+		}
+		
+		public Builder videoFrameRate(int videoFrameRate) {
+			this.videoFrameRate = videoFrameRate;
+			return this;
+		}
+		
+		public H264EncodeConsumer build() {
+			return new H264EncodeConsumer(this);
 		}
 	}
 	

@@ -141,6 +141,10 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
      */
     private val onImageAvailableListener = ImageReader.OnImageAvailableListener {
         backgroundHandler?.post(ImageSaver(it.acquireNextImage(), file, mainHandler))
+    
+        // val data = YUVTool.getBytesFromImageReader(it)
+        // val myMediaRecorder =  MyMediaRecorder()
+        // myMediaRecorder.addVideoData(data)
     }
     
     /**
@@ -850,29 +854,29 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
     companion object {
         @JvmStatic
         fun newInstance(): Camera2BasicFragment = Camera2BasicFragment()
-        
-        private val TAG = "Camera2BasicFragment"
+    
+        const val TAG = "Camera2BasicFragment"
         private val OREIENTATIONS = SparseIntArray()
-        
+    
         init {
             OREIENTATIONS.append(Surface.ROTATION_0, 90)
             OREIENTATIONS.append(Surface.ROTATION_90, 0)
             OREIENTATIONS.append(Surface.ROTATION_180, 270)
             OREIENTATIONS.append(Surface.ROTATION_270, 180)
-            
+        
         }
-        
-        private val SENSOR_ORIENTATION_DEFAULT_DEGREES = 90
-        private val SENSOR_ORIENTATION_INVERSE_DEGREES = 270
-        
+    
+        private const val SENSOR_ORIENTATION_DEFAULT_DEGREES = 90
+        private const val SENSOR_ORIENTATION_INVERSE_DEGREES = 270
+    
         private val INVERSE_ORIENTATIONS = SparseIntArray().apply {
             append(Surface.ROTATION_0, 270)
             append(Surface.ROTATION_90, 180)
             append(Surface.ROTATION_180, 90)
             append(Surface.ROTATION_270, 0)
         }
-        
-        
+    
+    
         /**
          * Camera state: Showing camera preview.
          */

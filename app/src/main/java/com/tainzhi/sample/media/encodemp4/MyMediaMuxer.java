@@ -15,15 +15,15 @@ import java.nio.ByteBuffer;
  * @description: Mp4封装混合器
  **/
 
-public class MediaMuxerUtil {
-	private static final String TAG = MediaMuxerUtil.class.getSimpleName();
+public class MyMediaMuxer {
+	private static final String TAG = "MyMediaMuxer";
 	private final long durationMills;
 	private MediaMuxer muxer;
 	private int videoTrackIndex = -1;
 	private int audioTrackIndex = -1;
 	private long beginMills;
 	
-	public MediaMuxerUtil(String path, long durationMills) {
+	public MyMediaMuxer(String path, long durationMills) {
 		this.durationMills = durationMills;
 		try {
 			muxer = new MediaMuxer(path, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4);
