@@ -30,6 +30,7 @@ import com.tainzhi.sample.media.R
 import com.tainzhi.sample.media.util.toast
 import com.tainzhi.sample.media.widget.AutoFitTextureView
 import com.tainzhi.sample.media.widget.CircleImageView
+import kotlinx.android.synthetic.main.fragment_camera2_basic.*
 import java.io.IOException
 import java.util.*
 import java.util.concurrent.Semaphore
@@ -232,6 +233,8 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
         ivRecord = view.findViewById(R.id.iv_record)
         cbChooseTakePicture = view.findViewById(R.id.cb_picture)
         cbChooseRecord = view.findViewById(R.id.cb_record)
+    
+        cameraModePicker.data = arrayListOf<CharSequence>("拍照", "视频", "录播")
     }
     
     override fun onResume() {
