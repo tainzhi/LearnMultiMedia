@@ -1,14 +1,13 @@
 package com.tainzhi.sample.media.camera
 
 import android.content.ContentValues
+import android.content.Context
 import android.media.Image
+import android.os.Build
 import android.os.Environment
 import android.os.Handler
 import android.os.Message
 import android.provider.MediaStore
-import android.util.Log
-import java.io.File
-import java.io.FileOutputStream
 import java.io.IOException
 
 /**
@@ -19,8 +18,8 @@ import java.io.IOException
  **/
 
 class ImageSaver(
+        private val context: Context,
         private val image: Image,
-        private val file: File,
         private val handler: Handler?
 ) : Runnable {
     override fun run() {
@@ -28,34 +27,38 @@ class ImageSaver(
         val contentValues = ContentValues().apply {
             put(MediaStore.MediaColumns.DISPLAY_NAME, System.currentTimeMillis().toString())
             put(MediaStore.MediaColumns.MIME_TYPE, "image/jpg")
-            if (build)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                put(MediaStore.MediaColumns.RELATIVE_PATH, relativeLocation)
+                put(MediaStore.MediaColumns.IS_PENDING, 1)
+            }
         }
+        val resolver = context.contentResolver
+        val imageUri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
+    
         val buffer = image.planes[0].buffer
         val bytes = ByteArray(buffer.remaining())
         buffer.get(bytes)
-        var output: FileOutputStream? = null
+    
         try {
-            output = FileOutputStream(file).apply {
-                write(bytes)
+            imageUri?.let { uri ->
+                val stream = resolver.openOutputStream(uri)
+                stream?.let { stream ->
+                    stream.write(bytes)
+                
+                    val message = Message().apply {
+                        what = CAMERA_UPDATE_PREVIEW_PICTURE
+                        obj = uri.toString()
+                    }
+                
+                    handler?.sendMessage(message)
+                } ?: throw IOException("Failed to create new MediaStore record")
             }
-            
-            val message = Message().apply {
-                what = CAMERA_UPDATE_PREVIEW_PICTURE
-                arg1 = uri.toString()
-            }
-
-            handler?.sendEmptyMessage(message)
-
         } catch (e: IOException) {
-            Log.e(TAG, e.toString())
+            imageUri?.let { resolver.delete(it, null, null) }
+            throw IOException(e)
         } finally {
-            image.close()
-            output?.let {
-                try {
-                    it.close()
-                } catch (e: IOException) {
-                    Log.e(TAG, e.toString())
-                }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                contentValues.put(MediaStore.MediaColumns.IS_PENDING, 0)
             }
         }
     }

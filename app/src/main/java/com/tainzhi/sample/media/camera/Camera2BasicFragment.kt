@@ -3,7 +3,6 @@ package com.tainzhi.sample.media.camera
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
-import android.content.ContentValues
 import android.content.Context
 import android.content.pm.PackageManager
 import android.content.res.Configuration
@@ -12,8 +11,10 @@ import android.hardware.camera2.*
 import android.media.ImageReader
 import android.media.MediaRecorder
 import android.net.Uri
-import android.os.*
-import android.provider.MediaStore
+import android.os.Bundle
+import android.os.Handler
+import android.os.HandlerThread
+import android.os.Message
 import android.util.Log
 import android.util.Size
 import android.util.SparseIntArray
@@ -30,7 +31,6 @@ import com.tainzhi.sample.media.util.startActivity
 import com.tainzhi.sample.media.util.toast
 import com.tainzhi.sample.media.widget.AutoFitTextureView
 import com.tainzhi.sample.media.widget.CircleImageView
-import java.io.File
 import java.io.IOException
 import java.util.*
 import java.util.concurrent.Semaphore
@@ -138,7 +138,7 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
      * still image is ready to be saved.
      */
     private val onImageAvailableListener = ImageReader.OnImageAvailableListener {
-        backgroundHandler?.post(ImageSaver(it.acquireNextImage(), mainHandler))
+        backgroundHandler?.post(ImageSaver(requireContext(), it.acquireNextImage(), mainHandler))
     
         // val data = YUVTool.getBytesFromImageReader(it)
         // val myMediaRecorder =  MyMediaRecorder()
@@ -301,11 +301,12 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
     private fun startBackgroundThread() {
         backgroundThread = HandlerThread("CameraBackground").also { it.start() }
         backgroundHandler = Handler(backgroundThread?.looper)
-        mainHandler = object : Handler() {
+        mainHandler = @SuppressLint("HandlerLeak")
+        object : Handler() {
             override fun handleMessage(msg: Message) {
                 when (msg.what) {
                     CAMERA_UPDATE_PREVIEW_PICTURE -> {
-                        val picPath = msg.arg1
+                        val picPath = msg.obj as String
                         updatePreviewPicture(picPath)
                     }
                 }
@@ -685,6 +686,7 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
     
     private fun updatePreviewPicture(picPath: String) {
         picturePreview.setImageURI(Uri.parse(picPath))
+        Log.d(TAG, "${picPath}")
         // if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
         //     MediaStore.Images.Media.insertImage(requireActivity().contentResolver,
         //                                         fileUri.path,
