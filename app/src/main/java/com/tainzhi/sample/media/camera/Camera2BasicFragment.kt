@@ -4,6 +4,7 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.graphics.*
@@ -26,8 +27,6 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import com.tainzhi.sample.media.R
-import com.tainzhi.sample.media.opengl2.ImageGLRendererActivity
-import com.tainzhi.sample.media.util.startActivity
 import com.tainzhi.sample.media.util.toast
 import com.tainzhi.sample.media.widget.AutoFitTextureView
 import com.tainzhi.sample.media.widget.CircleImageView
@@ -683,7 +682,16 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
         // } catch (e: Exception) {
         //     Log.e("Camemra", e.message)
         // }
-        requireActivity().startActivity<ImageGLRendererActivity>()
+        if (this::capturedImageUri.isInitialized) {
+            val intent = Intent().apply {
+                action = Intent.ACTION_VIEW
+                setDataAndType(capturedImageUri, "image/*")
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            requireActivity().startActivity(intent)
+        } else {
+            requireActivity().toast("请先拍照")
+        }
     }
     
     private fun updatePreviewPicture(picPath: String) {
