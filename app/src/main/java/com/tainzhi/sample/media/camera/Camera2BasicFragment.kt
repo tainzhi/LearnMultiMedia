@@ -64,15 +64,17 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
     private lateinit var cbChooseTakePicture: RadioButton
     private lateinit var cbChooseRecord: RadioButton
     
+    private lateinit var capturedImageUri: Uri
+    
     private var surfaceTextureListener = object : TextureView.SurfaceTextureListener {
         override fun onSurfaceTextureSizeChanged(p0: SurfaceTexture?, width: Int, height: Int) {
             configureTransform(width, height)
         }
-    
+        
         override fun onSurfaceTextureUpdated(p0: SurfaceTexture?) = Unit
-    
+        
         override fun onSurfaceTextureDestroyed(p0: SurfaceTexture?) = true
-    
+        
         override fun onSurfaceTextureAvailable(p0: SurfaceTexture?, width: Int, height: Int) {
             openCamera(width, height)
         }
@@ -685,8 +687,8 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
     }
     
     private fun updatePreviewPicture(picPath: String) {
-        picturePreview.setImageURI(Uri.parse(picPath))
-        Log.d(TAG, "${picPath}")
+        capturedImageUri = Uri.parse(picPath)
+        picturePreview.setImageURI(capturedImageUri)
         // if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
         //     MediaStore.Images.Media.insertImage(requireActivity().contentResolver,
         //                                         fileUri.path,

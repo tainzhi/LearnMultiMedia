@@ -8,20 +8,42 @@
         android:id="@+id/imageGLSurfaceView"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        app:layout_constraintDimensionRatio="4:3, h"
+        app:layout_constraintBottom_toTopOf="@id/renderModePickerTextHint"
         app:layout_constraintTop_toTopOf="parent" />
     
     <com.tainzhi.sample.media.widget.scrollpicker.StringScrollPicker
-        android:id="@+id/stringScrollPicker"
+        android:id="@+id/renderModePickerTextHint"
         android:layout_width="match_parent"
         android:layout_height="60dp"
+        app:layout_constraintBottom_toTopOf="@id/renderModePickerImageHint"
+        app:spv_alignment="center"
+        app:spv_disallow_intercept_touch="true"
+        app:spv_draw_bitmap_height="40dp"
+        app:spv_draw_bitmap_mode="size"
+        app:spv_draw_bitmap_width="40dp"
+        app:spv_is_circulation="false"
+        app:spv_max_line_width="300dp"
+        app:spv_max_text_size="28dp"
+        app:spv_min_text_size="24dp"
+        app:spv_orientation="horizontal"
+        app:spv_visible_item_count="5"
         app:layout_constraintTop_toBottomOf="@+id/imageGLSurfaceView" />
     
-    <!--<com.tainzhi.sample.media.widget.scrollpicker.BitmapScrollPicker-->
-    <!--	android:id="@+id/bitmapScrollPicker"-->
-    <!--	android:layout_width="match_parent"-->
-    <!--	app:layout_constraintTop_toBottomOf="@id/stringScrollPicker"-->
-    <!--	app:layout_constraintBottom_toBottomOf="parent"-->
-    <!--	android:layout_height="100dp"/>-->
+    <com.tainzhi.sample.media.widget.scrollpicker.BitmapScrollPicker
+        android:id="@+id/renderModePickerImageHint"
+        android:layout_width="match_parent"
+        android:layout_height="100dp"
+        android:background="#888888"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/renderModePickerTextHint"
+        app:spv_disallow_intercept_touch="true"
+        app:spv_draw_bitmap_height="50dp"
+        app:spv_draw_bitmap_mode="size"
+        app:spv_draw_bitmap_width="50dp"
+        app:spv_is_circulation="true"
+        app:spv_max_scale="1.1"
+        app:spv_min_scale="0.9"
+        app:spv_orientation="horizontal"
+        app:spv_visible_item_count="5" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
