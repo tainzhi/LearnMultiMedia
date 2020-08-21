@@ -20,7 +20,13 @@
 		<activity android:name=".native_codec.NativeCodecActivity" />
 		<activity android:name=".opengl2.camera.TakePictureActivity" />
 		<activity android:name=".opengl2.camera.CameraPreviewActivity" />
-		<activity android:name=".opengl2.ImageGLRendererActivity" />
+		<activity android:name=".opengl2.ImageGLRendererActivity">
+			<intent-filter>
+				<action android:name="android.intent.action.VIEW" />
+				<category android:name="android.intent.category.DEFAULT" />
+				<data android:mimeType="image/*" />
+			</intent-filter>
+		</activity>
 		<activity android:name=".opengl2.RotateTriangleActivity" />
 		<activity android:name=".opengl2.PaintPointActivity" />
 		<activity android:name=".opengl2.BallActivity" />

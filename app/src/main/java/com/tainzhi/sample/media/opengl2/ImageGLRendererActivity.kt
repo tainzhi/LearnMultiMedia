@@ -14,7 +14,8 @@ class ImageGLRendererActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_image_glrender)
+    
+        intent.setContentView(R.layout.activity_image_glrender)
         imageGLSurfaceView.setOnClickListener {
         
             (it as ImageGLSurfaceView).render =
