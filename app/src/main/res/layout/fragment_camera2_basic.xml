@@ -44,7 +44,7 @@
             app:spv_alignment="center"
             app:spv_end_color="@android:color/white"
             app:spv_is_circulation="false"
-            app:spv_center_item_position="0"
+            app:spv_center_item_position="1"
             app:spv_max_line_width="70dp"
             app:spv_max_text_size="24dp"
             app:spv_min_text_size="20dp"
