@@ -21,9 +21,15 @@ class ImageGLSurfaceView(context: Context, attributes: AttributeSet? = null) : B
         requestRender()
     }
     
-    var render: Renderer = ImageRenderer(context)
-        set(value) {
-            setRenderer(render)
-            field = value
-        }
+    // var bitmap: Bitmap?= null
+    //     set(value) {
+    //         render.mBitmap = value
+    //         field = value
+    //     }
+    //
+    // var render: ImageRenderer = ImageRenderer(context)
+    //     set(value) {
+    //         setRenderer(render)
+    //         field = value
+    //     }
 }

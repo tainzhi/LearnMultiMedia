@@ -2,7 +2,6 @@ package com.tainzhi.sample.media.opengl2.image
 
 import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.opengl.GLES20
 import android.opengl.GLSurfaceView
 import android.opengl.GLUtils
@@ -18,12 +17,14 @@ import javax.microedition.khronos.opengles.GL10
  * 图片展示渲染器
  */
 class ImageRenderer(private val mContext: Context) : BaseGLSL(), GLSurfaceView.Renderer {
+    
+    var mBitmap: Bitmap? = null
+    
     private var mProgram = 0
     private var glHPosition = 0
     private var glHTexture = 0
     private var glHCoordinate = 0
     private var glHMatrix = 0
-    private val mBitmap: Bitmap?
     private var textureId = 0
     private val bPos: FloatBuffer
     private val bCoord: FloatBuffer
@@ -43,7 +44,7 @@ class ImageRenderer(private val mContext: Context) : BaseGLSL(), GLSurfaceView.R
     override fun onSurfaceChanged(gl: GL10, width: Int, height: Int) {
         GLES20.glViewport(0, 0, width, height)
         val w = mBitmap!!.width
-        val h = mBitmap.height
+        val h = mBitmap!!.height
         val sWH = w / h.toFloat()
         val sWidthHeight = width / height.toFloat()
         if (width > height) {
@@ -82,7 +83,7 @@ class ImageRenderer(private val mContext: Context) : BaseGLSL(), GLSurfaceView.R
 
     private fun createTexture(): Int {
         val texture = IntArray(1)
-        if (mBitmap != null && !mBitmap.isRecycled) { //生成纹理
+        if (mBitmap != null && !mBitmap!!.isRecycled) { //生成纹理
             GLES20.glGenTextures(1, texture, 0)
             //生成纹理
             GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, texture[0])
@@ -130,7 +131,6 @@ class ImageRenderer(private val mContext: Context) : BaseGLSL(), GLSurfaceView.R
     }
 
     init {
-        mBitmap = BitmapFactory.decodeStream(mContext.resources.assets.open("one_piece.jpg"))
         val bb = ByteBuffer.allocateDirect(sPos.size * 4)
         bb.order(ByteOrder.nativeOrder())
         bPos = bb.asFloatBuffer()
