@@ -40,6 +40,7 @@ class FaceView @JvmOverloads constructor(
     
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
+        // 多个人脸需要绘制
         faces?.let {
             it.forEach {
                 canvas.drawRect(it, paint)
