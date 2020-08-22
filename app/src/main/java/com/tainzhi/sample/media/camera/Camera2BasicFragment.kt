@@ -21,7 +21,6 @@ import android.util.Size
 import android.util.SparseIntArray
 import android.view.*
 import android.widget.ImageView
-import android.widget.RadioButton
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -61,8 +60,6 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
     private lateinit var picturePreview: CircleImageView
     private lateinit var ivTakePicture: ImageView
     private lateinit var ivRecord: ImageView
-    private lateinit var cbChooseTakePicture: RadioButton
-    private lateinit var cbChooseRecord: RadioButton
     
     private lateinit var capturedImageUri: Uri
     
@@ -223,18 +220,29 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         view.findViewById<View>(R.id.picture).setOnClickListener(this)
         view.findViewById<View>(R.id.iv_preview).setOnClickListener(this)
-        view.findViewById<View>(R.id.info).setOnClickListener(this)
         view.findViewById<View>(R.id.iv_record).setOnClickListener(this)
-        view.findViewById<View>(R.id.cb_picture).setOnClickListener(this)
-        view.findViewById<View>(R.id.cb_record).setOnClickListener(this)
+        view.findViewById<View>(R.id.iv_change_camera).setOnClickListener(this)
         textureView = view.findViewById(R.id.texture)
         picturePreview = view.findViewById(R.id.iv_preview)
         ivTakePicture = view.findViewById(R.id.picture)
         ivRecord = view.findViewById(R.id.iv_record)
-        cbChooseTakePicture = view.findViewById(R.id.cb_picture)
-        cbChooseRecord = view.findViewById(R.id.cb_record)
     
-        cameraModePicker.data = arrayListOf<CharSequence>("拍照", "视频", "录播")
+        cameraModePicker.data = cameraModes.toList()
+        cameraModePicker.setOnSelectedListener { _, position ->
+            when (position) {
+                CaptureMode -> {
+                    ivRecord.visibility = View.INVISIBLE
+                    ivTakePicture.visibility = View.VISIBLE
+                }
+                RecordMode -> {
+                    ivRecord.visibility = View.VISIBLE
+                    ivTakePicture.visibility = View.INVISIBLE
+                }
+                BroadcastModel -> {
+                    requireActivity().toast("待实现录制视频推送功能")
+                }
+            }
+        }
     }
     
     override fun onResume() {
@@ -635,22 +643,7 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
             R.id.picture -> lockFocus()
             R.id.iv_record -> if (isRecordingVideo) stopRecordingVideo() else startRecordingVideo()
             R.id.iv_preview -> viewPicture()
-            R.id.cb_picture -> {
-                ivRecord.visibility = View.GONE
-                ivTakePicture.visibility = View.VISIBLE
-    
-            }
-            R.id.cb_record -> {
-                ivRecord.visibility = View.VISIBLE
-                ivTakePicture.visibility = View.GONE
-            }
-            R.id.info -> {
-                //                if (activity != null) {
-                //                    AlertDialog.Builder(activity as FragmentActivity)
-                //                            .setMessage("information")
-                //                            .setPositiveButton(android.R.string.ok, null)
-                //                            .show()
-                //                }
+            R.id.iv_change_camera -> {
                 closeCamera()
                 if (textureView.isAvailable) {
                     camera = if (camera == FRONT_CAMERA) BACK_CAMERA else FRONT_CAMERA
@@ -859,6 +852,12 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
         const val TAG = "Camera2BasicFragment"
         private val OREIENTATIONS = SparseIntArray()
     
+        private const val RecordMode = 0
+        private const val CaptureMode = 1
+        private const val BroadcastModel = 2
+        private val cameraModes = arrayOf(
+                "视频", "拍照", "主播")
+    
         init {
             OREIENTATIONS.append(Surface.ROTATION_0, 90)
             OREIENTATIONS.append(Surface.ROTATION_90, 0)
@@ -972,3 +971,5 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
         }
     }
 }
+
+
