@@ -693,23 +693,6 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
     private fun updatePreviewPicture(picPath: String) {
         capturedImageUri = Uri.parse(picPath)
         picturePreview.setImageURI(capturedImageUri)
-        // if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
-        //     MediaStore.Images.Media.insertImage(requireActivity().contentResolver,
-        //                                         fileUri.path,
-        //                                         "pic.jpg",
-        //                                         "insert_image"
-        //     )
-        // } else {
-        //     // FIXME: 2020/8/17 android Q以上可能有问题
-        //     val relativePath = requireContext().getExternalFilesDir(null)!!.path
-        //     val contentValues = ContentValues().apply {
-        //         put(MediaStore.MediaColumns.DISPLAY_NAME, "pic")
-        //         put(MediaStore.MediaColumns.MIME_TYPE, "image/jpg")
-        //         put(MediaStore.MediaColumns.RELATIVE_PATH, requireContext().getExternalFilesDir(null)!!.path)
-        //         put(MediaStore.MediaColumns.IS_PENDING, 1)
-        //     }
-        //     requireContext().contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
-        // }
     }
     
     private fun closePreviewSession() {
