@@ -30,7 +30,9 @@ import com.tainzhi.sample.media.util.toast
 import com.tainzhi.sample.media.widget.AutoFitTextureView
 import com.tainzhi.sample.media.widget.CircleImageView
 import kotlinx.android.synthetic.main.fragment_camera2_basic.*
+import java.io.FileNotFoundException
 import java.io.IOException
+import java.io.InputStream
 import java.util.*
 import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
@@ -261,10 +263,6 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
         closeCamera()
     }
     
-    override fun onDestroy() {
-        super.onDestroy()
-    }
-    
     private fun openCamera(width: Int, height: Int) {
     
         checkPermissions()
@@ -370,7 +368,7 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
                         Arrays.asList(*map.getOutputSizes(ImageFormat.JPEG)),
                         CompareSizesByArea())
                 imageReader = ImageReader.newInstance(largest.width, largest.height,
-                                                      ImageFormat.JPEG, 2).apply {
+                        ImageFormat.JPEG, 2).apply {
                     setOnImageAvailableListener(onImageAvailableListener, backgroundHandler)
                 }
     
@@ -394,9 +392,9 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
                 // bus' bandwidth limitation, resulting in gorgeous previews but the storage of
                 // garbage capture data.
                 previewSize = chooseOptimalSize(map.getOutputSizes(SurfaceTexture::class.java),
-                                                rotatedPreviewWidth, rotatedPreviewHeight,
-                                                maxPreviewWidth, maxPreviewHeight,
-                                                largest)
+                        rotatedPreviewWidth, rotatedPreviewHeight,
+                        maxPreviewWidth, maxPreviewHeight,
+                        largest)
                 if (resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
                     textureView.setAspectRatio(previewSize.width, previewSize.height)
                 } else {
@@ -460,17 +458,17 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
             previewRequestBuilder.addTarget(surface)
     
             cameraDevice?.createCaptureSession(Arrays.asList(surface, imageReader?.surface),
-                                               object : CameraCaptureSession.StateCallback() {
-                                                   override fun onConfigureFailed(p0: CameraCaptureSession) {
-                                                       activity?.toast("Failed")
-                                                   }
-        
-                                                   override fun onConfigured(cameraCaptureSession: CameraCaptureSession) {
-                                                       // When the session is ready, we start displaying the preview.
-                                                       captureSession = cameraCaptureSession
-                                                       updatePreview()
-                                                   }
-                                               }, backgroundHandler)
+                    object : CameraCaptureSession.StateCallback() {
+                        override fun onConfigureFailed(p0: CameraCaptureSession) {
+                            activity?.toast("Failed")
+                        }
+            
+                        override fun onConfigured(cameraCaptureSession: CameraCaptureSession) {
+                            // When the session is ready, we start displaying the preview.
+                            captureSession = cameraCaptureSession
+                            updatePreview()
+                        }
+                    }, backgroundHandler)
         } catch (e: CameraAccessException) {
             Log.e(TAG, e.toString())
         }
@@ -483,12 +481,12 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
         try {
             // Auto focus should be continuous for camera preview.
             previewRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE,
-                                      CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
+                    CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
             setAutoFlash(previewRequestBuilder)
             
             previewRequest = previewRequestBuilder.build()
             captureSession?.setRepeatingRequest(previewRequest,
-                                                captureCallback, backgroundHandler)
+                    captureCallback, backgroundHandler)
         } catch (e: CameraAccessException) {
             Log.e(TAG, e.toString())
         }
@@ -554,11 +552,11 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
         try {
             // This is how to tell the camera to lock focus.
             previewRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER,
-                                      CameraMetadata.CONTROL_AF_TRIGGER_START)
+                    CameraMetadata.CONTROL_AF_TRIGGER_START)
             // Tell #captureCallback to wait for the lock.
             cameraState = STATE_WAITING_LOCK
             captureSession?.capture(previewRequestBuilder.build(), captureCallback,
-                                    backgroundHandler)
+                    backgroundHandler)
         } catch (e: CameraAccessException) {
             Log.e(TAG, e.toString())
         }
@@ -572,10 +570,10 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
     private fun runPrecaptureSequence() {
         try {
             previewRequestBuilder.set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER,
-                                      CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_START)
+                    CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_START)
             cameraState = STATE_WAITING_PRECAPTURE
             captureSession?.capture(previewRequestBuilder.build(), captureCallback,
-                                    backgroundHandler)
+                    backgroundHandler)
         } catch (e: CameraAccessException) {
             Log.e(TAG, e.toString())
         }
@@ -596,7 +594,7 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
                 // set(CaptureRequest.JPEG_ORIENTATION, (OREIENTATIONS.get(rotation) + sensorOrientation + 270) % 360)
                 set(CaptureRequest.JPEG_ORIENTATION, OREIENTATIONS.get(rotation))
                 set(CaptureRequest.CONTROL_AF_MODE,
-                    CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
+                        CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
             }.also { setAutoFlash(it) }
     
             val captureCallback = object : CameraCaptureSession.CaptureCallback() {
@@ -624,14 +622,14 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
         try {
             // Reset the auto-focus trigger
             previewRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER,
-                                      CameraMetadata.CONTROL_AF_TRIGGER_CANCEL)
+                    CameraMetadata.CONTROL_AF_TRIGGER_CANCEL)
             setAutoFlash(previewRequestBuilder)
             captureSession?.capture(previewRequestBuilder.build(), captureCallback,
-                                    backgroundHandler)
+                    backgroundHandler)
             // After this, the camera will go back to the normal state of preview.
             cameraState = STATE_PREVIEW
             captureSession?.setRepeatingRequest(previewRequest, captureCallback,
-                                                backgroundHandler)
+                    backgroundHandler)
         } catch (e: CameraAccessException) {
             Log.e(TAG, e.toString())
         }
@@ -656,7 +654,7 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
     private fun setAutoFlash(requestBuilder: CaptureRequest.Builder) {
         if (flashSupported) {
             requestBuilder.set(CaptureRequest.CONTROL_AE_MODE,
-                               CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH)
+                    CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH)
         }
     }
     
@@ -691,8 +689,11 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
     }
     
     private fun updatePreviewPicture(picPath: String) {
-        capturedImageUri = Uri.parse(picPath)
-        picturePreview.setImageURI(capturedImageUri)
+        // val bitmap = if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+        //     MediaStore.Images.Media.getBitmap(requireActivity().contentResolver, capturedImageUri)
+        // } else { ImageDecoder.decodeBitmap(ImageDecoder.createSource(requireActivity().contentResolver, capturedImageUri))}
+        val thumbnail = getThumbnail(requireContext(), Uri.parse(picPath))
+        picturePreview.setImageBitmap(thumbnail)
     }
     
     private fun closePreviewSession() {
@@ -723,21 +724,21 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
                     }
     
             cameraDevice?.createCaptureSession(surfaces,
-                                               object : CameraCaptureSession.StateCallback() {
-                                                   override fun onConfigured(p0: CameraCaptureSession) {
-                                                       captureSession = p0
-                                                       updatePreview()
-                                                       activity?.runOnUiThread {
-                                                           ivRecord.setImageResource(R.drawable.btn_record_stop)
-                                                           isRecordingVideo = true
-                                                           mediaRecorder?.start()
-                                                       }
-                                                   }
-        
-                                                   override fun onConfigureFailed(p0: CameraCaptureSession) {
-                                                       if (activity != null) activity?.toast("Failed")
-                                                   }
-                                               }, backgroundHandler)
+                    object : CameraCaptureSession.StateCallback() {
+                        override fun onConfigured(p0: CameraCaptureSession) {
+                            captureSession = p0
+                            updatePreview()
+                            activity?.runOnUiThread {
+                                ivRecord.setImageResource(R.drawable.btn_record_stop)
+                                isRecordingVideo = true
+                                mediaRecorder?.start()
+                            }
+                        }
+            
+                        override fun onConfigureFailed(p0: CameraCaptureSession) {
+                            if (activity != null) activity?.toast("Failed")
+                        }
+                    }, backgroundHandler)
         } catch (e: CameraAccessException) {
             Log.e(TAG, e.toString())
         } catch (e: IOException) {
@@ -822,8 +823,8 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
         unGrantedPermissionList.toArray(arrayString)
         if (unGrantedPermissionList.isNotEmpty()) {
             ActivityCompat.requestPermissions(activity as Activity,
-                                              arrayString,
-                                              10001)
+                    arrayString,
+                    10001)
         }
     }
     
@@ -952,6 +953,37 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
                 return choices[0]
             }
         }
+    
+        @Throws(FileNotFoundException::class, IOException::class)
+        fun getThumbnail(context: Context, uri: Uri): Bitmap? {
+            val THUMBNAIL_SIZE = 256
+            var input: InputStream? = context.contentResolver.openInputStream(uri)
+            val onlyBoundsOptions: BitmapFactory.Options = BitmapFactory.Options()
+            onlyBoundsOptions.inJustDecodeBounds = true
+            onlyBoundsOptions.inDither = true //optional
+            onlyBoundsOptions.inPreferredConfig = Bitmap.Config.ARGB_8888 //optional
+            BitmapFactory.decodeStream(input, null, onlyBoundsOptions)
+            input?.close()
+            if (onlyBoundsOptions.outWidth === -1 || onlyBoundsOptions.outHeight === -1) {
+                return null
+            }
+            val originalSize = if (onlyBoundsOptions.outHeight > onlyBoundsOptions.outWidth) onlyBoundsOptions.outHeight else onlyBoundsOptions.outWidth
+            val ratio: Double = if (originalSize > THUMBNAIL_SIZE) originalSize.toDouble() / THUMBNAIL_SIZE else 1.0
+            val bitmapOptions: BitmapFactory.Options = BitmapFactory.Options()
+            bitmapOptions.inSampleSize = getPowerOfTwoForSampleRatio(ratio)
+            bitmapOptions.inDither = true //optional
+            bitmapOptions.inPreferredConfig = Bitmap.Config.ARGB_8888 //
+            input = context.contentResolver.openInputStream(uri)
+            val bitmap = BitmapFactory.decodeStream(input, null, bitmapOptions)
+            input?.close()
+            return bitmap
+        }
+    
+        private fun getPowerOfTwoForSampleRatio(ratio: Double): Int {
+            val k = Integer.highestOneBit(Math.floor(ratio).toInt())
+            return if (k == 0) 1 else k
+        }
+    
     }
 }
 
