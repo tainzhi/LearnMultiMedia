@@ -50,6 +50,7 @@ class ImageSaver(
                         obj = uri.toString()
                     }
                 
+                    handler?.removeCallbacksAndMessages(null)
                     handler?.sendMessage(message)
                 } ?: throw IOException("Failed to create new MediaStore record")
             }
@@ -60,6 +61,9 @@ class ImageSaver(
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 contentValues.put(MediaStore.MediaColumns.IS_PENDING, 0)
             }
+    
+            // 必须关掉, 否则不能连续拍照
+            image.close()
         }
     }
 
