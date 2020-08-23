@@ -692,7 +692,8 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
         // val bitmap = if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
         //     MediaStore.Images.Media.getBitmap(requireActivity().contentResolver, capturedImageUri)
         // } else { ImageDecoder.decodeBitmap(ImageDecoder.createSource(requireActivity().contentResolver, capturedImageUri))}
-        val thumbnail = getThumbnail(requireContext(), Uri.parse(picPath))
+        capturedImageUri = Uri.parse(picPath)
+        val thumbnail = getThumbnail(requireContext(), capturedImageUri)
         picturePreview.setImageBitmap(thumbnail)
     }
     
