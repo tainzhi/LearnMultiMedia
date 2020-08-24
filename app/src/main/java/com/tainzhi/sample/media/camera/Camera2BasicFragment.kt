@@ -11,11 +11,10 @@ import android.graphics.*
 import android.hardware.camera2.*
 import android.media.ImageReader
 import android.media.MediaRecorder
+import android.media.ThumbnailUtils
 import android.net.Uri
-import android.os.Bundle
-import android.os.Handler
-import android.os.HandlerThread
-import android.os.Message
+import android.os.*
+import android.provider.MediaStore
 import android.util.Log
 import android.util.Size
 import android.util.SparseIntArray
@@ -689,11 +688,12 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
     }
     
     private fun updatePreviewPicture(picPath: String) {
-        // val bitmap = if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
-        //     MediaStore.Images.Media.getBitmap(requireActivity().contentResolver, capturedImageUri)
-        // } else { ImageDecoder.decodeBitmap(ImageDecoder.createSource(requireActivity().contentResolver, capturedImageUri))}
         capturedImageUri = Uri.parse(picPath)
-        val thumbnail = getThumbnail(requireContext(), capturedImageUri)
+        val bitmap = if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            MediaStore.Images.Media.getBitmap(requireActivity().contentResolver, capturedImageUri)
+        } else { ImageDecoder.decodeBitmap(ImageDecoder.createSource(requireActivity().contentResolver, capturedImageUri))}
+        val thumbnail = ThumbnailUtils.extractThumbnail(bitmap, 100, 100)
+        // val thumbnail = getThumbnail(requireContext(), capturedImageUri)
         picturePreview.setImageBitmap(thumbnail)
     }
     
