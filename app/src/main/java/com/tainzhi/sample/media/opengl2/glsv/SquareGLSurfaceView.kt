@@ -16,28 +16,28 @@ import javax.microedition.khronos.opengles.GL10
  **/
 
 class SquareGLSurfaceView(context: Context) : BaseGLSurfaceView(context) {
-    internal inner class SquareRenderer : Renderer {
+    class SquareRenderer : Renderer {
         var square: Square? = null
         override fun onSurfaceCreated(gl: GL10, config: EGLConfig) {
             square = Square()
         }
-        
+    
         override fun onSurfaceChanged(gl: GL10, width: Int, height: Int) {
             square!!.onSurfaceChanged(width, height)
         }
-
+    
         override fun onDrawFrame(gl: GL10) {
             square!!.draw()
         }
     }
-
-    internal inner class CubeRenderer : Renderer {
+    
+    class CubeRenderer : Renderer {
         var cube: Cube? = null
         override fun onSurfaceCreated(gl: GL10, config: EGLConfig) {
             cube = Cube()
             cube!!.onSurfaceCreated()
         }
-
+        
         override fun onSurfaceChanged(gl: GL10, width: Int, height: Int) {
             cube!!.onSurfaceChanged(width, height)
         }
@@ -46,14 +46,14 @@ class SquareGLSurfaceView(context: Context) : BaseGLSurfaceView(context) {
             cube!!.draw()
         }
     }
-
-    internal inner class VaryMatrixCubeRenderer : Renderer {
+    
+    class VaryMatrixCubeRenderer : Renderer {
         var cube: VaryMatrixCube? = null
         override fun onSurfaceCreated(gl: GL10, config: EGLConfig) {
             cube = VaryMatrixCube()
             cube!!.onSurfaceCreated()
         }
-
+        
         override fun onSurfaceChanged(gl: GL10, width: Int, height: Int) {
             cube!!.onSurfaceChanged(width, height)
         }
@@ -64,8 +64,8 @@ class SquareGLSurfaceView(context: Context) : BaseGLSurfaceView(context) {
     }
 
     init {
-//         setRenderer(SquareRenderer()); // 绘制正方形
-//     setRenderer(CubeRenderer());  // 绘制立方体
+        // setRenderer(SquareRenderer()) // 绘制正方形
+        // setRenderer(CubeRenderer())  // 绘制立方体
         setRenderer(VaryMatrixCubeRenderer())
     }
 }
