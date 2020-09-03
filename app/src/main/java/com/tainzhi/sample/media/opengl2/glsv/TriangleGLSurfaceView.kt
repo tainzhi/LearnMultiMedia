@@ -17,46 +17,46 @@ import javax.microedition.khronos.opengles.GL10
  **/
 
 class TriangleGLSurfaceView(context: Context) : BaseGLSurfaceView(context) {
-    internal inner class TriangleRenderer : Renderer {
+    class TriangleRenderer : Renderer {
         var triangle: Triangle? = null
+        override fun onDrawFrame(p0: GL10?) {
+            triangle!!.draw()
+        }
+    
+        override fun onSurfaceChanged(p0: GL10?, width: Int, height: Int) {
+            GLES20.glViewport(0, 0, width, height)
+        }
+    
+        override fun onSurfaceCreated(p0: GL10?, p1: EGLConfig?) {
+            triangle = Triangle()
+        }
+    }
+    
+    class CameraTiangleRenderer : Renderer {
+        var triangle: CameraTriangle? = null
+        override fun onDrawFrame(p0: GL10?) {
+            triangle!!.draw()
+        }
+        
+        override fun onSurfaceChanged(p0: GL10?, p1: Int, p2: Int) {
+            triangle!!.onSurfaceChanged(p1, p2)
+        }
+        
+        override fun onSurfaceCreated(p0: GL10?, p1: EGLConfig?) {
+            triangle = CameraTriangle()
+        }
+    }
+    
+    class ColorfulTriangleRenderer : Renderer {
+        var triangle: ColorfulTriangle? = null
         override fun onDrawFrame(p0: GL10?) {
             triangle!!.draw()
         }
         
         override fun onSurfaceChanged(p0: GL10?, width: Int, height: Int) {
-            GLES20.glViewport(0, 0, width, height)
-        }
-
-        override fun onSurfaceCreated(p0: GL10?, p1: EGLConfig?) {
-            triangle = Triangle()
-        }
-    }
-
-    internal inner class CameraTiangleRenderer : Renderer {
-        var triangle: CameraTriangle? = null
-        override fun onDrawFrame(p0: GL10?) {
-            triangle!!.draw()
-        }
-
-        override fun onSurfaceChanged(p0: GL10?, p1: Int, p2: Int) {
             triangle!!.onSurfaceChanged(width, height)
         }
-
-        override fun onSurfaceCreated(p0: GL10?, p1: EGLConfig?) {
-            triangle = CameraTriangle()
-        }
-    }
-
-    internal inner class ColorfulTriangleRenderer : Renderer {
-        var triangle: ColorfulTriangle? = null
-        override fun onDrawFrame(p0: GL10?) {
-            triangle!!.draw()
-        }
-
-        override fun onSurfaceChanged(p0: GL10?, width: Int, height: Int) {
-            triangle!!.onSurfaceChanged(width, height)
-        }
-
+        
         override fun onSurfaceCreated(p0: GL10?, p1: EGLConfig?) {
             triangle = ColorfulTriangle()
         }
