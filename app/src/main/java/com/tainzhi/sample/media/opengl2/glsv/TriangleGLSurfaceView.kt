@@ -2,6 +2,7 @@ package com.tainzhi.sample.media.opengl2.glsv
 
 import android.content.Context
 import android.opengl.GLES20
+import android.util.AttributeSet
 import com.tainzhi.sample.media.opengl2.base.BaseGLSurfaceView
 import com.tainzhi.sample.media.opengl2.shape.triangle.CameraTriangle
 import com.tainzhi.sample.media.opengl2.shape.triangle.ColorfulTriangle
@@ -16,45 +17,70 @@ import javax.microedition.khronos.opengles.GL10
  * @description:
  **/
 
-class TriangleGLSurfaceView(context: Context) : BaseGLSurfaceView(context) {
+class TriangleGLSurfaceView(context: Context, attributeSet: AttributeSet?) :
+    BaseGLSurfaceView(context, attributeSet) {
+
+    init {
+        setRenderer(TriangleRenderer())
+    }
+
     class TriangleRenderer : Renderer {
-        var triangle: Triangle? = null
+
+        private lateinit var triangle: Triangle
         override fun onDrawFrame(p0: GL10?) {
-            triangle!!.draw()
+            triangle.draw()
         }
-    
+
         override fun onSurfaceChanged(p0: GL10?, width: Int, height: Int) {
             GLES20.glViewport(0, 0, width, height)
         }
-    
+
         override fun onSurfaceCreated(p0: GL10?, p1: EGLConfig?) {
             triangle = Triangle()
         }
     }
-    
-    class CameraTiangleRenderer : Renderer {
-        var triangle: CameraTriangle? = null
+}
+
+class CameraTriangleGLSurfaceView(context: Context, attributeSet: AttributeSet?) :
+    BaseGLSurfaceView(context, attributeSet) {
+
+    init {
+        setRenderer(CameraTriangleRenderer())
+    }
+
+    class CameraTriangleRenderer : Renderer {
+
+        private lateinit var triangle: CameraTriangle
         override fun onDrawFrame(p0: GL10?) {
-            triangle!!.draw()
+            triangle.draw()
         }
-        
+
         override fun onSurfaceChanged(p0: GL10?, p1: Int, p2: Int) {
-            triangle!!.onSurfaceChanged(p1, p2)
+            triangle.onSurfaceChanged(p1, p2)
         }
-        
+
         override fun onSurfaceCreated(p0: GL10?, p1: EGLConfig?) {
             triangle = CameraTriangle()
         }
     }
-    
+}
+
+class ColorfulTriangleGLSurfaceView(context: Context, attributeSet: AttributeSet?) :
+    BaseGLSurfaceView(context, attributeSet) {
+
+    init {
+        setRenderer(ColorfulTriangleRenderer())
+    }
+
     class ColorfulTriangleRenderer : Renderer {
-        var triangle: ColorfulTriangle? = null
+
+        private lateinit var triangle: ColorfulTriangle
         override fun onDrawFrame(p0: GL10?) {
-            triangle!!.draw()
+            triangle.draw()
         }
-        
+
         override fun onSurfaceChanged(p0: GL10?, width: Int, height: Int) {
-            triangle!!.onSurfaceChanged(width, height)
+            triangle.onSurfaceChanged(width, height)
         }
         
         override fun onSurfaceCreated(p0: GL10?, p1: EGLConfig?) {
@@ -62,9 +88,4 @@ class TriangleGLSurfaceView(context: Context) : BaseGLSurfaceView(context) {
         }
     }
 
-    init {
-//        setRenderer(TriangleRenderer())
-        setRenderer(CameraTiangleRenderer())
-//        setRenderer(ColorfulTriangleRenderer())
-    }
 }
