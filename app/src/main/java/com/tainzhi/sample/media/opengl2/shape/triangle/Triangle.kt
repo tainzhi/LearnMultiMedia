@@ -60,7 +60,7 @@ open class Triangle : BaseGLSL() {
                 0.5f, -0.5f, 0.0f
         )
         // 三角形的颜色--白色
-        var color = floatArrayOf(1.0f, 1.0f, 1.0f, 1.0f)
+        var color = floatArrayOf(1.0f, 1.0f, 0.0f, 1.0f)
         //  顶点个数
         val vertexCount = triangleCoords.size / COORDS_PER_VERTEX
     }

@@ -20,7 +20,7 @@ class CameraTriangle : Triangle() {
     var positionHandler = 0
     var colorHandler = 0
     // 颜色, R:G:B:透明值, 当前设置为白色
-    var color = floatArrayOf(1.0f, 1.0f, 1.0f, 1.0f)
+    var color = floatArrayOf(1.0f, 0.0f, 0.5f, 1.0f)
 
     fun onSurfaceChanged(width: Int, height: Int) {
         val ratio = width.toFloat() / height

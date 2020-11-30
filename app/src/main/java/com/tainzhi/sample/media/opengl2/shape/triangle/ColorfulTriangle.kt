@@ -15,6 +15,7 @@ import java.nio.FloatBuffer
 
 class ColorfulTriangle : Triangle() {
     private val vertexColorShaderCode = """
+        attribute vec4 vPosition;
         uniform mat4 vMatrix;
         varying vec4 vColor;
         attribute vec4 aColor;
@@ -33,7 +34,7 @@ class ColorfulTriangle : Triangle() {
 
     var color = floatArrayOf(
             0.0f, 1.0f, 0.0f, 1.0f,
-            1.0f, 0.0f, 0.0f, 1.0f,
+            1.0f, 0.3f, 0.5f, 1.0f,
             0.0f, 0.0f, 1.0f, 1.0f
     )
 
@@ -53,7 +54,6 @@ class ColorfulTriangle : Triangle() {
     }
 
     override fun draw() {
-        GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT or GLES20.GL_DEPTH_BUFFER_BIT)
         GLES20.glUseProgram(program)
         matrixHandler = GLES20.glGetUniformLocation(program, "vMatrix")
         GLES20.glUniformMatrix4fv(matrixHandler, 1, false, mvpMatrix, 0)
@@ -63,7 +63,7 @@ class ColorfulTriangle : Triangle() {
                 vertexStride, vertexBuffer)
         colorHandler = GLES20.glGetAttribLocation(program, "aColor")
         GLES20.glEnableVertexAttribArray(colorHandler)
-        GLES20.glVertexAttribPointer(colorHandler, 4, GLES20.GL_FLOAT, false, 0, colorBuffer)
+        GLES20.glVertexAttribPointer(colorHandler, 4, GLES20.GL_FLOAT, false, 4, colorBuffer)
         GLES20.glDrawArrays(GLES20.GL_TRIANGLES, 0, vertexCount)
         GLES20.glDisableVertexAttribArray(positionHander)
     }
@@ -80,6 +80,8 @@ class ColorfulTriangle : Triangle() {
         colorBuffer.put(color)
         colorBuffer.position(0)
         program = createOpenGLProgram(vertexColorShaderCode, fragmentColorShaderCode)
+        // 申请底色空间
+        GLES20.glClearColor(0.5f, 0.5f, 0.5f, 1.0f)
     }
 
 }
