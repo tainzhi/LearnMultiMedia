@@ -65,15 +65,15 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
     private lateinit var capturedImageUri: Uri
     
     private var surfaceTextureListener = object : TextureView.SurfaceTextureListener {
-        override fun onSurfaceTextureSizeChanged(p0: SurfaceTexture?, width: Int, height: Int) {
+        override fun onSurfaceTextureSizeChanged(p0: SurfaceTexture, width: Int, height: Int) {
             configureTransform(width, height)
         }
         
-        override fun onSurfaceTextureUpdated(p0: SurfaceTexture?) = Unit
+        override fun onSurfaceTextureUpdated(p0: SurfaceTexture) = Unit
         
-        override fun onSurfaceTextureDestroyed(p0: SurfaceTexture?) = true
+        override fun onSurfaceTextureDestroyed(p0: SurfaceTexture) = true
         
-        override fun onSurfaceTextureAvailable(p0: SurfaceTexture?, width: Int, height: Int) {
+        override fun onSurfaceTextureAvailable(p0: SurfaceTexture, width: Int, height: Int) {
             openCamera(width, height)
         }
     }
@@ -309,7 +309,7 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
     }
     private fun startBackgroundThread() {
         backgroundThread = HandlerThread("CameraBackground").also { it.start() }
-        backgroundHandler = Handler(backgroundThread?.looper)
+        backgroundHandler = Handler(backgroundThread!!.looper)
         mainHandler = @SuppressLint("HandlerLeak")
         object : Handler() {
             override fun handleMessage(msg: Message) {
@@ -447,7 +447,7 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
         try {
             val texture = textureView.surfaceTexture
     
-            texture.setDefaultBufferSize(previewSize.width, previewSize.height)
+            texture?.setDefaultBufferSize(previewSize.width, previewSize.height)
     
             val surface = Surface(texture)
     
@@ -707,7 +707,7 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
         try {
             closePreviewSession()
             setUpMediaRecorder()
-            val texture = textureView.surfaceTexture.apply {
+            val texture = textureView.surfaceTexture?.apply {
                 setDefaultBufferSize(previewSize.width, previewSize.height)
             }
     

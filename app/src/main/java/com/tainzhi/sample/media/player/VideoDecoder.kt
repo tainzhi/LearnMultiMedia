@@ -49,7 +49,7 @@ class VideoDecoder(
             extractor.selectTrack(trackIndex)
             val format = extractor.getTrackFormat(trackIndex)
             val mime = format.getString(MediaFormat.KEY_MIME)
-            decoder = MediaCodec.createDecoderByType(mime)
+            decoder = MediaCodec.createDecoderByType(mime!!)
             decoder.configure(format, outputSurface, null, 0)
             decoder.start()
             doExtract(extractor, trackIndex, decoder, frameCallback)

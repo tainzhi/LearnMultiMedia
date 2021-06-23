@@ -74,20 +74,20 @@ class PlayActivity : Activity(), TextureView.SurfaceTextureListener, PlayerFeedb
         if (::videoPlayer.isInitialized) videoPlayer.stop()
     }
     
-    override fun onSurfaceTextureSizeChanged(surface: SurfaceTexture?, width: Int, height: Int) {
+    override fun onSurfaceTextureSizeChanged(surface: SurfaceTexture, width: Int, height: Int) {
     }
     
-    override fun onSurfaceTextureDestroyed(surface: SurfaceTexture?): Boolean {
+    override fun onSurfaceTextureDestroyed(surface: SurfaceTexture): Boolean {
         videoPlayer.stop()
         return true
     }
     
-    override fun onSurfaceTextureAvailable(surface: SurfaceTexture?, width: Int, height: Int) {
+    override fun onSurfaceTextureAvailable(surface: SurfaceTexture, width: Int, height: Int) {
         Log.d(TAG, "SurfaceTexture ready width:$width, height:$height")
         play()
     }
     
-    override fun onSurfaceTextureUpdated(surface: SurfaceTexture?) {
+    override fun onSurfaceTextureUpdated(surface: SurfaceTexture) {
     }
     
     override fun playbackStopped() {
@@ -97,7 +97,7 @@ class PlayActivity : Activity(), TextureView.SurfaceTextureListener, PlayerFeedb
         adjustAspectRatio(textureView!!, width, height)
     }
     
-    @RequiresApi(Build.VERSION_CODES.N)
+    @RequiresApi(Build.VERSION_CODES.M)
     private fun play() {
         if (this::videoPlayer.isInitialized) {
             if (videoPlayer.isPlaying) {

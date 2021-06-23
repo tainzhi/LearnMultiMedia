@@ -55,7 +55,7 @@ class VideoPlayer(video: AssetFileDescriptor, surface: Surface) {
         audioDecoder.setLoopMode(loopMode)
     }
     
-    @RequiresApi(Build.VERSION_CODES.N)
+    @RequiresApi(Build.VERSION_CODES.M)
     fun start() {
         Log.d(TAG, "start()")
         onSizeChangedListener?.onSizeChanged(videoDecoder.videoWidth, videoDecoder.videoHeight)

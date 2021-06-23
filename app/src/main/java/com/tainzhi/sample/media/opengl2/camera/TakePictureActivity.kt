@@ -35,7 +35,7 @@ class TakePictureActivity : Activity(), FrameCallback {
         mRenderer = CameraRenderer()
         setContentView(R.layout.activity_takepic)
         mSurfaceView = findViewById(R.id.mSurface)
-        mController = TextureController(this@TakePictureActivity)
+        mController = TextureController(this@TakePictureActivity, mSurfaceView!!.holder)
         // 添加水印
         val filter = WaterMarkFilter()
         filter.setWaterMark(BitmapFactory.decodeResource(resources, R.mipmap.ic_launcher))

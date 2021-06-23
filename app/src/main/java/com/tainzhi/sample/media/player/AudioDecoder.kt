@@ -79,7 +79,7 @@ class AudioDecoder(private val video: AssetFileDescriptor, private val callback:
         // step 2: generate AudioTrack
         audioTrack.play()
         try {
-            val audioDecoder = MediaCodec.createDecoderByType(mime)
+            val audioDecoder = MediaCodec.createDecoderByType(mime!!)
             audioDecoder.configure(mediaFormat, null, null, 0)
             // step 3: create MediaCodec for AudioDecoder
             audioDecoder.start()

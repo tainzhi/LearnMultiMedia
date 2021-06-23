@@ -1,10 +1,13 @@
 package com.tainzhi.sample.media.opengl2.camera.takepic
 
 import android.content.Context
+import android.graphics.ImageFormat
+import android.graphics.PixelFormat
 import android.graphics.Point
 import android.graphics.SurfaceTexture
 import android.opengl.GLES20
 import android.opengl.GLSurfaceView
+import android.view.SurfaceHolder
 import android.view.View
 import android.view.ViewGroup
 import com.tainzhi.sample.media.opengl2.camera.filter.BaseFilter
@@ -25,7 +28,7 @@ import javax.microedition.khronos.opengles.GL10
  * Description: 借助GLSurfaceView创建的GL环境，做渲染工作。不将内容渲染到GLSurfaceView
  * 的Surface上，而是将内容绘制到外部提供的Surface、SurfaceHolder或者SurfaceTexture上。
  */
-class TextureController(private val mContext: Context) : GLSurfaceView.Renderer {
+class TextureController(private val mContext: Context, val holder: SurfaceHolder) : GLSurfaceView.Renderer {
     private var surface: Any? = null
     private var mGLView: GLView? = null
     private var mRenderer //用户附加的Renderer或用来监听Renderer
@@ -56,18 +59,17 @@ class TextureController(private val mContext: Context) : GLSurfaceView.Renderer 
     private var frameCallbackHeight = 0 //回调数据的宽高 = 0
     private var indexOutput = 0 //回调数据使用的buffer索引
     fun surfaceCreated(nativeWindow: Any?) {
-        surface = nativeWindow
-        mGLView!!.surfaceCreated(null)
+        mGLView!!.surfaceCreated(holder)
     }
 
     fun surfaceChanged(width: Int, height: Int) {
         mWindowSize!!.x = width
         mWindowSize!!.y = height
-        mGLView!!.surfaceChanged(null, 0, width, height)
+        mGLView!!.surfaceChanged(holder, PixelFormat.RGBA_8888, width, height)
     }
 
     fun surfaceDestroyed() {
-        mGLView!!.surfaceDestroyed(null)
+        mGLView!!.surfaceDestroyed(holder)
     }
 
     //在Surface创建前，应该被调用
@@ -207,7 +209,7 @@ class TextureController(private val mContext: Context) : GLSurfaceView.Renderer 
         if (mRenderer != null) {
             mRenderer!!.onDestroy()
         }
-        mGLView!!.surfaceDestroyed(null)
+        mGLView!!.surfaceDestroyed(holder)
         mGLView!!.detachedFromWindow()
     }
 
