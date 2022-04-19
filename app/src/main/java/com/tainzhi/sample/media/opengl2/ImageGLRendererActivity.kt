@@ -5,15 +5,18 @@ import android.graphics.BitmapFactory
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import com.tainzhi.sample.media.R
-import kotlinx.android.synthetic.main.activity_image_glrender.*
+import com.tainzhi.sample.media.databinding.ActivityImageGlrenderBinding
 import java.util.concurrent.CopyOnWriteArrayList
 
 class ImageGLRendererActivity : AppCompatActivity() {
 
+    private lateinit var binding: ActivityImageGlrenderBinding
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-    
-        setContentView(R.layout.activity_image_glrender)
+
+        binding = ActivityImageGlrenderBinding.inflate(layoutInflater)
+        setContentView(binding.root)
     
         // var imageUri: Uri? = null
         // if (intent.action == Intent.ACTION_VIEW) {
@@ -29,7 +32,7 @@ class ImageGLRendererActivity : AppCompatActivity() {
         //         e.printStackTrace()
         //     }
         // }
-        renderModePickerTextHint.data = arrayListOf<CharSequence>("黑白", "冷色调", "暖色调", "模糊", "黑白", "冷色调", "暖色调", "模糊")
+        binding.renderModePickerTextHint.data = arrayListOf<CharSequence>("黑白", "冷色调", "暖色调", "模糊", "黑白", "冷色调", "暖色调", "模糊")
     
     
         val bitmaps = CopyOnWriteArrayList<Bitmap>()
@@ -40,6 +43,6 @@ class ImageGLRendererActivity : AppCompatActivity() {
         bitmaps.add(BitmapFactory.decodeResource(resources, R.drawable.huge))
         bitmaps.add(BitmapFactory.decodeResource(resources, R.drawable.huge))
         bitmaps.add(BitmapFactory.decodeResource(resources, R.drawable.huge))
-        renderModePickerImageHint.data = bitmaps
+        binding.renderModePickerImageHint.data = bitmaps
     }
 }

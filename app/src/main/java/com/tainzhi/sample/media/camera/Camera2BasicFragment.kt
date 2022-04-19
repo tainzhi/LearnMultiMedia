@@ -25,10 +25,10 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import com.tainzhi.sample.media.R
+import com.tainzhi.sample.media.databinding.FragmentCamera2BasicBinding
 import com.tainzhi.sample.media.util.toast
 import com.tainzhi.sample.media.widget.AutoFitTextureView
 import com.tainzhi.sample.media.widget.CircleImageView
-import kotlinx.android.synthetic.main.fragment_camera2_basic.*
 import java.io.FileNotFoundException
 import java.io.IOException
 import java.io.InputStream
@@ -54,7 +54,9 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
     )
     
     private val unGrantedPermissionList = arrayListOf<String>()
-    
+
+    private var _binding: FragmentCamera2BasicBinding? = null
+
     private lateinit var textureView: AutoFitTextureView
     
     // 预览拍照的图片，用于相册打开
@@ -216,7 +218,10 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
             inflater: LayoutInflater,
             container: ViewGroup?,
             savedInstanceState: Bundle?
-    ): View? = inflater.inflate(R.layout.fragment_camera2_basic, container, false)
+    ): View {
+        _binding = FragmentCamera2BasicBinding.inflate(inflater, container, false)
+        return _binding!!.root
+    }
     
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         view.findViewById<View>(R.id.picture).setOnClickListener(this)
@@ -228,19 +233,21 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
         ivTakePicture = view.findViewById(R.id.picture)
         ivRecord = view.findViewById(R.id.iv_record)
     
-        cameraModePicker.data = cameraModes.toList()
-        cameraModePicker.setOnSelectedListener { _, position ->
-            when (position) {
-                CaptureMode -> {
-                    ivRecord.visibility = View.INVISIBLE
-                    ivTakePicture.visibility = View.VISIBLE
-                }
-                RecordMode -> {
-                    ivRecord.visibility = View.VISIBLE
-                    ivTakePicture.visibility = View.INVISIBLE
-                }
-                BroadcastModel -> {
-                    requireActivity().toast("待实现录制视频推送功能")
+        _binding!!.cameraModePicker.apply {
+            data = cameraModes.toList()
+            setOnSelectedListener { _, position ->
+                when (position) {
+                    CaptureMode -> {
+                        ivRecord.visibility = View.INVISIBLE
+                        ivTakePicture.visibility = View.VISIBLE
+                    }
+                    RecordMode -> {
+                        ivRecord.visibility = View.VISIBLE
+                        ivTakePicture.visibility = View.INVISIBLE
+                    }
+                    BroadcastModel -> {
+                        requireActivity().toast("待实现录制视频推送功能")
+                    }
                 }
             }
         }
@@ -260,6 +267,11 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
         super.onPause()
         stopBackgroundThread()
         closeCamera()
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
     
     private fun openCamera(width: Int, height: Int) {

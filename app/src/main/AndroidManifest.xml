@@ -20,11 +20,23 @@
 		<activity android:name=".native_codec.NativeCodecActivity" />
 		<activity android:name=".opengl2.camera.TakePictureActivity" />
 		<activity android:name=".opengl2.camera.CameraPreviewActivity" />
-		<activity android:name=".opengl2.ImageGLRendererActivity">
+		<activity android:name=".opengl2.ImageGLRendererActivity"
+				android:exported="true">
 			<intent-filter>
 				<action android:name="android.intent.action.VIEW" />
 				<category android:name="android.intent.category.DEFAULT" />
-				<data android:mimeType="image/*" />
+				<data
+						android:host="*"
+						android:scheme="file"
+						android:mimeType="image/*" />
+			</intent-filter>
+			<intent-filter>
+				<action android:name="android.intent.action.VIEW" />
+				<category android:name="android.intent.category.DEFAULT" />
+				<data
+						android:host="*"
+						android:scheme="content"
+						android:mimeType="image/*" />
 			</intent-filter>
 		</activity>
 		<activity android:name=".opengl2.RotateTriangleActivity" />
@@ -43,7 +55,8 @@
 		<activity
 			android:name=".AudioRecordPlayActivity" android:label="@string/title_activity_audio_record_play" android:theme="@style/AppTheme.NoActionBar" />
 		<activity
-			android:name=".MainActivity" android:label="@string/app_name" android:theme="@style/AppTheme.NoActionBar">
+			android:name=".MainActivity" android:label="@string/app_name" android:theme="@style/AppTheme.NoActionBar"
+				android:exported="true">
 			<intent-filter>
 				<action android:name="android.intent.action.MAIN" />
 				
