@@ -105,20 +105,17 @@ class LargeView @JvmOverloads constructor(
         canvas?.drawBitmap(bitmap!!, _matrix, null)
     }
 
-    override fun onTouchEvent(event: MotionEvent?): Boolean {
+    override fun onTouchEvent(event: MotionEvent): Boolean {
         scaleGestureDetector.onTouchEvent(event)
         gestureDetector.onTouchEvent(event)
         return true
     }
 
-    override fun onShowPress(e: MotionEvent?) {
-    }
-
-    override fun onSingleTapUp(e: MotionEvent?): Boolean {
+    override fun onSingleTapUp(e: MotionEvent): Boolean {
         return false
     }
 
-    override fun onDown(e: MotionEvent?): Boolean {
+    override fun onDown(e: MotionEvent): Boolean {
         // 如果正在滑动, 先停止
         if (!scroller.isFinished) {
             scroller.forceFinished(true)
@@ -126,13 +123,13 @@ class LargeView @JvmOverloads constructor(
         return true
     }
 
-    override fun onFling(e1: MotionEvent?, e2: MotionEvent?, velocityX: Float, velocityY: Float): Boolean {
+    override fun onFling(e1: MotionEvent, e2: MotionEvent, velocityX: Float, velocityY: Float): Boolean {
         scroller.fling(rect.left, rect.top, -velocityX.toInt(), -velocityY.toInt(), 0, imageWidth
                 .toInt(), 0, imageHeight.toInt())
         return false
     }
 
-    override fun onScroll(e1: MotionEvent?, e2: MotionEvent?, distanceX: Float, distanceY: Float): Boolean {
+    override fun onScroll(e1: MotionEvent, e2: MotionEvent, distanceX: Float, distanceY: Float): Boolean {
         // rect.offset(distanceX.toInt(), distanceY.toInt())
         rect.offset(distanceX.toInt(), 0)
         handleBorder()
@@ -178,10 +175,10 @@ class LargeView @JvmOverloads constructor(
     }
 
 
-    override fun onLongPress(e: MotionEvent?) {
+    override fun onLongPress(e: MotionEvent) {
     }
 
-    override fun onDoubleTap(e: MotionEvent?): Boolean {
+    override fun onDoubleTap(e: MotionEvent): Boolean {
         if (currentScale > scale) {
             currentScale = scale
         } else {
@@ -195,23 +192,23 @@ class LargeView @JvmOverloads constructor(
         return true
     }
 
-    override fun onDoubleTapEvent(e: MotionEvent?): Boolean {
+    override fun onDoubleTapEvent(e: MotionEvent): Boolean {
         return false
     }
 
-    override fun onSingleTapConfirmed(e: MotionEvent?): Boolean {
+    override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
         return false
     }
 
-    override fun onScaleBegin(detector: ScaleGestureDetector?): Boolean {
+    override fun onScaleBegin(detector: ScaleGestureDetector): Boolean {
         // 当 >= 2个手指触摸屏幕时调用, 若返回false则忽略事件调用
         return true
     }
 
-    override fun onScaleEnd(detector: ScaleGestureDetector?) {
+    override fun onScaleEnd(detector: ScaleGestureDetector) {
     }
 
-    override fun onScale(detector: ScaleGestureDetector?): Boolean {
+    override fun onScale(detector: ScaleGestureDetector): Boolean {
         val scaleFactor = detector!!.scaleFactor
         currentScale *= scaleFactor
         if (currentScale > scale * multiple) {
@@ -223,6 +220,10 @@ class LargeView @JvmOverloads constructor(
         rect.bottom = rect.top + (viewHeight / currentScale).toInt()
         invalidate()
         return true
+    }
+
+    override fun onShowPress(e: MotionEvent) {
+
     }
 
 }
