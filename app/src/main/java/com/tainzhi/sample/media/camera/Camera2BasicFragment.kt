@@ -1,8 +1,6 @@
 package com.tainzhi.sample.media.camera
 
 import android.Manifest
-import android.annotation.SuppressLint
-import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -22,7 +20,6 @@ import android.view.*
 import android.widget.ImageView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import com.tainzhi.sample.media.R
 import com.tainzhi.sample.media.databinding.FragmentCamera2BasicBinding
@@ -44,16 +41,7 @@ import kotlin.collections.ArrayList
  * @description:
  **/
 
-class Camera2BasicFragment : Fragment(), View.OnClickListener,
-        ActivityCompat.OnRequestPermissionsResultCallback {
-    
-    private val permissions = arrayListOf<String>(
-            Manifest.permission.RECORD_AUDIO,
-            Manifest.permission.CAMERA,
-            Manifest.permission.WRITE_EXTERNAL_STORAGE
-    )
-    
-    private val unGrantedPermissionList = arrayListOf<String>()
+class Camera2BasicFragment : Fragment(), View.OnClickListener {
 
     private var _binding: FragmentCamera2BasicBinding? = null
 
@@ -80,8 +68,11 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
         }
     }
     
-    private var backgroundThread: HandlerThread? = null
-    private var backgroundHandler: Handler? = null
+    private val cameraThread =  HandlerThread("CameraThread").apply { start() }
+    private var cameraHandler = Handler(cameraThread.looper)
+
+    private var imageReaderThread = HandlerThread("ImageReaderThread").apply { start() }
+    private val imageReaderHandler = Handler(imageReaderThread.looper)
     
     // 用于子线程给主线程通信
     private var mainHandler: Handler? = null
@@ -113,6 +104,7 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
         
         override fun onError(p0: CameraDevice, p1: Int) {
             onDisconnected(p0)
+            Log.i(TAG, "onError: $p0, $p1")
             this@Camera2BasicFragment.activity?.finish()
         }
     }
@@ -140,7 +132,8 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
      * still image is ready to be saved.
      */
     private val onImageAvailableListener = ImageReader.OnImageAvailableListener {
-        backgroundHandler?.post(ImageSaver(requireContext(), it.acquireNextImage(), mainHandler))
+        ImageSaver(requireContext(), it.acquireNextImage(), Handler(Looper.getMainLooper()))
+//        backgroundHandler?.post(ImageSaver(requireContext(), it.acquireNextImage(), mainHandler))
     
         // val data = YUVTool.getBytesFromImageReader(it)
         // val myMediaRecorder =  MyMediaRecorder()
@@ -254,6 +247,7 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
     }
     
     override fun onResume() {
+        Log.i(TAG, "onResume: ")
         super.onResume()
         startBackgroundThread()
         if (textureView.isAvailable) {
@@ -265,19 +259,18 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
     
     override fun onPause() {
         super.onPause()
-        stopBackgroundThread()
-        closeCamera()
+        Log.i(TAG, "onPause: ")
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
+        stopBackgroundThread()
+        closeCamera()
         _binding = null
     }
     
     private fun openCamera(width: Int, height: Int) {
-    
-        checkPermissions()
-    
+
         setUpCameraOutputs(width, height)
         configureTransform(width, height)
         val manager = activity?.getSystemService(Context.CAMERA_SERVICE) as CameraManager
@@ -286,7 +279,11 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
             if (!cameraOpenCloseLock.tryAcquire(2500, TimeUnit.MILLISECONDS)) {
                 throw RuntimeException("Time out waiting to lock camera opening.")
             }
-            if (ActivityCompat.checkSelfPermission(requireContext(), Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+            if (ActivityCompat.checkSelfPermission(
+                    requireContext(),
+                    Manifest.permission.CAMERA
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
                 // TODO: Consider calling
                 //    ActivityCompat#requestPermissions
                 // here to request the missing permissions, and then overriding
@@ -296,7 +293,7 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
                 // for ActivityCompat#requestPermissions for more details.
                 return
             }
-            manager.openCamera(cameraId, stateCallback, backgroundHandler)
+            manager.openCamera(cameraId, stateCallback, cameraHandler)
         } catch (e: CameraAccessException) {
             Log.e(TAG, e.toString())
         } catch (e: InterruptedException) {
@@ -320,32 +317,19 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
         }
     }
     private fun startBackgroundThread() {
-        backgroundThread = HandlerThread("CameraBackground").also { it.start() }
-        backgroundHandler = Handler(backgroundThread!!.looper)
-        mainHandler = @SuppressLint("HandlerLeak")
-        object : Handler() {
-            override fun handleMessage(msg: Message) {
-                when (msg.what) {
-                    CAMERA_UPDATE_PREVIEW_PICTURE -> {
-                        val picPath = msg.obj as String
-                        updatePreviewPicture(picPath)
-                    }
-                }
-                super.handleMessage(msg)
-            }
-        }
     }
-    
+
     private fun stopBackgroundThread() {
-        backgroundThread?.quitSafely()
-        try {
-            backgroundThread?.join()
-            backgroundThread = null
-            backgroundHandler = null
-            mainHandler = null
-        } catch (e: InterruptedException) {
-            Log.e(TAG, e.toString())
-        }
+        cameraThread.quitSafely()
+        imageReaderThread.quitSafely()
+//        try {
+//            cameraThread?.join()
+//            cameraThread = null
+//            cameraHandler = null
+//            mainHandler = null
+//        } catch (e: InterruptedException) {
+//            Log.e(TAG, e.toString())
+//        }
     }
     
     /**
@@ -380,7 +364,7 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
                         CompareSizesByArea())
                 imageReader = ImageReader.newInstance(largest.width, largest.height,
                         ImageFormat.JPEG, 2).apply {
-                    setOnImageAvailableListener(onImageAvailableListener, backgroundHandler)
+                    setOnImageAvailableListener(onImageAvailableListener, imageReaderHandler)
                 }
     
                 val displayRotation = activity?.windowManager?.defaultDisplay?.rotation
@@ -479,7 +463,7 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
                             captureSession = cameraCaptureSession
                             updatePreview()
                         }
-                    }, backgroundHandler)
+                    }, cameraHandler)
         } catch (e: CameraAccessException) {
             Log.e(TAG, e.toString())
         }
@@ -497,7 +481,7 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
             
             previewRequest = previewRequestBuilder.build()
             captureSession?.setRepeatingRequest(previewRequest,
-                    captureCallback, backgroundHandler)
+                    captureCallback, cameraHandler)
         } catch (e: CameraAccessException) {
             Log.e(TAG, e.toString())
         }
@@ -537,25 +521,6 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
         textureView.setTransform(matrix)
     }
     
-    private fun requestCameraPermission() {
-        if (shouldShowRequestPermissionRationale(Manifest.permission.CAMERA)) {
-            ConfirmationDialog().show(childFragmentManager, "fragment_dialog")
-        } else {
-            requestPermissions(arrayOf(Manifest.permission.CAMERA), REQUEST_CAMERA_PERMISSION)
-        }
-    }
-    
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
-        if (requestCode == REQUEST_CAMERA_PERMISSION) {
-            if (grantResults.size != 1 || grantResults[0] != PackageManager.PERMISSION_GRANTED) {
-                ErrorDialog.newInstance("This app needs camera permission")
-                        .show(childFragmentManager, "fragment_dialog")
-            } else {
-                super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-            }
-        }
-    }
-    
     /**
      * Lock the focus as the first step for a still image capture.
      */
@@ -567,7 +532,7 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
             // Tell #captureCallback to wait for the lock.
             cameraState = STATE_WAITING_LOCK
             captureSession?.capture(previewRequestBuilder.build(), captureCallback,
-                    backgroundHandler)
+                    cameraHandler)
         } catch (e: CameraAccessException) {
             Log.e(TAG, e.toString())
         }
@@ -584,7 +549,7 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
                     CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_START)
             cameraState = STATE_WAITING_PRECAPTURE
             captureSession?.capture(previewRequestBuilder.build(), captureCallback,
-                    backgroundHandler)
+                    cameraHandler)
         } catch (e: CameraAccessException) {
             Log.e(TAG, e.toString())
         }
@@ -636,11 +601,11 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
                     CameraMetadata.CONTROL_AF_TRIGGER_CANCEL)
             setAutoFlash(previewRequestBuilder)
             captureSession?.capture(previewRequestBuilder.build(), captureCallback,
-                    backgroundHandler)
+                    cameraHandler)
             // After this, the camera will go back to the normal state of preview.
             cameraState = STATE_PREVIEW
             captureSession?.setRepeatingRequest(previewRequest, captureCallback,
-                    backgroundHandler)
+                    cameraHandler)
         } catch (e: CameraAccessException) {
             Log.e(TAG, e.toString())
         }
@@ -751,7 +716,7 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
                         override fun onConfigureFailed(p0: CameraCaptureSession) {
                             if (activity != null) activity?.toast("Failed")
                         }
-                    }, backgroundHandler)
+                    }, cameraHandler)
         } catch (e: CameraAccessException) {
             Log.e(TAG, e.toString())
         } catch (e: IOException) {
@@ -825,27 +790,27 @@ class Camera2BasicFragment : Fragment(), View.OnClickListener,
         }
     }
     
-    private fun checkPermissions() {
-        for (permission in permissions) {
-            if (ContextCompat.checkSelfPermission(activity as Context, permission) != PackageManager
-                            .PERMISSION_GRANTED) {
-                unGrantedPermissionList.add(permission)
-            }
-        }
-        val arrayString = arrayOfNulls<String>(unGrantedPermissionList.size)
-        unGrantedPermissionList.toArray(arrayString)
-        if (unGrantedPermissionList.isNotEmpty()) {
-            ActivityCompat.requestPermissions(activity as Activity,
-                    arrayString,
-                    10001)
-        }
-    }
+//    private fun checkPermissions() {
+//        for (permission in permissions) {
+//            if (ContextCompat.checkSelfPermission(activity as Context, permission) != PackageManager
+//                            .PERMISSION_GRANTED) {
+//                unGrantedPermissionList.add(permission)
+//            }
+//        }
+//        val arrayString = arrayOfNulls<String>(unGrantedPermissionList.size)
+//        unGrantedPermissionList.toArray(arrayString)
+//        if (unGrantedPermissionList.isNotEmpty()) {
+//            ActivityCompat.requestPermissions(activity as Activity,
+//                    arrayString,
+//                    10001)
+//        }
+//    }
     
     
     companion object {
         @JvmStatic
         fun newInstance(): Camera2BasicFragment = Camera2BasicFragment()
-    
+
         const val TAG = "Camera2BasicFragment"
         private val OREIENTATIONS = SparseIntArray()
     
