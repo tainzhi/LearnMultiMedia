@@ -57,9 +57,6 @@
 			android:name=".opengl2.OvalActivity" android:label="@string/title_activity_oval" android:theme="@style/AppTheme.NoActionBar" />
 		<activity android:name=".opengl2.SquareActivity" />
 		<activity android:name=".opengl2.TriangleActivity" />
-		<activity
-			android:name=".VideoRecordActivity" android:label="@string/title_activity_video_record" android:theme="@style/AppTheme.NoActionBar" />
-		<activity
 			android:name=".DrawImageActivity" android:label="@string/title_activity_draw_image2" android:theme="@style/AppTheme.NoActionBar" />
 		<activity
 			android:name=".AudioRecordPlayActivity" android:label="@string/title_activity_audio_record_play" android:theme="@style/AppTheme.NoActionBar" />

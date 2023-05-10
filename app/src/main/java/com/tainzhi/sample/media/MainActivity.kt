@@ -11,7 +11,15 @@ import com.chad.library.adapter.base.BaseQuickAdapter
 import com.chad.library.adapter.base.viewholder.BaseViewHolder
 import com.tainzhi.sample.media.camera.CameraActivity
 import com.tainzhi.sample.media.native_codec.NativeCodecActivity
-import com.tainzhi.sample.media.opengl2.*
+import com.tainzhi.sample.media.opengl2.BallActivity
+import com.tainzhi.sample.media.opengl2.ConeActivity
+import com.tainzhi.sample.media.opengl2.CylinderActivity
+import com.tainzhi.sample.media.opengl2.ImageGLRendererActivity
+import com.tainzhi.sample.media.opengl2.OvalActivity
+import com.tainzhi.sample.media.opengl2.PaintPointActivity
+import com.tainzhi.sample.media.opengl2.RotateTriangleActivity
+import com.tainzhi.sample.media.opengl2.SquareActivity
+import com.tainzhi.sample.media.opengl2.TriangleActivity
 import com.tainzhi.sample.media.opengl2.camera.CameraPreviewActivity
 import com.tainzhi.sample.media.opengl2.camera.TakePictureActivity
 import com.tainzhi.sample.media.player.PlayActivity
@@ -29,7 +37,6 @@ class MainActivity : AppCompatActivity() {
             ActivityItem("录制音频, 播放音频", "AudioRecord采集音频PCM, 编码成WAV保存, 并用AudioTrack播放", AudioRecordPlayActivity::class.java),
             ActivityItem("硬解码视频播放器", "硬解码MediaCodec解码音频,视频并同步音视频", PlayActivity::class.java),
             ActivityItem("Camera2拍照录制音频视频", "Camera2拍照, 系统MediaRecorder录制音视频", CameraActivity::class.java),
-            ActivityItem("Camera2拍照, 使用自定义MediaRecorder录制音视频", "MediaCodec编码音频aac, 视频h264, 封装成MP4文件", VideoRecordActivity::class.java),
             ActivityItem("OpenGLES draw triangle", "绘制基本三角形", TriangleActivity::class.java),
             ActivityItem("OpenGLES draw Square", "绘制立方体， 并缩放，位移，旋转等", SquareActivity::class.java),
             ActivityItem("OpenGLES draw oval", "绘制基本圆形", OvalActivity::class.java),
