@@ -49,11 +49,12 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
     private lateinit var rootView: View
     private lateinit var _binding: ActivityCameraBinding
 
-    private val permissions = arrayOf(
+    private val permissions_exclude_storage = arrayOf(
         Manifest.permission.RECORD_AUDIO,
         Manifest.permission.CAMERA,
-        Manifest.permission.WRITE_EXTERNAL_STORAGE
     )
+    private val permission_storage = Manifest.permission.WRITE_EXTERNAL_STORAGE
+
     private val unGrantedPermissionList: MutableList<String> = ArrayList()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -99,18 +100,23 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
     private fun checkPermissions() {
         // Marshmallow开始运行时申请权限
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            for (permission in permissions) {
-                if (ContextCompat.checkSelfPermission(
-                        this,
-                        permission
-                    ) != PackageManager.PERMISSION_GRANTED
-                ) {
+            for (permission in permissions_exclude_storage) {
+                if (ContextCompat.checkSelfPermission(this, permission)
+                    != PackageManager.PERMISSION_GRANTED) {
                     unGrantedPermissionList.add(permission)
+                }
+            }
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R){
+                if (ContextCompat.checkSelfPermission(this, permission_storage)
+                    != PackageManager.PERMISSION_GRANTED
+                ) {
+                    unGrantedPermissionList.add(permission_storage)
                 }
             }
         }
         if (!unGrantedPermissionList.isEmpty()) {
             val tmpPermissions = unGrantedPermissionList.toTypedArray()
+            Log.d(TAG, "checkPermissions: size=" + tmpPermissions.size)
             ActivityCompat.requestPermissions(this, tmpPermissions, MY_PERMISSIONS_REQUEST)
         }
     }
@@ -124,11 +130,15 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
         if (requestCode == MY_PERMISSIONS_REQUEST) {
             for (i in grantResults.indices) {
                 if (grantResults[i] != PackageManager.PERMISSION_GRANTED) {
-                    Log.e(TAG, permissions[i] + " 权限被用户禁止")
+                    Log.e(TAG, permissions[i] + " block")
+                } else {
+                    Log.d(TAG, permissions[i] + " grand")
                 }
             }
+        } else {
+            // TODO: 2019-11-22 运行时权限的申请
+            Log.i(TAG, "onRequestPermissionsResult: ")
         }
-        // TODO: 2019-11-22 运行时权限的申请
     }
 
     private fun setFullScreen() {
@@ -359,6 +369,7 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
                 //                                          int[] grantResults)
                 // to handle the case where the user grants the permission. See the documentation
                 // for ActivityCompat#requestPermissions for more details.
+                Log.e(TAG, "openCamera: not grand permission", )
                 return
             }
             manager.openCamera(cameraId, stateCallback, cameraHandler)
