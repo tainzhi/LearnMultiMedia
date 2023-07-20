@@ -23,8 +23,10 @@ import android.widget.ImageView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.updatePadding
 import com.tainzhi.sample.media.R
 import com.tainzhi.sample.media.databinding.ActivityCameraBinding
 import com.tainzhi.sample.media.util.toast
@@ -64,6 +66,7 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
         rootView = _binding.root
 
         setFullScreen()
+
         findViewById<View>(R.id.picture).setOnClickListener(this)
         findViewById<View>(R.id.iv_preview).setOnClickListener(this)
         findViewById<View>(R.id.iv_record).setOnClickListener(this)
@@ -142,19 +145,31 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
     }
 
     private fun setFullScreen() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+        // todo:
+        // reference https://developer.android.com/develop/ui/views/layout/edge-to-edge
+        // to  solve immersive mode mode but transparent navigation bar
+        if (false && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            WindowCompat.setDecorFitsSystemWindows(window, false)
             val controller = WindowCompat.getInsetsController(window, rootView)
-            controller.hide(WindowInsetsCompat.Type.systemBars())
-        } else {
-            rootView.postDelayed ({
-                rootView.systemUiVisibility = FLAGS_FULLSCREEN}, 500L)
-            requestWindowFeature(Window.FEATURE_NO_TITLE)
-            window.setFlags(
-                WindowManager.LayoutParams.FLAG_FULLSCREEN,
-                WindowManager.LayoutParams.FLAG_FULLSCREEN
-            )
+            controller?.isAppearanceLightNavigationBars = true
+            controller.hide(WindowInsetsCompat.Type.statusBars())
 
+            ViewCompat.setOnApplyWindowInsetsListener(window.decorView) { view, windowInsets ->
+                val insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemGestures())
+                // Apply the insets as padding to the view. Here we're setting all of the
+                // dimensions, but apply as appropriate to your layout. You could also
+                // update the views margin if more appropriate.
+                view.updatePadding(insets.left, insets.top, insets.right, insets.bottom)
+
+                // Return CONSUMED if we don't want the window insets to keep being passed
+                // down to descendant views.
+                WindowInsetsCompat.CONSUMED
+            }
+        } else {
+            window.addFlags(WindowManager.LayoutParams.TYPE_STATUS_BAR)
+            window.addFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION)
         }
+
     }
 
     private lateinit var textureView: AutoFitTextureView
