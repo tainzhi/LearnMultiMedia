@@ -1,14 +1,13 @@
 package com.tainzhi.sample.media.camera
 
 import android.Manifest
-import android.annotation.TargetApi
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.graphics.*
-import android.graphics.SurfaceTexture
 import android.hardware.camera2.*
+import android.media.Image
 import android.media.ImageReader
 import android.media.MediaRecorder
 import android.media.ThumbnailUtils
@@ -36,6 +35,7 @@ import java.io.FileNotFoundException
 import java.io.IOException
 import java.io.InputStream
 import java.util.*
+import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
 
@@ -105,11 +105,12 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             for (permission in permissions_exclude_storage) {
                 if (ContextCompat.checkSelfPermission(this, permission)
-                    != PackageManager.PERMISSION_GRANTED) {
+                    != PackageManager.PERMISSION_GRANTED
+                ) {
                     unGrantedPermissionList.add(permission)
                 }
             }
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R){
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
                 if (ContextCompat.checkSelfPermission(this, permission_storage)
                     != PackageManager.PERMISSION_GRANTED
                 ) {
@@ -166,8 +167,12 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
                 WindowInsetsCompat.CONSUMED
             }
         } else {
-            window.addFlags(WindowManager.LayoutParams.TYPE_STATUS_BAR)
+            // it doesn't work when set transparent for statusbar/navigationbar in styles.xml
+            // so hardcode here
             window.addFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION)
+            window.addFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS)
+            window.addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
+            window.addFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS)
         }
 
     }
@@ -199,7 +204,15 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
     private var cameraHandler = Handler(cameraThread.looper)
 
     private var imageReaderThread = HandlerThread("ImageReaderThread").apply { start() }
-    private val imageReaderHandler = Handler(imageReaderThread.looper)
+    private val imageReaderHandler = Handler(imageReaderThread.looper) { msg ->
+        when (msg.what) {
+            CAMERA_UPDATE_PREVIEW_PICTURE -> {
+                val filePath: String = msg.obj as String
+                updatePreviewPicture(filePath)
+            }
+        }
+        false
+    }
 
     // 用于子线程给主线程通信
     private var mainHandler: Handler? = null
@@ -246,26 +259,12 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
     private var camera = BACK_CAMERA
 
     // handles still image capture
-    private var imageReader: ImageReader? = null
+    private lateinit var imageReader: ImageReader
 
     private var isRecordingVideo = false
     private var mediaRecorder: MediaRecorder? = null
     private var videoPath: String? = null
     private lateinit var videoSize: Size
-
-
-    /**
-     * This a callback object for the [ImageReader]. "onImageAvailable" will be called when a
-     * still image is ready to be saved.
-     */
-    private val onImageAvailableListener = ImageReader.OnImageAvailableListener {
-        ImageSaver(this, it.acquireNextImage(), Handler(Looper.getMainLooper()))
-//        backgroundHandler?.post(ImageSaver(requireContext(), it.acquireNextImage(), mainHandler))
-
-        // val data = YUVTool.getBytesFromImageReader(it)
-        // val myMediaRecorder =  MyMediaRecorder()
-        // myMediaRecorder.addVideoData(data)
-    }
 
     /**
      * [CaptureRequest.Builder] for the camera preview
@@ -363,7 +362,6 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
     }
 
     private fun openCamera(width: Int, height: Int) {
-
         setUpCameraOutputs(width, height)
         configureTransform(width, height)
         val manager = getSystemService(Context.CAMERA_SERVICE) as CameraManager
@@ -384,7 +382,7 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
                 //                                          int[] grantResults)
                 // to handle the case where the user grants the permission. See the documentation
                 // for ActivityCompat#requestPermissions for more details.
-                Log.e(TAG, "openCamera: not grand permission", )
+                Log.e(TAG, "openCamera: not grand permission")
                 return
             }
             manager.openCamera(cameraId, stateCallback, cameraHandler)
@@ -403,7 +401,6 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
             cameraDevice?.close()
             cameraDevice = null
             imageReader?.close()
-            imageReader = null
         } catch (e: InterruptedException) {
             throw RuntimeException("Interrupted while trying to lock camera closing.", e)
         } finally {
@@ -463,10 +460,8 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
                 )
                 imageReader = ImageReader.newInstance(
                     largest.width, largest.height,
-                    ImageFormat.JPEG, 2
-                ).apply {
-                    setOnImageAvailableListener(onImageAvailableListener, imageReaderHandler)
-                }
+                    ImageFormat.JPEG, IMAGE_BUFFER_SIZE
+                )
 
                 val displayRotation = windowManager?.defaultDisplay?.rotation
                 sensorOrientation = characteristics.get(CameraCharacteristics.SENSOR_ORIENTATION)
@@ -480,9 +475,8 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
                 val rotatedPreviewHeight = if (swappedDimensions) width else height
                 var maxPreviewWidth = if (swappedDimensions) displaySize.y else displaySize.x
                 var maxPreviewHeight = if (swappedDimensions) displaySize.x else displaySize.y
-
-                if (maxPreviewWidth > MAX_PREVIEW_WIDTH) maxPreviewWidth = MAX_PREVIEW_WIDTH
-                if (maxPreviewHeight > MAX_PREVIEW_HEIGHT) maxPreviewHeight = MAX_PREVIEW_HEIGHT
+//                if (maxPreviewWidth > MAX_PREVIEW_WIDTH) maxPreviewWidth = MAX_PREVIEW_WIDTH
+//                if (maxPreviewHeight > MAX_PREVIEW_HEIGHT) maxPreviewHeight = MAX_PREVIEW_HEIGHT
 
                 // Danger, W.R.! Attempting to use too large a preview size could exceed the camera
                 // bus' bandwidth limitation, resulting in gorgeous previews but the storage of
@@ -680,13 +674,25 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
      */
     private fun captureStillPicture() {
         try {
+            // flush any images left in the image queue
+            while (imageReader.acquireLatestImage() != null) {
+            }
+            val imageQueue = ArrayBlockingQueue<Image>(IMAGE_BUFFER_SIZE)
+            imageReader.setOnImageAvailableListener({ reader ->
+                val image = reader.acquireNextImage()
+                imageQueue.add(image)
+                Log.d(TAG, "captureStillPicture: image available in queue: ${image.timestamp}")
+                // val data = YUVTool.getBytesFromImageReader(it)
+                // val myMediaRecorder =  MyMediaRecorder()
+                // myMediaRecorder.addVideoData(data)
+            }, imageReaderHandler)
             if (cameraDevice == null) return
             val rotation = windowManager.defaultDisplay.rotation
 
             val captureBuilder = cameraDevice!!.createCaptureRequest(
                 CameraDevice.TEMPLATE_STILL_CAPTURE
             ).apply {
-                addTarget(imageReader!!.surface)
+                addTarget(imageReader.surface)
                 // set(CaptureRequest.JPEG_ORIENTATION, (OREIENTATIONS.get(rotation) + sensorOrientation + 270) % 360)
                 set(CaptureRequest.JPEG_ORIENTATION, OREIENTATIONS.get(rotation))
                 set(
@@ -696,6 +702,15 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
             }.also { setAutoFlash(it) }
 
             val captureCallback = object : CameraCaptureSession.CaptureCallback() {
+                override fun onCaptureStarted(
+                    session: CameraCaptureSession,
+                    request: CaptureRequest,
+                    timestamp: Long,
+                    frameNumber: Long
+                ) {
+                    super.onCaptureStarted(session, request, timestamp, frameNumber)
+                }
+
                 override fun onCaptureCompleted(
                     session: CameraCaptureSession,
                     request: CaptureRequest,
@@ -703,6 +718,9 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
                 ) {
                     super.onCaptureCompleted(session, request, result)
                     unlockFocus()
+
+                    imageReaderHandler?.post(ImageSaver(this@CameraActivity, imageQueue, mainHandler))
+                    imageReader.setOnImageAvailableListener(null, null)
                 }
             }
 
@@ -812,7 +830,11 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
         }
         val thumbnail = ThumbnailUtils.extractThumbnail(bitmap, 100, 100)
         // val thumbnail = getThumbnail(requireContext(), capturedImageUri)
-        picturePreview.setImageBitmap(thumbnail)
+        picturePreview.apply {
+            post {
+                setImageBitmap(thumbnail)
+            }
+        }
     }
 
     private fun closePreviewSession() {
@@ -952,17 +974,12 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
 
 
     companion object {
-        @TargetApi(Build.VERSION_CODES.Q)
-        const val FLAGS_FULLSCREEN =
-            View.SYSTEM_UI_FLAG_LOW_PROFILE or
-                    View.SYSTEM_UI_FLAG_FULLSCREEN or
-                    View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
-                    View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-
         private const val TAG = "CameraActivity"
         private val OREIENTATIONS = SparseIntArray()
 
         private const val MY_PERMISSIONS_REQUEST = 1001
+
+        private const val IMAGE_BUFFER_SIZE = 3
 
         private const val RecordMode = 0
         private const val CaptureMode = 1
@@ -1062,7 +1079,7 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
             val h = aspectRatio.height
             for (option in choices) {
                 if (option.width <= maxWidth && option.height <= maxHeight &&
-                    option.height == option.width * h / w
+                    option.height == option.width * textureViewHeight / textureViewWidth
                 ) {
                     if (option.width >= textureViewWidth && option.height >= textureViewHeight) {
                         bigEnough.add(option)
