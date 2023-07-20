@@ -23,13 +23,10 @@ import com.tainzhi.sample.media.opengl2.TriangleActivity
 import com.tainzhi.sample.media.opengl2.camera.CameraPreviewActivity
 import com.tainzhi.sample.media.opengl2.camera.TakePictureActivity
 import com.tainzhi.sample.media.player.PlayActivity
-import com.tainzhi.sample.media.tencent.matrix.battery.TestBatteryActivity
 
 class MainActivity : AppCompatActivity() {
     
     private val datas = arrayListOf(
-            ActivityItem("Matrix Battery", "tencent Matrix Battery Canary",
-                        TestBatteryActivity::class.java),
             ActivityItem("三种方式绘制图片",
                          "ImageView, SurfaceView, 自定义图片",
                          DrawImageActivity::class.java),
