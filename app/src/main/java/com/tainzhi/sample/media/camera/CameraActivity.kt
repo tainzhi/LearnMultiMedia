@@ -206,6 +206,7 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
         when (msg.what) {
             CAMERA_UPDATE_PREVIEW_PICTURE -> {
                 val pictureUri: Uri = msg.obj as Uri
+                capturedImageUri = pictureUri
                 updatePreviewPicture(pictureUri)
             }
         }
@@ -782,23 +783,6 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
     }
 
     private fun viewPicture() {
-        // try {
-        //     val intent = Intent().apply {
-        //         action = Intent.ACTION_VIEW
-        //         setDataAndType(fileUri, "image/*")
-        //         flags = Intent.FLAG_ACTIVITY_NEW_TASK
-        //     }
-        //     startActivity(intent)
-        //
-        //     // 打开系统相册或者系统文件夹, 前提是文件已经保存到系统MediaStore中
-        //     // startActivityForResult(Intent(Intent.ACTION_PICK, fileUri).apply {
-        //     //     type = "image/*"
-        //     // },
-        //     //         1000
-        //     // )
-        // } catch (e: Exception) {
-        //     Log.e("Camemra", e.message)
-        // }
         if (this::capturedImageUri.isInitialized) {
             val intent = Intent().apply {
                 action = Intent.ACTION_VIEW
@@ -812,17 +796,12 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
     }
 
     private fun updatePreviewPicture(capturedImageUri: Uri) {
-        val bitmap = if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
-            MediaStore.Images.Media.getBitmap(contentResolver, capturedImageUri)
+        val thumbnail = if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            val temp = MediaStore.Images.Media.getBitmap(contentResolver, capturedImageUri)
+            ThumbnailUtils.extractThumbnail(temp, 100, 100)
         } else {
-            ImageDecoder.decodeBitmap(
-                ImageDecoder.createSource(
-                    contentResolver,
-                    capturedImageUri
-                )
-            )
+            contentResolver.loadThumbnail(capturedImageUri, Size(100, 100), null)
         }
-        val thumbnail = ThumbnailUtils.extractThumbnail(bitmap, 100, 100)
         picturePreview.apply {
             post {
                 setImageBitmap(thumbnail)
