@@ -28,6 +28,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
 import com.tainzhi.sample.media.R
 import com.tainzhi.sample.media.databinding.ActivityCameraBinding
+import com.tainzhi.sample.media.util.Kpi
 import com.tainzhi.sample.media.util.toast
 import com.tainzhi.sample.media.widget.AutoFitTextureView
 import com.tainzhi.sample.media.widget.CircleImageView
@@ -207,6 +208,7 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
             CAMERA_UPDATE_PREVIEW_PICTURE -> {
                 val pictureUri: Uri = msg.obj as Uri
                 capturedImageUri = pictureUri
+                Kpi.start(Kpi.TYPE.IMAGE_TO_THUMBNAIL)
                 updatePreviewPicture(pictureUri)
             }
         }
@@ -669,6 +671,7 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
      * [.captureCallback] from both [.lockFocus].
      */
     private fun captureStillPicture() {
+        Kpi.start(Kpi.TYPE.SHOT_TO_SHOT)
         try {
             // flush any images left in the image queue
             while (imageReader.acquireLatestImage() != null) {
@@ -714,6 +717,8 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
                 ) {
                     super.onCaptureCompleted(session, request, result)
                     unlockFocus()
+
+                    Kpi.end(Kpi.TYPE.SHOT_TO_SHOT)
 
                     imageReaderHandler?.post(ImageSaver(this@CameraActivity, imageQueue, imageReaderHandler))
                     imageReader.setOnImageAvailableListener(null, null)
@@ -804,6 +809,7 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
         }
         picturePreview.apply {
             post {
+                Kpi.end(Kpi.TYPE.IMAGE_TO_THUMBNAIL)
                 setImageBitmap(thumbnail)
             }
         }

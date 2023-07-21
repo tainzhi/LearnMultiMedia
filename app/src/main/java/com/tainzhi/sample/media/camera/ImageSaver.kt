@@ -8,6 +8,7 @@ import android.os.Environment
 import android.os.Handler
 import android.os.Message
 import android.provider.MediaStore
+import com.tainzhi.sample.media.util.Kpi
 import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -26,6 +27,7 @@ class ImageSaver(
     private val handler: Handler
 ) : Runnable {
     override fun run() {
+        Kpi.start(Kpi.TYPE.SHOT_TO_SAVE_IMAGE)
         val relativeLocation = Environment.DIRECTORY_PICTURES
         val image = imageQueue.take()
         val fileName = "IMG_${SimpleDateFormat("yyyyMMddHHmmssSSS", Locale.US).format(image.timestamp)}.jpg"
@@ -69,6 +71,7 @@ class ImageSaver(
                 imageQueue.take().close()
             }
         }
+        Kpi.end(Kpi.TYPE.SHOT_TO_SAVE_IMAGE)
     }
 
     companion object {
