@@ -31,9 +31,7 @@ import com.tainzhi.sample.media.databinding.ActivityCameraBinding
 import com.tainzhi.sample.media.util.toast
 import com.tainzhi.sample.media.widget.AutoFitTextureView
 import com.tainzhi.sample.media.widget.CircleImageView
-import java.io.FileNotFoundException
 import java.io.IOException
-import java.io.InputStream
 import java.util.*
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.Semaphore
@@ -207,15 +205,12 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
     private val imageReaderHandler = Handler(imageReaderThread.looper) { msg ->
         when (msg.what) {
             CAMERA_UPDATE_PREVIEW_PICTURE -> {
-                val filePath: String = msg.obj as String
-                updatePreviewPicture(filePath)
+                val pictureUri: Uri = msg.obj as Uri
+                updatePreviewPicture(pictureUri)
             }
         }
         false
     }
-
-    // 用于子线程给主线程通信
-    private var mainHandler: Handler? = null
 
     // a [Semaphore] to prevent the app from exiting before closing the camera
     private val cameraOpenCloseLock = Semaphore(1)
@@ -719,7 +714,7 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
                     super.onCaptureCompleted(session, request, result)
                     unlockFocus()
 
-                    imageReaderHandler?.post(ImageSaver(this@CameraActivity, imageQueue, mainHandler))
+                    imageReaderHandler?.post(ImageSaver(this@CameraActivity, imageQueue, imageReaderHandler))
                     imageReader.setOnImageAvailableListener(null, null)
                 }
             }
@@ -816,8 +811,7 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
         }
     }
 
-    private fun updatePreviewPicture(picPath: String) {
-        capturedImageUri = Uri.parse(picPath)
+    private fun updatePreviewPicture(capturedImageUri: Uri) {
         val bitmap = if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
             MediaStore.Images.Media.getBitmap(contentResolver, capturedImageUri)
         } else {
@@ -829,7 +823,6 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
             )
         }
         val thumbnail = ThumbnailUtils.extractThumbnail(bitmap, 100, 100)
-        // val thumbnail = getThumbnail(requireContext(), capturedImageUri)
         picturePreview.apply {
             post {
                 setImageBitmap(thumbnail)
@@ -1099,33 +1092,6 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
                 Log.e(TAG, "Couldn't find any suitable preview size")
                 return choices[0]
             }
-        }
-
-        @Throws(FileNotFoundException::class, IOException::class)
-        fun getThumbnail(context: Context, uri: Uri): Bitmap? {
-            val THUMBNAIL_SIZE = 256
-            var input: InputStream? = context.contentResolver.openInputStream(uri)
-            val onlyBoundsOptions: BitmapFactory.Options = BitmapFactory.Options()
-            onlyBoundsOptions.inJustDecodeBounds = true
-            onlyBoundsOptions.inDither = true //optional
-            onlyBoundsOptions.inPreferredConfig = Bitmap.Config.ARGB_8888 //optional
-            BitmapFactory.decodeStream(input, null, onlyBoundsOptions)
-            input?.close()
-            if (onlyBoundsOptions.outWidth === -1 || onlyBoundsOptions.outHeight === -1) {
-                return null
-            }
-            val originalSize =
-                if (onlyBoundsOptions.outHeight > onlyBoundsOptions.outWidth) onlyBoundsOptions.outHeight else onlyBoundsOptions.outWidth
-            val ratio: Double =
-                if (originalSize > THUMBNAIL_SIZE) originalSize.toDouble() / THUMBNAIL_SIZE else 1.0
-            val bitmapOptions: BitmapFactory.Options = BitmapFactory.Options()
-            bitmapOptions.inSampleSize = getPowerOfTwoForSampleRatio(ratio)
-            bitmapOptions.inDither = true //optional
-            bitmapOptions.inPreferredConfig = Bitmap.Config.ARGB_8888 //
-            input = context.contentResolver.openInputStream(uri)
-            val bitmap = BitmapFactory.decodeStream(input, null, bitmapOptions)
-            input?.close()
-            return bitmap
         }
 
         private fun getPowerOfTwoForSampleRatio(ratio: Double): Int {

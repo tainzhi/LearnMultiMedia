@@ -8,7 +8,6 @@ import android.os.Environment
 import android.os.Handler
 import android.os.Message
 import android.provider.MediaStore
-import java.io.File
 import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -24,13 +23,12 @@ import java.util.concurrent.ArrayBlockingQueue
 class ImageSaver(
     private val context: Context,
     private val imageQueue: ArrayBlockingQueue<Image>,
-    private val handler: Handler?
+    private val handler: Handler
 ) : Runnable {
     override fun run() {
         val relativeLocation = Environment.DIRECTORY_PICTURES
         val image = imageQueue.take()
         val fileName = "IMG_${SimpleDateFormat("yyyyMMddHHmmssSSS", Locale.US).format(image.timestamp)}.jpg"
-        val filePath = relativeLocation + File.separator + fileName
         val contentValues = ContentValues().apply {
             put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
             put(MediaStore.MediaColumns.MIME_TYPE, "image/jpg")
@@ -54,10 +52,10 @@ class ImageSaver(
 
                     val message = Message().apply {
                         what = CAMERA_UPDATE_PREVIEW_PICTURE
-                        obj = filePath
+                        obj = uri
                     }
-                    handler?.removeCallbacksAndMessages(null)
-                    handler?.sendMessage(message)
+                    handler.removeCallbacksAndMessages(null)
+                    handler.sendMessage(message)
                 } else {
                     throw IOException("Failed to create new MediaStore record")
                 }
