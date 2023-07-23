@@ -12,7 +12,6 @@ import com.tainzhi.sample.media.util.Kpi
 import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Locale
-import java.util.concurrent.ArrayBlockingQueue
 
 /**
  * @author:       tainzhi
@@ -23,13 +22,12 @@ import java.util.concurrent.ArrayBlockingQueue
 
 class ImageSaver(
     private val context: Context,
-    private val imageQueue: ArrayBlockingQueue<Image>,
+    private val image: Image,
     private val handler: Handler
 ) : Runnable {
     override fun run() {
         Kpi.start(Kpi.TYPE.SHOT_TO_SAVE_IMAGE)
         val relativeLocation = Environment.DIRECTORY_PICTURES
-        val image = imageQueue.take()
         val fileName = "IMG_${SimpleDateFormat("yyyyMMddHHmmssSSS", Locale.US).format(image.timestamp)}.jpg"
         val contentValues = ContentValues().apply {
             put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
@@ -67,9 +65,7 @@ class ImageSaver(
             throw IOException(e)
         } finally {
             // 必须关掉, 否则不能连续拍照
-            while (imageQueue.size > 0) {
-                imageQueue.take().close()
-            }
+            image.close()
         }
         Kpi.end(Kpi.TYPE.SHOT_TO_SAVE_IMAGE)
     }

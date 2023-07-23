@@ -7,8 +7,13 @@ import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.graphics.*
 import android.hardware.camera2.*
+import android.hardware.camera2.params.InputConfiguration
+import android.hardware.camera2.params.OutputConfiguration
+import android.hardware.camera2.params.SessionConfiguration
 import android.media.Image
 import android.media.ImageReader
+import android.media.ImageWriter
+import android.media.MediaActionSound
 import android.media.MediaRecorder
 import android.media.ThumbnailUtils
 import android.net.Uri
@@ -22,6 +27,7 @@ import android.widget.ImageView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.os.ExecutorCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -34,7 +40,6 @@ import com.tainzhi.sample.media.widget.AutoFitTextureView
 import com.tainzhi.sample.media.widget.CircleImageView
 import java.io.IOException
 import java.util.*
-import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
 
@@ -57,6 +62,186 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
     private val permission_storage = Manifest.permission.WRITE_EXTERNAL_STORAGE
 
     private val unGrantedPermissionList: MutableList<String> = ArrayList()
+
+    // to play click sound when take picture
+    private val mediaActionSound = MediaActionSound()
+
+    private lateinit var textureView: AutoFitTextureView
+
+    // 预览拍照的图片，用于相册打开
+    private lateinit var ivThumbnail: CircleImageView
+    private lateinit var ivTakePicture: ImageView
+    private lateinit var ivRecord: ImageView
+
+    private lateinit var capturedImageUri: Uri
+
+    private var surfaceTextureListener = object : TextureView.SurfaceTextureListener {
+        override fun onSurfaceTextureSizeChanged(p0: SurfaceTexture, width: Int, height: Int) {
+            configureTransform(width, height)
+        }
+
+        override fun onSurfaceTextureUpdated(p0: SurfaceTexture) {
+            Log.i(TAG, "onSurfaceTextureUpdated: ")
+        }
+
+        override fun onSurfaceTextureDestroyed(p0: SurfaceTexture): Boolean {
+            Log.d(TAG, "onSurfaceTextureDestroyed: ")
+            return true
+        }
+
+        override fun onSurfaceTextureAvailable(p0: SurfaceTexture, width: Int, height: Int) {
+            openCamera(width, height)
+        }
+    }
+
+    // fixme move to onResume
+    private val cameraThread = HandlerThread("CameraThread").apply { start() }
+    private val cameraHandler = Handler(cameraThread.looper)
+    private var cameraExecutor = ExecutorCompat.create(cameraHandler)
+
+    // fixme move to onResume
+    private var imageReaderThread = HandlerThread("ImageReaderThread").apply { start() }
+    private val imageReaderHandler = Handler(imageReaderThread.looper) { msg ->
+        when (msg.what) {
+            CAMERA_UPDATE_PREVIEW_PICTURE -> {
+                val pictureUri: Uri = msg.obj as Uri
+                capturedImageUri = pictureUri
+                Kpi.start(Kpi.TYPE.IMAGE_TO_THUMBNAIL)
+                updatePreviewPicture(pictureUri)
+            }
+        }
+        false
+    }
+    // fixme move to onResume
+    private var yuvImageReaderThread = HandlerThread("YuvImageReaderThread").apply { start() }
+    private val yuvHandler = Handler(yuvImageReaderThread.looper)
+
+    private var supportReprocess = false
+    private var enableZsl = true
+    private lateinit var lastTotalCaptureResult: TotalCaptureResult
+    private lateinit var zslImageWriter: ImageWriter
+
+    // a [Semaphore] to prevent the app from exiting before closing the camera
+    private val cameraOpenCloseLock = Semaphore(1)
+
+    private lateinit var cameraId: String
+    private var camera = BACK_CAMERA
+
+    // for camera preview
+    private var currentCaptureSession: CameraCaptureSession? = null
+    private var cameraDevice: CameraDevice? = null
+    private lateinit var previewSize: Size
+
+    private var flashSupported = false
+
+    // orientation of the camera sensor
+    private var sensorOrientation = 0
+
+    private var cameraState = STATE_PREVIEW
+
+    // handles still image capture
+    private lateinit var jpgImageReader: ImageReader
+    private var jpgLatestReceivedImage: Image? = null
+    private lateinit var yuvImageReader: ImageReader
+    private var yuvLatestReceivedImage: Image? = null
+
+    private var isRecordingVideo = false
+    private var mediaRecorder: MediaRecorder? = null
+    private var videoPath: String? = null
+    private lateinit var videoSize: Size
+
+    private lateinit var previewRequestBuilder: CaptureRequest.Builder
+    private lateinit var previewRequest: CaptureRequest
+    private lateinit var previewSurface: Surface
+
+    private val cameraDeviceCallback = object : CameraDevice.StateCallback() {
+        override fun onOpened(p0: CameraDevice) {
+            cameraOpenCloseLock.release()
+            this@CameraActivity.cameraDevice = p0
+            startCaptureSession()
+        }
+
+        override fun onDisconnected(p0: CameraDevice) {
+            super.onClosed(p0)
+            cameraOpenCloseLock.release()
+            p0.close()
+            this@CameraActivity.cameraDevice = null
+        }
+
+        override fun onError(p0: CameraDevice, p1: Int) {
+            onDisconnected(p0)
+            Log.i(TAG, "onError: $p0, $p1")
+            finish()
+        }
+    }
+
+    private val captureCallback = object : CameraCaptureSession.CaptureCallback() {
+
+        private fun process(result: CaptureResult) {
+            when (cameraState) {
+                STATE_PREVIEW -> {
+                    Log.d(TAG, "process: preview")
+                }
+                STATE_WAITING_LOCK -> capturePicture(result)
+                STATE_WAITING_PRECAPTURE -> {
+                    // CONTROL_AE_STATE can be null on some devices
+                    val aeState = result.get(CaptureResult.CONTROL_AE_STATE)
+                    if (aeState == null ||
+                        aeState == CaptureResult.CONTROL_AE_STATE_PRECAPTURE ||
+                        aeState == CaptureRequest.CONTROL_AE_STATE_FLASH_REQUIRED
+                    ) {
+                        cameraState = STATE_WAITING_NON_PRECAPTURE
+                    }
+                }
+
+                STATE_WAITING_NON_PRECAPTURE -> {
+                    // CONTROL_AE_STATE can be null on some devices
+                    val aeState = result.get(CaptureResult.CONTROL_AE_STATE)
+                    if (aeState == null || aeState != CaptureResult.CONTROL_AE_STATE_PRECAPTURE) {
+                        cameraState = STATE_PICTURE_TAKEN
+                        captureStillPicture()
+                    }
+                }
+            }
+        }
+
+        private fun capturePicture(result: CaptureResult) {
+            Log.i(TAG, "capturePicture: ")
+            val afState = result.get(CaptureResult.CONTROL_AF_STATE)
+            if (afState == null) {
+                captureStillPicture()
+            } else if (afState == CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED
+                || afState == CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED
+            ) {
+                // CONTROL_AE_STATE can be null on some devices
+                val aeState = result.get(CaptureResult.CONTROL_AE_STATE)
+                if (aeState == null || aeState == CaptureResult.CONTROL_AE_STATE_CONVERGED) {
+                    cameraState = STATE_PICTURE_TAKEN
+                    captureStillPicture()
+                } else {
+                    runPrecaptureSequence()
+                }
+            }
+        }
+
+        override fun onCaptureCompleted(
+            session: CameraCaptureSession,
+            request: CaptureRequest,
+            result: TotalCaptureResult
+        ) {
+            lastTotalCaptureResult = result
+            process(result)
+        }
+
+        override fun onCaptureProgressed(
+            session: CameraCaptureSession,
+            request: CaptureRequest,
+            partialResult: CaptureResult
+        ) {
+            process(partialResult)
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -67,11 +252,11 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
         setFullScreen()
 
         findViewById<View>(R.id.picture).setOnClickListener(this)
-        findViewById<View>(R.id.iv_preview).setOnClickListener(this)
+        findViewById<View>(R.id.iv_thumbnail).setOnClickListener(this)
         findViewById<View>(R.id.iv_record).setOnClickListener(this)
         findViewById<View>(R.id.iv_change_camera).setOnClickListener(this)
         textureView = findViewById(R.id.texture)
-        picturePreview = findViewById(R.id.iv_preview)
+        ivThumbnail = findViewById(R.id.iv_thumbnail)
         ivTakePicture = findViewById(R.id.picture)
         ivRecord = findViewById(R.id.iv_record)
 
@@ -99,6 +284,107 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
         checkPermissions()
     }
 
+
+    override fun onResume() {
+        Log.i(TAG, "onResume: ")
+        super.onResume()
+        startBackgroundThread()
+        if (textureView.isAvailable) {
+            openCamera(textureView.width, textureView.height)
+        } else {
+            textureView.surfaceTextureListener = surfaceTextureListener
+        }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        stopBackgroundThread()
+        closeCamera()
+        Log.i(TAG, "onPause: ")
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == MY_PERMISSIONS_REQUEST) {
+            for (i in grantResults.indices) {
+                if (grantResults[i] != PackageManager.PERMISSION_GRANTED) {
+                    Log.e(TAG, permissions[i] + " block")
+                } else {
+                    Log.d(TAG, permissions[i] + " grand")
+                }
+            }
+        } else {
+            // TODO: 2019-11-22 运行时权限的申请
+            Log.i(TAG, "onRequestPermissionsResult: ")
+        }
+    }
+
+    override fun onClick(p0: View?) {
+        when (p0?.id) {
+            R.id.picture -> lockFocus()
+            R.id.iv_record -> if (isRecordingVideo) stopRecordingVideo() else startRecordingVideo()
+            R.id.iv_thumbnail -> viewPicture()
+            R.id.iv_change_camera -> {
+                closeCamera()
+                if (textureView.isAvailable) {
+                    camera = if (camera == FRONT_CAMERA) BACK_CAMERA else FRONT_CAMERA
+                    openCamera(textureView.width, textureView.height)
+                }
+            }
+        }
+    }
+
+    private fun openCamera(width: Int, height: Int) {
+        setUpCameraOutputs(width, height)
+        configureTransform(width, height)
+        val manager = getSystemService(Context.CAMERA_SERVICE) as CameraManager
+        try {
+            // Wait for camera to open - 2.5 seconds is sufficient
+            if (!cameraOpenCloseLock.tryAcquire(2500, TimeUnit.MILLISECONDS)) {
+                throw RuntimeException("Time out waiting to lock camera opening.")
+            }
+            if (ActivityCompat.checkSelfPermission(
+                    this,
+                    Manifest.permission.CAMERA
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                // TODO: Consider calling
+                //    ActivityCompat#requestPermissions
+                // here to request the missing permissions, and then overriding
+                //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+                //                                          int[] grantResults)
+                // to handle the case where the user grants the permission. See the documentation
+                // for ActivityCompat#requestPermissions for more details.
+                Log.e(TAG, "openCamera: not grand permission")
+                return
+            }
+            manager.openCamera(cameraId, cameraDeviceCallback, cameraHandler)
+        } catch (e: CameraAccessException) {
+            Log.e(TAG, e.toString())
+        } catch (e: InterruptedException) {
+            throw RuntimeException("Interrupted while trying to lock camera opening.", e)
+        }
+    }
+
+    private fun closeCamera() {
+        try {
+            cameraOpenCloseLock.acquire()
+            currentCaptureSession?.close()
+            currentCaptureSession = null
+            cameraDevice?.close()
+            cameraDevice = null
+            jpgImageReader.close()
+        } catch (e: InterruptedException) {
+            throw RuntimeException("Interrupted while trying to lock camera closing.", e)
+        } finally {
+            cameraOpenCloseLock.release()
+        }
+    }
+
     private fun checkPermissions() {
         // Marshmallow开始运行时申请权限
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -124,25 +410,6 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
         }
     }
 
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<String>,
-        grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == MY_PERMISSIONS_REQUEST) {
-            for (i in grantResults.indices) {
-                if (grantResults[i] != PackageManager.PERMISSION_GRANTED) {
-                    Log.e(TAG, permissions[i] + " block")
-                } else {
-                    Log.d(TAG, permissions[i] + " grand")
-                }
-            }
-        } else {
-            // TODO: 2019-11-22 运行时权限的申请
-            Log.i(TAG, "onRequestPermissionsResult: ")
-        }
-    }
 
     private fun setFullScreen() {
         // todo:
@@ -176,236 +443,6 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
 
     }
 
-    private lateinit var textureView: AutoFitTextureView
-
-    // 预览拍照的图片，用于相册打开
-    private lateinit var picturePreview: CircleImageView
-    private lateinit var ivTakePicture: ImageView
-    private lateinit var ivRecord: ImageView
-
-    private lateinit var capturedImageUri: Uri
-
-    private var surfaceTextureListener = object : TextureView.SurfaceTextureListener {
-        override fun onSurfaceTextureSizeChanged(p0: SurfaceTexture, width: Int, height: Int) {
-            configureTransform(width, height)
-        }
-
-        override fun onSurfaceTextureUpdated(p0: SurfaceTexture) = Unit
-
-        override fun onSurfaceTextureDestroyed(p0: SurfaceTexture) = true
-
-        override fun onSurfaceTextureAvailable(p0: SurfaceTexture, width: Int, height: Int) {
-            openCamera(width, height)
-        }
-    }
-
-    private val cameraThread = HandlerThread("CameraThread").apply { start() }
-    private var cameraHandler = Handler(cameraThread.looper)
-
-    private var imageReaderThread = HandlerThread("ImageReaderThread").apply { start() }
-    private val imageReaderHandler = Handler(imageReaderThread.looper) { msg ->
-        when (msg.what) {
-            CAMERA_UPDATE_PREVIEW_PICTURE -> {
-                val pictureUri: Uri = msg.obj as Uri
-                capturedImageUri = pictureUri
-                Kpi.start(Kpi.TYPE.IMAGE_TO_THUMBNAIL)
-                updatePreviewPicture(pictureUri)
-            }
-        }
-        false
-    }
-
-    // a [Semaphore] to prevent the app from exiting before closing the camera
-    private val cameraOpenCloseLock = Semaphore(1)
-
-    private lateinit var cameraId: String
-
-    // for camera preview
-    private var captureSession: CameraCaptureSession? = null
-    private var cameraDevice: CameraDevice? = null
-    private lateinit var previewSize: Size
-
-    // [CameraDevice.StateCallback] is called when [CameraDevice] changes its state.
-    private val stateCallback = object : CameraDevice.StateCallback() {
-        override fun onOpened(p0: CameraDevice) {
-            cameraOpenCloseLock.release()
-            this@CameraActivity.cameraDevice = p0
-            startPreview()
-        }
-
-        override fun onDisconnected(p0: CameraDevice) {
-            super.onClosed(p0)
-            cameraOpenCloseLock.release()
-            p0.close()
-            this@CameraActivity.cameraDevice = null
-        }
-
-        override fun onError(p0: CameraDevice, p1: Int) {
-            onDisconnected(p0)
-            Log.i(TAG, "onError: $p0, $p1")
-            finish()
-        }
-    }
-
-    private var flashSupported = false
-
-    // orientation of the camera sensor
-    private var sensorOrientation = 0
-
-    private var cameraState = STATE_PREVIEW
-
-    private var camera = BACK_CAMERA
-
-    // handles still image capture
-    private lateinit var imageReader: ImageReader
-
-    private var isRecordingVideo = false
-    private var mediaRecorder: MediaRecorder? = null
-    private var videoPath: String? = null
-    private lateinit var videoSize: Size
-
-    /**
-     * [CaptureRequest.Builder] for the camera preview
-     */
-    private lateinit var previewRequestBuilder: CaptureRequest.Builder
-
-    /**
-     * [CaptureRequest] generated by [.previewRequestBuilder]
-     */
-    private lateinit var previewRequest: CaptureRequest
-
-
-    /**
-     * A [CameraCaptureSession.CaptureCallback] that handles events related to JPEG capture.
-     */
-    private val captureCallback = object : CameraCaptureSession.CaptureCallback() {
-
-        private fun process(result: CaptureResult) {
-            when (cameraState) {
-                STATE_PREVIEW -> Unit // Do nothing when the camera preview is working normally.
-                STATE_WAITING_LOCK -> capturePicture(result)
-                STATE_WAITING_PRECAPTURE -> {
-                    // CONTROL_AE_STATE can be null on some devices
-                    val aeState = result.get(CaptureResult.CONTROL_AE_STATE)
-                    if (aeState == null ||
-                        aeState == CaptureResult.CONTROL_AE_STATE_PRECAPTURE ||
-                        aeState == CaptureRequest.CONTROL_AE_STATE_FLASH_REQUIRED
-                    ) {
-                        cameraState = STATE_WAITING_NON_PRECAPTURE
-                    }
-                }
-
-                STATE_WAITING_NON_PRECAPTURE -> {
-                    // CONTROL_AE_STATE can be null on some devices
-                    val aeState = result.get(CaptureResult.CONTROL_AE_STATE)
-                    if (aeState == null || aeState != CaptureResult.CONTROL_AE_STATE_PRECAPTURE) {
-                        cameraState = STATE_PICTURE_TAKEN
-                        captureStillPicture()
-                    }
-                }
-            }
-        }
-
-        private fun capturePicture(result: CaptureResult) {
-            val afState = result.get(CaptureResult.CONTROL_AF_STATE)
-            if (afState == null) {
-                captureStillPicture()
-            } else if (afState == CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED
-                || afState == CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED
-            ) {
-                // CONTROL_AE_STATE can be null on some devices
-                val aeState = result.get(CaptureResult.CONTROL_AE_STATE)
-                if (aeState == null || aeState == CaptureResult.CONTROL_AE_STATE_CONVERGED) {
-                    cameraState = STATE_PICTURE_TAKEN
-                    captureStillPicture()
-                } else {
-                    runPrecaptureSequence()
-                }
-            }
-        }
-
-        override fun onCaptureCompleted(
-            session: CameraCaptureSession,
-            request: CaptureRequest,
-            result: TotalCaptureResult
-        ) {
-            process(result)
-        }
-
-        override fun onCaptureProgressed(
-            session: CameraCaptureSession,
-            request: CaptureRequest,
-            partialResult: CaptureResult
-        ) {
-            process(partialResult)
-        }
-    }
-
-    override fun onResume() {
-        Log.i(TAG, "onResume: ")
-        super.onResume()
-        startBackgroundThread()
-        if (textureView.isAvailable) {
-            openCamera(textureView.width, textureView.height)
-        } else {
-            textureView.surfaceTextureListener = surfaceTextureListener
-        }
-    }
-
-    override fun onPause() {
-        super.onPause()
-        stopBackgroundThread()
-        closeCamera()
-        Log.i(TAG, "onPause: ")
-    }
-
-    private fun openCamera(width: Int, height: Int) {
-        setUpCameraOutputs(width, height)
-        configureTransform(width, height)
-        val manager = getSystemService(Context.CAMERA_SERVICE) as CameraManager
-        try {
-            // Wait for camera to open - 2.5 seconds is sufficient
-            if (!cameraOpenCloseLock.tryAcquire(2500, TimeUnit.MILLISECONDS)) {
-                throw RuntimeException("Time out waiting to lock camera opening.")
-            }
-            if (ActivityCompat.checkSelfPermission(
-                    this,
-                    Manifest.permission.CAMERA
-                ) != PackageManager.PERMISSION_GRANTED
-            ) {
-                // TODO: Consider calling
-                //    ActivityCompat#requestPermissions
-                // here to request the missing permissions, and then overriding
-                //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-                //                                          int[] grantResults)
-                // to handle the case where the user grants the permission. See the documentation
-                // for ActivityCompat#requestPermissions for more details.
-                Log.e(TAG, "openCamera: not grand permission")
-                return
-            }
-            manager.openCamera(cameraId, stateCallback, cameraHandler)
-        } catch (e: CameraAccessException) {
-            Log.e(TAG, e.toString())
-        } catch (e: InterruptedException) {
-            throw RuntimeException("Interrupted while trying to lock camera opening.", e)
-        }
-    }
-
-    private fun closeCamera() {
-        try {
-            cameraOpenCloseLock.acquire()
-            captureSession?.close()
-            captureSession = null
-            cameraDevice?.close()
-            cameraDevice = null
-            imageReader?.close()
-        } catch (e: InterruptedException) {
-            throw RuntimeException("Interrupted while trying to lock camera closing.", e)
-        } finally {
-            cameraOpenCloseLock.release()
-        }
-    }
-
     private fun startBackgroundThread() {
     }
 
@@ -434,6 +471,14 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
             for (cameraId in manager.cameraIdList) {
                 val characteristics = manager.getCameraCharacteristics(cameraId)
 
+                val availableCapabilities = characteristics.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES)
+                if (availableCapabilities!= null &&
+                    (availableCapabilities.contains(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_YUV_REPROCESSING)  ||
+                            availableCapabilities.contains(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_PRIVATE_REPROCESSING))
+                        ) {
+                    supportReprocess = true
+                }
+
                 val cameraDirection = characteristics.get(CameraCharacteristics.LENS_FACING)
                 if (cameraDirection != null &&
                     cameraDirection == CameraCharacteristics.LENS_FACING_FRONT &&
@@ -456,10 +501,32 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
                     Arrays.asList(*map.getOutputSizes(ImageFormat.JPEG)),
                     CompareSizesByArea()
                 )
-                imageReader = ImageReader.newInstance(
+                jpgImageReader = ImageReader.newInstance(
                     largest.width, largest.height,
                     ImageFormat.JPEG, IMAGE_BUFFER_SIZE
                 )
+                jpgImageReader.setOnImageAvailableListener({ reader ->
+                    val image = reader.acquireLatestImage()
+                    jpgLatestReceivedImage?.close()
+                    jpgLatestReceivedImage = image
+                    // val data = YUVTool.getBytesFromImageReader(it)
+                    // val myMediaRecorder =  MyMediaRecorder()
+                    // myMediaRecorder.addVideoData(data)
+                }, imageReaderHandler)
+
+                if (enableZsl && supportReprocess) {
+                    yuvImageReader = ImageReader.newInstance(
+                        largest.width, largest.height,
+                        ImageFormat.YUV_420_888,
+                        YUV_IMAGE_READER_SIZE
+                    )
+                    yuvImageReader.setOnImageAvailableListener({ reader ->
+                        val image = reader.acquireLatestImage()
+                        yuvLatestReceivedImage?.close()
+                        yuvLatestReceivedImage = image
+                        image.close()
+                    }, yuvHandler)
+                }
 
                 val displayRotation = windowManager?.defaultDisplay?.rotation
                 sensorOrientation = characteristics.get(CameraCharacteristics.SENSOR_ORIENTATION)
@@ -536,33 +603,73 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
         return swappedDimensions
     }
 
-    private fun startPreview() {
+    private fun startCaptureSession() {
+        Log.i(TAG, "startCaptureSession: ")
+        mediaActionSound.load(MediaActionSound.SHUTTER_CLICK)
         try {
-            val texture = textureView.surfaceTexture
-
-            texture?.setDefaultBufferSize(previewSize.width, previewSize.height)
-
-            val surface = Surface(texture)
-
-            previewRequestBuilder = cameraDevice!!.createCaptureRequest(
-                CameraDevice.TEMPLATE_PREVIEW
-            )
-            previewRequestBuilder.addTarget(surface)
-
-            cameraDevice?.createCaptureSession(
-                Arrays.asList(surface, imageReader?.surface),
-                object : CameraCaptureSession.StateCallback() {
+            val captureSessionStateCallback = object : CameraCaptureSession.StateCallback() {
                     override fun onConfigureFailed(p0: CameraCaptureSession) {
                         toast("Failed")
                     }
 
                     override fun onConfigured(cameraCaptureSession: CameraCaptureSession) {
-                        // When the session is ready, we start displaying the preview.
-                        captureSession = cameraCaptureSession
-                        updatePreview()
                     }
-                }, cameraHandler
-            )
+
+                    override fun onReady(session: CameraCaptureSession) {
+                        // When the session is ready, we start displaying the preview.
+                        currentCaptureSession = session
+                        updatePreview()
+                        Log.i(TAG, "startCaptureSession onReady isReprocessable=${session.isReprocessable} ")
+                        if (session.isReprocessable) {
+                            zslImageWriter = ImageWriter.newInstance(session.inputSurface!!, ZSL_IMAGE_WRITER_SIZE)
+                            zslImageWriter.setOnImageReleasedListener({ _ -> {
+                                Log.d(TAG, "ZslImageWriter onImageReleased()")
+                            }}, yuvHandler)
+                        }
+                        super.onReady(session)
+                    }
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val texture = textureView.surfaceTexture
+                texture?.setDefaultBufferSize(previewSize.width, previewSize.height)
+                previewSurface = Surface(texture)
+                val previewConfiguration = OutputConfiguration(previewSurface)
+
+                val outputConfigurations = mutableListOf<OutputConfiguration>(
+                    previewConfiguration,
+                    OutputConfiguration(jpgImageReader.surface)
+                )
+                if (enableZsl && supportReprocess) {
+                    outputConfigurations.add(
+                        OutputConfiguration(yuvImageReader.surface)
+                    )
+                }
+                val sessionConfiguration = SessionConfiguration(
+                    SessionConfiguration.SESSION_REGULAR,
+                    outputConfigurations,
+                    cameraExecutor,
+                    captureSessionStateCallback
+                )
+                if (enableZsl && supportReprocess) {
+                    sessionConfiguration.inputConfiguration =
+                        InputConfiguration(yuvImageReader.width, yuvImageReader.height, ImageFormat.YUV_420_888)
+                }
+                cameraDevice?.createCaptureSession(sessionConfiguration)
+            } else {
+                val texture = textureView.surfaceTexture
+                texture?.setDefaultBufferSize(previewSize.width, previewSize.height)
+                previewSurface = Surface(texture)
+
+                if (enableZsl && supportReprocess) {
+
+                } else {
+                    cameraDevice?.createCaptureSession(
+                        arrayListOf(previewSurface, jpgImageReader?.surface),
+                        captureSessionStateCallback, cameraHandler
+                    )
+                }
+
+            }
         } catch (e: CameraAccessException) {
             Log.e(TAG, e.toString())
         }
@@ -570,20 +677,29 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
 
     private fun updatePreview() {
         if (cameraDevice == null) return
-
-
         try {
+            previewRequestBuilder =
+                cameraDevice!!.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
+            previewRequestBuilder.addTarget(previewSurface)
+            previewRequestBuilder.addTarget(jpgImageReader.surface)
+            if (enableZsl && this::yuvImageReader.isInitialized){
+                previewRequestBuilder.addTarget(yuvImageReader.surface)
+            }
             // Auto focus should be continuous for camera preview.
             previewRequestBuilder.set(
                 CaptureRequest.CONTROL_AF_MODE,
                 CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE
             )
+//            if (AFtrigger) {
+//                b1.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_START);
+//                mCurrentCaptureSession.capture(b1.build(), mCaptureCallback, mOpsHandler);
+//                b1.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_IDLE);
+//            }
             setAutoFlash(previewRequestBuilder)
-
             previewRequest = previewRequestBuilder.build()
-            captureSession?.setRepeatingRequest(
+            currentCaptureSession?.setRepeatingRequest(
                 previewRequest,
-                captureCallback, cameraHandler
+                captureCallback, yuvHandler
             )
         } catch (e: CameraAccessException) {
             Log.e(TAG, e.toString())
@@ -636,7 +752,7 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
             )
             // Tell #captureCallback to wait for the lock.
             cameraState = STATE_WAITING_LOCK
-            captureSession?.capture(
+            currentCaptureSession?.capture(
                 previewRequestBuilder.build(), captureCallback,
                 cameraHandler
             )
@@ -657,7 +773,7 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
                 CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_START
             )
             cameraState = STATE_WAITING_PRECAPTURE
-            captureSession?.capture(
+            currentCaptureSession?.capture(
                 previewRequestBuilder.build(), captureCallback,
                 cameraHandler
             )
@@ -671,27 +787,31 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
      * [.captureCallback] from both [.lockFocus].
      */
     private fun captureStillPicture() {
+        Log.d(TAG, "captureStillPicture: enableZsl=${enableZsl}, supportReprocess=${supportReprocess}")
+        mediaActionSound.play(MediaActionSound.SHUTTER_CLICK)
         Kpi.start(Kpi.TYPE.SHOT_TO_SHOT)
         try {
             // flush any images left in the image queue
-            while (imageReader.acquireLatestImage() != null) {
+            while (jpgImageReader.acquireLatestImage() != null) {
             }
-            val imageQueue = ArrayBlockingQueue<Image>(IMAGE_BUFFER_SIZE)
-            imageReader.setOnImageAvailableListener({ reader ->
-                val image = reader.acquireNextImage()
-                imageQueue.add(image)
-                Log.d(TAG, "captureStillPicture: image available in queue: ${image.timestamp}")
-                // val data = YUVTool.getBytesFromImageReader(it)
-                // val myMediaRecorder =  MyMediaRecorder()
-                // myMediaRecorder.addVideoData(data)
-            }, imageReaderHandler)
             if (cameraDevice == null) return
             val rotation = windowManager.defaultDisplay.rotation
 
-            val captureBuilder = cameraDevice!!.createCaptureRequest(
-                CameraDevice.TEMPLATE_STILL_CAPTURE
-            ).apply {
-                addTarget(imageReader.surface)
+            val captureBuilder =
+                if (enableZsl && supportReprocess&&this::zslImageWriter.isInitialized) {
+                    zslImageWriter.queueInputImage(yuvLatestReceivedImage)
+                    cameraDevice!!.createReprocessCaptureRequest(lastTotalCaptureResult)
+                } else {
+                    cameraDevice!!.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
+                }
+
+            captureBuilder.apply {
+//                zsl
+//                b1.set(CaptureRequest.JPEG_ORIENTATION, mCameraInfoCache.sensorOrientation());
+//                b1.set(CaptureRequest.JPEG_QUALITY, (byte) 95);
+//                b1.set(CaptureRequest.NOISE_REDUCTION_MODE, mReprocessingNoiseMode);
+//                b1.set(CaptureRequest.EDGE_MODE, mReprocessingEdgeMode);
+                addTarget(jpgImageReader.surface)
                 // set(CaptureRequest.JPEG_ORIENTATION, (OREIENTATIONS.get(rotation) + sensorOrientation + 270) % 360)
                 set(CaptureRequest.JPEG_ORIENTATION, OREIENTATIONS.get(rotation))
                 set(
@@ -719,20 +839,28 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
                     unlockFocus()
 
                     Kpi.end(Kpi.TYPE.SHOT_TO_SHOT)
-
-                    imageReaderHandler?.post(ImageSaver(this@CameraActivity, imageQueue, imageReaderHandler))
-                    imageReader.setOnImageAvailableListener(null, null)
+                    if (!(enableZsl && supportReprocess)) {
+                        imageReaderHandler?.post(
+                            ImageSaver(
+                                this@CameraActivity,
+                                jpgLatestReceivedImage!!,
+                                imageReaderHandler
+                            )
+                        )
+                        jpgImageReader.setOnImageAvailableListener(null, null)
+                    }
                 }
             }
 
-            captureSession?.apply {
+            currentCaptureSession?.apply {
                 stopRepeating()
                 abortCaptures()
-                capture(captureBuilder.build(), captureCallback, null)
+                capture(captureBuilder.build(), captureCallback, yuvHandler)
             }
         } catch (e: CameraAccessException) {
             Log.e(TAG, e.toString())
         }
+        yuvLatestReceivedImage = null
     }
 
     /**
@@ -747,13 +875,13 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
                 CameraMetadata.CONTROL_AF_TRIGGER_CANCEL
             )
             setAutoFlash(previewRequestBuilder)
-            captureSession?.capture(
+            currentCaptureSession?.capture(
                 previewRequestBuilder.build(), captureCallback,
                 cameraHandler
             )
             // After this, the camera will go back to the normal state of preview.
             cameraState = STATE_PREVIEW
-            captureSession?.setRepeatingRequest(
+            currentCaptureSession?.setRepeatingRequest(
                 previewRequest, captureCallback,
                 cameraHandler
             )
@@ -763,20 +891,6 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
 
     }
 
-    override fun onClick(p0: View?) {
-        when (p0?.id) {
-            R.id.picture -> lockFocus()
-            R.id.iv_record -> if (isRecordingVideo) stopRecordingVideo() else startRecordingVideo()
-            R.id.iv_preview -> viewPicture()
-            R.id.iv_change_camera -> {
-                closeCamera()
-                if (textureView.isAvailable) {
-                    camera = if (camera == FRONT_CAMERA) BACK_CAMERA else FRONT_CAMERA
-                    openCamera(textureView.width, textureView.height)
-                }
-            }
-        }
-    }
 
     private fun setAutoFlash(requestBuilder: CaptureRequest.Builder) {
         if (flashSupported) {
@@ -807,7 +921,7 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
         } else {
             contentResolver.loadThumbnail(capturedImageUri, Size(100, 100), null)
         }
-        picturePreview.apply {
+        ivThumbnail.apply {
             post {
                 Kpi.end(Kpi.TYPE.IMAGE_TO_THUMBNAIL)
                 setImageBitmap(thumbnail)
@@ -816,8 +930,8 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
     }
 
     private fun closePreviewSession() {
-        captureSession?.close()
-        captureSession = null
+        currentCaptureSession?.close()
+        currentCaptureSession = null
     }
 
     private fun startRecordingVideo() {
@@ -829,7 +943,7 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
                 setDefaultBufferSize(previewSize.width, previewSize.height)
             }
 
-            val previewSurface = Surface(texture)
+            previewSurface = Surface(texture)
             val recorderSurface = mediaRecorder!!.surface
             val surfaces = ArrayList<Surface>().apply {
                 add(previewSurface)
@@ -847,7 +961,7 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
                 surfaces,
                 object : CameraCaptureSession.StateCallback() {
                     override fun onConfigured(p0: CameraCaptureSession) {
-                        captureSession = p0
+                        currentCaptureSession = p0
                         updatePreview()
                         runOnUiThread {
                             ivRecord.setImageResource(R.drawable.btn_record_stop)
@@ -907,7 +1021,7 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
         }
         toast("Video saved: $videoPath")
         videoPath = null
-        startPreview()
+        startCaptureSession()
     }
 
 
@@ -957,6 +1071,8 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
 
         private const val MY_PERMISSIONS_REQUEST = 1001
 
+        private const val YUV_IMAGE_READER_SIZE = 8
+        private const val ZSL_IMAGE_WRITER_SIZE = 2
         private const val IMAGE_BUFFER_SIZE = 3
 
         private const val RecordMode = 0
