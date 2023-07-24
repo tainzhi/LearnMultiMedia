@@ -81,7 +81,6 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
         }
 
         override fun onSurfaceTextureUpdated(p0: SurfaceTexture) {
-            Log.i(TAG, "onSurfaceTextureUpdated: ")
         }
 
         override fun onSurfaceTextureDestroyed(p0: SurfaceTexture): Boolean {
@@ -117,6 +116,10 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
     private val yuvHandler = Handler(yuvImageReaderThread.looper)
 
     private var supportReprocess = false
+    // more fast than disableZSL
+    // e.g
+    // disableZSL 450ms
+    // enableZSL 278ms
     private var enableZsl = true
     private lateinit var lastTotalCaptureResult: TotalCaptureResult
     private lateinit var zslImageWriter: ImageWriter
@@ -180,7 +183,6 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
         private fun process(result: CaptureResult) {
             when (cameraState) {
                 STATE_PREVIEW -> {
-                    Log.d(TAG, "process: preview")
                 }
                 STATE_WAITING_LOCK -> capturePicture(result)
                 STATE_WAITING_PRECAPTURE -> {
@@ -199,21 +201,22 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
                     val aeState = result.get(CaptureResult.CONTROL_AE_STATE)
                     if (aeState == null || aeState != CaptureResult.CONTROL_AE_STATE_PRECAPTURE) {
                         cameraState = STATE_PICTURE_TAKEN
-                        captureStillPicture()
+//                        captureStillPicture()
                     }
                 }
             }
         }
 
         private fun capturePicture(result: CaptureResult) {
-            Log.i(TAG, "capturePicture: ")
             val afState = result.get(CaptureResult.CONTROL_AF_STATE)
             if (afState == null) {
+                Log.e(TAG, "capturePicture: afState is null")
                 captureStillPicture()
             } else if (afState == CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED
                 || afState == CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED
             ) {
                 // CONTROL_AE_STATE can be null on some devices
+                Log.e(TAG, "capturePicture: afState is ${afState}")
                 val aeState = result.get(CaptureResult.CONTROL_AE_STATE)
                 if (aeState == null || aeState == CaptureResult.CONTROL_AE_STATE_CONVERGED) {
                     cameraState = STATE_PICTURE_TAKEN
@@ -324,6 +327,7 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
     }
 
     override fun onClick(p0: View?) {
+        Log.d(TAG, "onClick: ")
         when (p0?.id) {
             R.id.picture -> lockFocus()
             R.id.iv_record -> if (isRecordingVideo) stopRecordingVideo() else startRecordingVideo()
@@ -507,7 +511,6 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
                 )
                 jpgImageReader.setOnImageAvailableListener({ reader ->
                     val image = reader.acquireLatestImage()
-                    jpgLatestReceivedImage?.close()
                     jpgLatestReceivedImage = image
                     // val data = YUVTool.getBytesFromImageReader(it)
                     // val myMediaRecorder =  MyMediaRecorder()
@@ -524,7 +527,7 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
                         val image = reader.acquireLatestImage()
                         yuvLatestReceivedImage?.close()
                         yuvLatestReceivedImage = image
-                        image.close()
+//                        image.close()
                     }, yuvHandler)
                 }
 
@@ -617,16 +620,18 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
 
                     override fun onReady(session: CameraCaptureSession) {
                         // When the session is ready, we start displaying the preview.
+                        super.onReady(session)
+                        Log.d(TAG, "capture session onReady()")
                         currentCaptureSession = session
                         updatePreview()
-                        Log.i(TAG, "startCaptureSession onReady isReprocessable=${session.isReprocessable} ")
+                        Log.d(TAG, "startCaptureSession onReady isReprocessable=${session.isReprocessable} ")
                         if (session.isReprocessable) {
                             zslImageWriter = ImageWriter.newInstance(session.inputSurface!!, ZSL_IMAGE_WRITER_SIZE)
                             zslImageWriter.setOnImageReleasedListener({ _ -> {
                                 Log.d(TAG, "ZslImageWriter onImageReleased()")
                             }}, yuvHandler)
+                            Log.d(TAG, "create ImageWriter")
                         }
-                        super.onReady(session)
                     }
             }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -681,7 +686,6 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
             previewRequestBuilder =
                 cameraDevice!!.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
             previewRequestBuilder.addTarget(previewSurface)
-            previewRequestBuilder.addTarget(jpgImageReader.surface)
             if (enableZsl && this::yuvImageReader.isInitialized){
                 previewRequestBuilder.addTarget(yuvImageReader.surface)
             }
@@ -744,6 +748,7 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
      * Lock the focus as the first step for a still image capture.
      */
     private fun lockFocus() {
+        Log.d(TAG, "lockFocus: ")
         try {
             // This is how to tell the camera to lock focus.
             previewRequestBuilder.set(
@@ -791,10 +796,10 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
         mediaActionSound.play(MediaActionSound.SHUTTER_CLICK)
         Kpi.start(Kpi.TYPE.SHOT_TO_SHOT)
         try {
-            // flush any images left in the image queue
-            while (jpgImageReader.acquireLatestImage() != null) {
+            if (yuvLatestReceivedImage == null) {
+                Log.e(TAG, "captureStillPicture: no yuv image available")
+                return
             }
-            if (cameraDevice == null) return
             val rotation = windowManager.defaultDisplay.rotation
 
             val captureBuilder =
@@ -835,32 +840,30 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
                     request: CaptureRequest,
                     result: TotalCaptureResult
                 ) {
+                    Log.d(TAG, "capture onCaptureCompleted: ")
                     super.onCaptureCompleted(session, request, result)
                     unlockFocus()
-
                     Kpi.end(Kpi.TYPE.SHOT_TO_SHOT)
-                    if (!(enableZsl && supportReprocess)) {
-                        imageReaderHandler?.post(
-                            ImageSaver(
-                                this@CameraActivity,
-                                jpgLatestReceivedImage!!,
-                                imageReaderHandler
-                            )
+                    imageReaderHandler?.post(
+                        ImageSaver(
+                            this@CameraActivity,
+                            jpgLatestReceivedImage!!,
+                            imageReaderHandler
                         )
-                        jpgImageReader.setOnImageAvailableListener(null, null)
-                    }
+                    )
+                    jpgImageReader.setOnImageAvailableListener(null, null)
                 }
             }
 
             currentCaptureSession?.apply {
-                stopRepeating()
-                abortCaptures()
+//                stopRepeating()
+//                abortCaptures()
                 capture(captureBuilder.build(), captureCallback, yuvHandler)
             }
         } catch (e: CameraAccessException) {
             Log.e(TAG, e.toString())
         }
-        yuvLatestReceivedImage = null
+//        yuvLatestReceivedImage = null
     }
 
     /**

@@ -8,6 +8,7 @@ import android.os.Environment
 import android.os.Handler
 import android.os.Message
 import android.provider.MediaStore
+import android.util.Log
 import com.tainzhi.sample.media.util.Kpi
 import java.io.IOException
 import java.text.SimpleDateFormat
@@ -65,6 +66,7 @@ class ImageSaver(
             throw IOException(e)
         } finally {
             // 必须关掉, 否则不能连续拍照
+            Log.d(TAG, "close image")
             image.close()
         }
         Kpi.end(Kpi.TYPE.SHOT_TO_SAVE_IMAGE)
