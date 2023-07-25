@@ -788,7 +788,7 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
         mediaActionSound.play(MediaActionSound.SHUTTER_CLICK)
         Kpi.start(Kpi.TYPE.SHOT_TO_SHOT)
         try {
-            if (yuvLatestReceivedImage == null) {
+            if (enableZsl && yuvLatestReceivedImage == null) {
                 Log.e(TAG, "captureStillPicture: no yuv image available")
                 return
             }
