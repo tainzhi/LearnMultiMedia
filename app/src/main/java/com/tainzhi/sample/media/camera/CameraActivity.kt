@@ -121,7 +121,7 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
     // e.g
     // disableZSL 450ms
     // enableZSL 278ms
-    private var enableZsl = false
+    private var enableZsl = true
     private lateinit var lastTotalCaptureResult: TotalCaptureResult
     private lateinit var zslImageWriter: ImageWriter
 
@@ -511,7 +511,7 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
                 )
                 jpgImageReader.setOnImageAvailableListener({ reader ->
                     val image = reader.acquireLatestImage()
-                    Log.w(TAG, "jpgImageQueue add")
+                    Log.d(TAG, "setUpCameraOutputs: jpgImageQueue add")
                     jpgImageQueue.add(image)
                     // val data = YUVTool.getBytesFromImageReader(it)
                     // val myMediaRecorder =  MyMediaRecorder()
@@ -849,17 +849,12 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
                     super.onCaptureCompleted(session, request, result)
                     unlockFocus()
                     Kpi.end(Kpi.TYPE.SHOT_TO_SHOT)
-                    Log.w(TAG, "jpgImageQueue.size:${jpgImageQueue.size}", )
+                    Log.d(TAG, "onCaptureCompleted: jpgImageQueue.size=${jpgImageQueue.size}")
                     val image = jpgImageQueue.take()
-
                     // clear the queue of images, if there are left
-                    jpgImageReader.setOnImageAvailableListener(null, null)
-                    Log.w(TAG, "after jpgImageQueue.size:${jpgImageQueue.size}", )
                     while (jpgImageQueue.size > 0) {
                         jpgImageQueue.take().close()
                     }
-                    Log.d(TAG, "jpgImageQueue cleared")
-
                     imageReaderHandler?.post(
                         ImageSaver(
                             this@CameraActivity,
