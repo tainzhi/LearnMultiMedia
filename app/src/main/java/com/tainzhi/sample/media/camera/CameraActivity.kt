@@ -94,12 +94,10 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
         }
     }
 
-    // fixme move to onResume
     private val cameraThread = HandlerThread("CameraThread").apply { start() }
     private val cameraHandler = Handler(cameraThread.looper)
     private var cameraExecutor = ExecutorCompat.create(cameraHandler)
 
-    // fixme move to onResume
     private var imageReaderThread = HandlerThread("ImageReaderThread").apply { start() }
     private val imageReaderHandler = Handler(imageReaderThread.looper) { msg ->
         when (msg.what) {
@@ -112,9 +110,6 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
         }
         false
     }
-    // fixme move to onResume
-    private var yuvImageReaderThread = HandlerThread("YuvImageReaderThread").apply { start() }
-    private val yuvHandler = Handler(yuvImageReaderThread.looper)
 
     private var supportReprocess = false
     // more fast than disableZSL
@@ -162,11 +157,13 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
         override fun onOpened(p0: CameraDevice) {
             cameraOpenCloseLock.release()
             this@CameraActivity.cameraDevice = p0
+            Log.i(TAG, "camera onOpened: ")
             startCaptureSession()
         }
 
         override fun onDisconnected(p0: CameraDevice) {
             super.onClosed(p0)
+            Log.i(TAG, "camera onClosed: ")
             cameraOpenCloseLock.release()
             p0.close()
             this@CameraActivity.cameraDevice = null
@@ -284,14 +281,13 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
             }
         }
 
+        mediaActionSound.load(MediaActionSound.SHUTTER_CLICK)
         checkPermissions()
     }
 
-
     override fun onResume() {
-        Log.i(TAG, "onResume: ")
         super.onResume()
-        startBackgroundThread()
+        Log.i(TAG, "onResume: ")
         if (textureView.isAvailable) {
             openCamera(textureView.width, textureView.height)
         } else {
@@ -300,10 +296,17 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
     }
 
     override fun onPause() {
-        super.onPause()
-        stopBackgroundThread()
-        closeCamera()
         Log.i(TAG, "onPause: ")
+        closeCamera()
+        super.onPause()
+    }
+
+    override fun onDestroy() {
+        Log.i(TAG, "onDestroy: ")
+        imageReaderThread.quitSafely()
+        cameraThread.quitSafely()
+        mediaActionSound.release()
+        super.onDestroy()
     }
 
     override fun onRequestPermissionsResult(
@@ -343,6 +346,7 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
     }
 
     private fun openCamera(width: Int, height: Int) {
+        Log.i(TAG, "openCamera: ")
         setUpCameraOutputs(width, height)
         configureTransform(width, height)
         val manager = getSystemService(Context.CAMERA_SERVICE) as CameraManager
@@ -375,6 +379,7 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
     }
 
     private fun closeCamera() {
+        Log.i(TAG, "closeCamera: ")
         try {
             cameraOpenCloseLock.acquire()
             currentCaptureSession?.close()
@@ -447,22 +452,6 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
 
     }
 
-    private fun startBackgroundThread() {
-    }
-
-    private fun stopBackgroundThread() {
-        cameraThread.quitSafely()
-        imageReaderThread.quitSafely()
-//        try {
-//            cameraThread?.join()
-//            cameraThread = null
-//            cameraHandler = null
-//            mainHandler = null
-//        } catch (e: InterruptedException) {
-//            Log.e(TAG, e.toString())
-//        }
-    }
-
     /**
      * Sets up member variables related to camera.
      *
@@ -528,7 +517,7 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
                         val image = reader.acquireLatestImage()
                         yuvLatestReceivedImage?.close()
                         yuvLatestReceivedImage = image
-                    }, yuvHandler)
+                    }, cameraHandler)
                 }
 
                 val displayRotation = windowManager?.defaultDisplay?.rotation
@@ -608,7 +597,6 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
 
     private fun startCaptureSession() {
         Log.i(TAG, "startCaptureSession: ")
-        mediaActionSound.load(MediaActionSound.SHUTTER_CLICK)
         try {
             val captureSessionStateCallback = object : CameraCaptureSession.StateCallback() {
                     override fun onConfigureFailed(p0: CameraCaptureSession) {
@@ -629,7 +617,7 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
                             zslImageWriter = ImageWriter.newInstance(session.inputSurface!!, ZSL_IMAGE_WRITER_SIZE)
                             zslImageWriter.setOnImageReleasedListener({ _ -> {
                                 Log.d(TAG, "ZslImageWriter onImageReleased()")
-                            }}, yuvHandler)
+                            }}, cameraHandler)
                             Log.d(TAG, "create ImageWriter")
                         }
                     }
@@ -652,7 +640,7 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
                 val sessionConfiguration = SessionConfiguration(
                     SessionConfiguration.SESSION_REGULAR,
                     outputConfigurations,
-                    cameraExecutor,
+                    cameraExecutor!!,
                     captureSessionStateCallback
                 )
                 if (enableZsl && supportReprocess) {
@@ -707,7 +695,7 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
             previewRequest = previewRequestBuilder.build()
             currentCaptureSession?.setRepeatingRequest(
                 previewRequest,
-                captureCallback, yuvHandler
+                captureCallback, cameraHandler
             )
         } catch (e: CameraAccessException) {
             Log.e(TAG, e.toString())
@@ -868,7 +856,7 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
             currentCaptureSession?.apply {
 //                stopRepeating()
 //                abortCaptures()
-                capture(captureBuilder.build(), captureCallback, yuvHandler)
+                capture(captureBuilder.build(), captureCallback, cameraHandler)
             }
         } catch (e: CameraAccessException) {
             Log.e(TAG, e.toString())
