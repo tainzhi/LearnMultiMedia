@@ -27,6 +27,7 @@ class ImageSaver(
     private val handler: Handler
 ) : Runnable {
     override fun run() {
+        Log.d(TAG, "begin run")
         Kpi.start(Kpi.TYPE.SHOT_TO_SAVE_IMAGE)
         val relativeLocation = Environment.DIRECTORY_PICTURES
         val fileName = "IMG_${SimpleDateFormat("yyyyMMddHHmmssSSS", Locale.US).format(image.timestamp)}.jpg"
@@ -69,6 +70,7 @@ class ImageSaver(
             Log.d(TAG, "close image")
             image.close()
         }
+        Log.d(TAG, "end run")
         Kpi.end(Kpi.TYPE.SHOT_TO_SAVE_IMAGE)
     }
 

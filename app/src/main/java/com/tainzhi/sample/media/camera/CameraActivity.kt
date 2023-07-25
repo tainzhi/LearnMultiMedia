@@ -40,6 +40,7 @@ import com.tainzhi.sample.media.widget.AutoFitTextureView
 import com.tainzhi.sample.media.widget.CircleImageView
 import java.io.IOException
 import java.util.*
+import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
 
@@ -120,7 +121,7 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
     // e.g
     // disableZSL 450ms
     // enableZSL 278ms
-    private var enableZsl = true
+    private var enableZsl = false
     private lateinit var lastTotalCaptureResult: TotalCaptureResult
     private lateinit var zslImageWriter: ImageWriter
 
@@ -144,7 +145,7 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
 
     // handles still image capture
     private lateinit var jpgImageReader: ImageReader
-    private var jpgLatestReceivedImage: Image? = null
+    private val jpgImageQueue = ArrayBlockingQueue<Image>(IMAGE_BUFFER_SIZE)
     private lateinit var yuvImageReader: ImageReader
     private var yuvLatestReceivedImage: Image? = null
 
@@ -211,7 +212,6 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
             val afState = result.get(CaptureResult.CONTROL_AF_STATE)
             if (afState == null) {
                 Log.e(TAG, "capturePicture: afState is null")
-                captureStillPicture()
             } else if (afState == CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED
                 || afState == CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED
             ) {
@@ -511,7 +511,8 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
                 )
                 jpgImageReader.setOnImageAvailableListener({ reader ->
                     val image = reader.acquireLatestImage()
-                    jpgLatestReceivedImage = image
+                    Log.w(TAG, "jpgImageQueue add")
+                    jpgImageQueue.add(image)
                     // val data = YUVTool.getBytesFromImageReader(it)
                     // val myMediaRecorder =  MyMediaRecorder()
                     // myMediaRecorder.addVideoData(data)
@@ -527,7 +528,6 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
                         val image = reader.acquireLatestImage()
                         yuvLatestReceivedImage?.close()
                         yuvLatestReceivedImage = image
-//                        image.close()
                     }, yuvHandler)
                 }
 
@@ -700,6 +700,10 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
 //                b1.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_IDLE);
 //            }
             setAutoFlash(previewRequestBuilder)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val controlZsl: Boolean? = previewRequestBuilder.get(CaptureRequest.CONTROL_ENABLE_ZSL)
+                Log.d(TAG, "updatePreview: controlZsl=${controlZsl}")
+            }
             previewRequest = previewRequestBuilder.build()
             currentCaptureSession?.setRepeatingRequest(
                 previewRequest,
@@ -804,6 +808,7 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
 
             val captureBuilder =
                 if (enableZsl && supportReprocess&&this::zslImageWriter.isInitialized) {
+                    Log.d(TAG, "captureStillPicture: queueInput yuvLatestReceiveImage to HAL")
                     zslImageWriter.queueInputImage(yuvLatestReceivedImage)
                     cameraDevice!!.createReprocessCaptureRequest(lastTotalCaptureResult)
                 } else {
@@ -844,14 +849,24 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
                     super.onCaptureCompleted(session, request, result)
                     unlockFocus()
                     Kpi.end(Kpi.TYPE.SHOT_TO_SHOT)
+                    Log.w(TAG, "jpgImageQueue.size:${jpgImageQueue.size}", )
+                    val image = jpgImageQueue.take()
+
+                    // clear the queue of images, if there are left
+                    jpgImageReader.setOnImageAvailableListener(null, null)
+                    Log.w(TAG, "after jpgImageQueue.size:${jpgImageQueue.size}", )
+                    while (jpgImageQueue.size > 0) {
+                        jpgImageQueue.take().close()
+                    }
+                    Log.d(TAG, "jpgImageQueue cleared")
+
                     imageReaderHandler?.post(
                         ImageSaver(
                             this@CameraActivity,
-                            jpgLatestReceivedImage!!,
+                            image,
                             imageReaderHandler
                         )
                     )
-                    jpgImageReader.setOnImageAvailableListener(null, null)
                 }
             }
 
@@ -863,7 +878,7 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
         } catch (e: CameraAccessException) {
             Log.e(TAG, e.toString())
         }
-//        yuvLatestReceivedImage = null
+        yuvLatestReceivedImage = null
     }
 
     /**
