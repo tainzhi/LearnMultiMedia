@@ -107,7 +107,7 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
                 val pictureUri: Uri = msg.obj as Uri
                 capturedImageUri = pictureUri
                 Kpi.start(Kpi.TYPE.IMAGE_TO_THUMBNAIL)
-                updatePreviewPicture(pictureUri)
+                updateThumbnail(pictureUri)
             }
         }
         false
@@ -927,7 +927,7 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
         }
     }
 
-    private fun updatePreviewPicture(capturedImageUri: Uri) {
+    private fun updateThumbnail(capturedImageUri: Uri) {
         val thumbnail = if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
             val temp = MediaStore.Images.Media.getBitmap(contentResolver, capturedImageUri)
             ThumbnailUtils.extractThumbnail(temp, 100, 100)
