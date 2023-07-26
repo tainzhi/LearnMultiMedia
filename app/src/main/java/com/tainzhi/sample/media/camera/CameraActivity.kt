@@ -1000,7 +1000,7 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
     }
 
     companion object {
-        private const val TAG = "CameraActivity"
+        private val TAG = CameraActivity::class.java.simpleName
         private val OREIENTATIONS = SparseIntArray()
 
         private const val MY_PERMISSIONS_REQUEST = 1001

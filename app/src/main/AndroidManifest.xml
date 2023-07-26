@@ -20,6 +20,7 @@
             android:icon="@mipmap/ic_launcher"
             android:label="@string/app_name"
             android:roundIcon="@mipmap/ic_launcher_round"
+            android:theme="@style/AppTheme"
             android:supportsRtl="true">
         <activity
                 android:name=".camera.SettingsActivity"
@@ -34,7 +35,7 @@
                 android:theme="@style/AppTheme.FullScreen" />
         <activity android:name=".native_codec.NativeCodecActivity" />
         <activity android:name=".opengl2.camera.TakePictureActivity" />
-        <activity android:name=".opengl2.camera.CameraPreviewActivity" />
+        <activity android:name=".opengl2.camera.preview.PreviewCameraActivity" />
         <activity
                 android:name=".opengl2.ImageGLRendererActivity"
                 android:exported="true">

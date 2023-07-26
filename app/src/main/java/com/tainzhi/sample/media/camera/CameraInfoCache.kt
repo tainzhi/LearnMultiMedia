@@ -182,6 +182,6 @@ class CameraInfoCache(cameraManager: CameraManager, useFrontCamera: Boolean = fa
             }
         }
 
-        const val TAG = "CameraInfoCache"
+        private val TAG = CameraInfoCache::class.java.simpleName
     }
 }
