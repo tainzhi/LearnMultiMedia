@@ -23,6 +23,9 @@ class CameraInfoCache(cameraManager: CameraManager, useFrontCamera: Boolean = fa
     private var noiseModes: IntArray? = null
     private var edgeModes: IntArray? = null
     private var streamConfigurationMap: StreamConfigurationMap? = null
+    private var hardwareLevel: Int = 0
+    var reprocessingNoiseMode = CameraCharacteristics.NOISE_REDUCTION_MODE_HIGH_QUALITY
+    var reprocessingEdgeMode = CameraCharacteristics.EDGE_MODE_HIGH_QUALITY
     init {
         val cameraList = cameraManager.cameraIdList
         for (id in cameraList) {
@@ -32,6 +35,9 @@ class CameraInfoCache(cameraManager: CameraManager, useFrontCamera: Boolean = fa
                 cameraId = id
                 break
             }
+        }
+        if (cameraCharacteristics == null) {
+            throw Exception("cannot get camera characteristics")
         }
         streamConfigurationMap = cameraCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
         videoSize = chooseVideoSize(streamConfigurationMap!!.getOutputSizes(MediaRecorder::class.java))
@@ -51,6 +57,7 @@ class CameraInfoCache(cameraManager: CameraManager, useFrontCamera: Boolean = fa
         requestAvailableAbilities = cameraCharacteristics.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES)
         edgeModes = cameraCharacteristics.get(CameraCharacteristics.EDGE_AVAILABLE_EDGE_MODES)
         noiseModes = cameraCharacteristics.get(CameraCharacteristics.NOISE_REDUCTION_AVAILABLE_NOISE_REDUCTION_MODES)
+        hardwareLevel = cameraCharacteristics.get(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL)!!
         sensorOrientation = cameraCharacteristics!!.get(CameraCharacteristics.SENSOR_ORIENTATION)
         isflashSupported = cameraCharacteristics.get(CameraCharacteristics.FLASH_INFO_AVAILABLE) == true
     }
@@ -68,6 +75,29 @@ class CameraInfoCache(cameraManager: CameraManager, useFrontCamera: Boolean = fa
 
     fun getPreviewSurfaceSize(): Array<Size> {
         return streamConfigurationMap!!.getOutputSizes(SurfaceTexture::class.java)
+    }
+
+    fun isCamera2FullModeAvailable() = isHardwareLevelAtLeast(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_FULL)
+
+    fun getCaptureNoiseMode(): Int {
+        if (noiseModes!!.contains(CameraCharacteristics.NOISE_REDUCTION_MODE_ZERO_SHUTTER_LAG)) {
+            return CameraCharacteristics.NOISE_REDUCTION_MODE_ZERO_SHUTTER_LAG
+        } else {
+            return CameraCharacteristics.NOISE_REDUCTION_MODE_FAST
+        }
+    }
+
+    fun getEdgeMode(): Int {
+        if (edgeModes!!.contains(CameraCharacteristics.EDGE_MODE_ZERO_SHUTTER_LAG)) {
+            return CameraCharacteristics.EDGE_MODE_ZERO_SHUTTER_LAG
+        } else {
+            return CameraCharacteristics.EDGE_MODE_FAST
+        }
+    }
+    private fun isHardwareLevelAtLeast(level: Int): Boolean {
+        if (level == CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY) return true
+        if (hardwareLevel == CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY) return false
+        return hardwareLevel >= level;
     }
 
     companion object {

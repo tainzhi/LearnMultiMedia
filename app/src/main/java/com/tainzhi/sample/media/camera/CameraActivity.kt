@@ -639,17 +639,20 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
             if (enableZsl && this::yuvImageReader.isInitialized){
                 previewRequestBuilder.addTarget(yuvImageReader.surface)
             }
-            // Auto focus should be continuous for camera preview.
-            previewRequestBuilder.set(
-                CaptureRequest.CONTROL_AF_MODE,
-                CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE
-            )
+
+            previewRequestBuilder.apply {
+                set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
+                set(CaptureRequest.NOISE_REDUCTION_MODE, cameraInfo.getCaptureNoiseMode())
+                set(CaptureRequest.EDGE_MODE, cameraInfo.getEdgeMode())
+                if (flashSupported) {
+                    set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH)
+                }
+            }
 //            if (AFtrigger) {
 //                b1.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_START);
 //                mCurrentCaptureSession.capture(b1.build(), mCaptureCallback, mOpsHandler);
 //                b1.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_IDLE);
 //            }
-            setAutoFlash(previewRequestBuilder)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 val controlZsl: Boolean? = previewRequestBuilder.get(CaptureRequest.CONTROL_ENABLE_ZSL)
                 Log.d(TAG, "updatePreview: controlZsl=${controlZsl}")
@@ -764,21 +767,27 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
                 } else {
                     cameraDevice!!.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
                 }
-
             captureBuilder.apply {
 //                zsl
 //                b1.set(CaptureRequest.JPEG_ORIENTATION, mCameraInfoCache.sensorOrientation());
-//                b1.set(CaptureRequest.JPEG_QUALITY, (byte) 95);
-//                b1.set(CaptureRequest.NOISE_REDUCTION_MODE, mReprocessingNoiseMode);
-//                b1.set(CaptureRequest.EDGE_MODE, mReprocessingEdgeMode);
                 addTarget(jpgImageReader.surface)
-                // set(CaptureRequest.JPEG_ORIENTATION, (OREIENTATIONS.get(rotation) + sensorOrientation + 270) % 360)
-                set(CaptureRequest.JPEG_ORIENTATION, OREIENTATIONS.get(rotation))
+                if (enableZsl) {
+                    set(CaptureRequest.NOISE_REDUCTION_MODE, cameraInfo.reprocessingNoiseMode);
+                    set(CaptureRequest.EDGE_MODE, cameraInfo.reprocessingEdgeMode);
+                }
+                set(CaptureRequest.JPEG_QUALITY, 95);
                 set(
-                    CaptureRequest.CONTROL_AF_MODE,
-                    CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE
+                    CaptureRequest.JPEG_ORIENTATION,
+                    (OREIENTATIONS.get(rotation) + sensorOrientation!! + 270) % 360
                 )
-            }.also { setAutoFlash(it) }
+                set(CaptureRequest.JPEG_ORIENTATION, OREIENTATIONS.get(rotation)); set(
+                CaptureRequest.CONTROL_AF_MODE,
+                CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE
+            )
+                if (flashSupported) {
+                    set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH)
+                }
+            }
 
             val captureCallback = object : CameraCaptureSession.CaptureCallback() {
                 override fun onCaptureStarted(
@@ -833,11 +842,12 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
     private fun unlockFocus() {
         try {
             // Reset the auto-focus trigger
-            previewRequestBuilder.set(
-                CaptureRequest.CONTROL_AF_TRIGGER,
-                CameraMetadata.CONTROL_AF_TRIGGER_CANCEL
-            )
-            setAutoFlash(previewRequestBuilder)
+            previewRequestBuilder.apply {
+                set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_CANCEL)
+                if (flashSupported) {
+                    set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH)
+                }
+            }
             currentCaptureSession?.capture(
                 previewRequestBuilder.build(), captureCallback,
                 cameraHandler
@@ -852,16 +862,6 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
             Log.e(TAG, e.toString())
         }
 
-    }
-
-
-    private fun setAutoFlash(requestBuilder: CaptureRequest.Builder) {
-        if (flashSupported) {
-            requestBuilder.set(
-                CaptureRequest.CONTROL_AE_MODE,
-                CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH
-            )
-        }
     }
 
     private fun viewPicture() {
