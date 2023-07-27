@@ -4,7 +4,6 @@ import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.content.res.Configuration
 import android.graphics.*
 import android.hardware.camera2.*
 import android.hardware.camera2.params.InputConfiguration
@@ -17,6 +16,7 @@ import android.media.MediaActionSound
 import android.media.MediaRecorder
 import android.media.ThumbnailUtils
 import android.net.Uri
+import android.opengl.GLES20
 import android.os.*
 import android.provider.MediaStore
 import android.util.Log
@@ -37,7 +37,6 @@ import com.tainzhi.sample.media.camera.CameraInfoCache.Companion.chooseOptimalSi
 import com.tainzhi.sample.media.databinding.ActivityCameraBinding
 import com.tainzhi.sample.media.util.Kpi
 import com.tainzhi.sample.media.util.toast
-import com.tainzhi.sample.media.widget.AutoFitTextureView
 import com.tainzhi.sample.media.widget.CircleImageView
 import java.io.IOException
 import java.util.*
@@ -68,7 +67,8 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
     // to play click sound when take picture
     private val mediaActionSound = MediaActionSound()
 
-    private lateinit var textureView: AutoFitTextureView
+    private lateinit var previewView: GLPreviewView
+    private lateinit var cameraPreviewRenderer: MyGLCameraDrawer
     // 预览拍照的图片，用于相册打开
     private lateinit var ivThumbnail: CircleImageView
     private lateinit var ivTakePicture: ImageView
@@ -79,9 +79,10 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
 
     private var useCameraFront = false
 
-    private var surfaceTextureListener = object : TextureView.SurfaceTextureListener {
+    private var surfaceTextureListener = object : GLPreviewView.SurfaceTextureListener {
         override fun onSurfaceTextureSizeChanged(p0: SurfaceTexture, width: Int, height: Int) {
-            configureTransform(width, height)
+            cameraPreviewRenderer.setViewSize(width, height)
+            GLES20.glViewport(0, 0, width, height)
         }
 
         override fun onSurfaceTextureUpdated(p0: SurfaceTexture) {
@@ -93,6 +94,13 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
         }
 
         override fun onSurfaceTextureAvailable(p0: SurfaceTexture, width: Int, height: Int) {
+            Log.d(TAG, "onSurfaceTextureAvailable: ")
+            previewView.requestRender()
+        }
+
+        override fun onSurfaceTextureCreated(surface: SurfaceTexture, width: Int, height: Int) {
+            Log.d(TAG, "onSurfaceTextureCreated: ")
+            previewSurface = Surface(surface)
             openCamera(width, height)
         }
     }
@@ -256,7 +264,9 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
         findViewById<View>(R.id.iv_thumbnail).setOnClickListener(this)
         findViewById<View>(R.id.iv_record).setOnClickListener(this)
         findViewById<View>(R.id.iv_change_camera).setOnClickListener(this)
-        textureView = findViewById(R.id.texture)
+        previewView = findViewById(R.id.previewView)
+        cameraPreviewRenderer = MyGLCameraDrawer()
+        previewView.setRender(cameraPreviewRenderer)
         ivThumbnail = findViewById(R.id.iv_thumbnail)
         ivTakePicture = findViewById(R.id.picture)
         ivRecord = findViewById(R.id.iv_record)
@@ -289,10 +299,10 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
     override fun onResume() {
         super.onResume()
         Log.i(TAG, "onResume: ")
-        if (textureView.isAvailable) {
-            openCamera(textureView.width, textureView.height)
+        if (previewView.isAvailable) {
+            openCamera(previewView.width, previewView.height)
         } else {
-            textureView.surfaceTextureListener = surfaceTextureListener
+            previewView.surfaceTextureListener = surfaceTextureListener
         }
     }
 
@@ -339,8 +349,8 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
             R.id.iv_change_camera -> {
                 useCameraFront = !useCameraFront
                 closeCamera()
-                if (textureView.isAvailable) {
-                    openCamera(textureView.width, textureView.height)
+                if (previewView.isAvailable) {
+                    openCamera(previewView.width, previewView.height)
                 }
             }
         }
@@ -350,7 +360,7 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
         Log.i(TAG, "openCamera: ")
         val manager = getSystemService(Context.CAMERA_SERVICE) as CameraManager
         setUpCameraOutputs(manager, width, height)
-        configureTransform(width, height)
+        // configureTransform(width, height)
         try {
             // Wait for camera to open - 2.5 seconds is sufficient
             if (!cameraOpenCloseLock.tryAcquire(2500, TimeUnit.MILLISECONDS)) {
@@ -509,19 +519,20 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
             // garbage capture data.
             previewSize = chooseOptimalSize(
                 cameraInfo.getPreviewSurfaceSize(),
-                rotatedPreviewWidth, rotatedPreviewHeight,
+                maxPreviewWidth, maxPreviewHeight,
                 maxPreviewWidth, maxPreviewHeight,
                 cameraInfo.largestYuvSize
             )
-            if (resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
-                textureView.setAspectRatio(previewSize.width, previewSize.height)
-            } else {
-                textureView.setAspectRatio(previewSize.height, previewSize.width)
-            }
+            // if (resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
+            //     textureView.setAspectRatio(previewSize.width, previewSize.height)
+            // } else {
+            //     textureView.setAspectRatio(previewSize.height, previewSize.width)
+            // }
+            cameraPreviewRenderer.setDataSize(previewView.width, previewView.height)
         } catch (e: CameraAccessException) {
             Log.e(TAG, e.toString())
         } catch (e: Exception) {
-            Log.getStackTraceString(e)
+            Log.e(TAG, Log.getStackTraceString(e))
             ErrorDialog.newInstance(getString(R.string.camera_error))
                 .show(supportFragmentManager, "fragment_dialog")
         }
@@ -585,9 +596,6 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
                     }
             }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                val texture = textureView.surfaceTexture
-                texture?.setDefaultBufferSize(previewSize.width, previewSize.height)
-                previewSurface = Surface(texture)
                 val previewConfiguration = OutputConfiguration(previewSurface)
 
                 val outputConfigurations = mutableListOf<OutputConfiguration>(
@@ -611,9 +619,6 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
                 }
                 cameraDevice?.createCaptureSession(sessionConfiguration)
             } else {
-                val texture = textureView.surfaceTexture
-                texture?.setDefaultBufferSize(previewSize.width, previewSize.height)
-                previewSurface = Surface(texture)
 
                 if (enableZsl && supportReprocess) {
 
@@ -698,7 +703,7 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
         } else if (Surface.ROTATION_180 == rotation) {
             matrix.postRotate(180f, centerX, centerY)
         }
-        textureView.setTransform(matrix)
+        // textureView.setTransform(matrix)
     }
 
     /**
@@ -898,15 +903,11 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
     }
 
     private fun startRecordingVideo() {
-        if (cameraDevice == null || !textureView.isAvailable) return
+        if (cameraDevice == null || !previewView.isAvailable) return
         try {
             closePreviewSession()
             setUpMediaRecorder()
-            val texture = textureView.surfaceTexture?.apply {
-                setDefaultBufferSize(previewSize.width, previewSize.height)
-            }
 
-            previewSurface = Surface(texture)
             val recorderSurface = mediaRecorder!!.surface
             val surfaces = ArrayList<Surface>().apply {
                 add(previewSurface)

@@ -20,11 +20,11 @@
     android:background="#000000"
     android:layout_height="match_parent">
     
-    <com.tainzhi.sample.media.widget.AutoFitTextureView
-        android:id="@+id/texture"
-        tools:background="#000000"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+    <com.tainzhi.sample.media.camera.GLPreviewView
+            android:id="@+id/previewView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            />
 
     <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
@@ -33,7 +33,7 @@
             android:layout_alignParentBottom="true"
             android:layout_marginBottom="60dp"
             android:background="#00000020"
-            app:layout_constraintBottom_toBottomOf="@+id/texture"
+            app:layout_constraintBottom_toBottomOf="@id/previewView"
             tools:layout_editor_absoluteX="0dp"
             >
 
