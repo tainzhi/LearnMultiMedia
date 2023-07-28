@@ -32,7 +32,7 @@ class ImageRenderer(private val mContext: Context) : BaseGLSL(), GLSurfaceView.R
     private val mProjectMatrix = FloatArray(16)
     private val mMVPMatrix = FloatArray(16)
     override fun onSurfaceCreated(gl: GL10, config: EGLConfig) {
-        GLES20.glClearColor(1.0f, 1.0f, 1.0f, 1.0f)
+        GLES20.glClearColor(0.0f, 0.0f, 0.0f, 1.0f)
         GLES20.glEnable(GLES20.GL_TEXTURE_2D)
         mProgram = createOpenGLProgram(vertexMatrixShaderCode, fragmentShaderCode)
         glHPosition = GLES20.glGetAttribLocation(mProgram, "vPosition")
@@ -47,17 +47,32 @@ class ImageRenderer(private val mContext: Context) : BaseGLSL(), GLSurfaceView.R
         val h = mBitmap!!.height
         val sWH = w / h.toFloat()
         val sWidthHeight = width / height.toFloat()
+        // if (width > height) {
+        //     if (sWH > sWidthHeight) {
+        //         Matrix.orthoM(mProjectMatrix, 0, -sWidthHeight * sWH, sWidthHeight * sWH, -1f, 1f, 3f, 7f)
+        //     } else {
+        //         Matrix.orthoM(mProjectMatrix, 0, -sWidthHeight / sWH, sWidthHeight / sWH, -1f, 1f, 3f, 7f)
+        //     }
+        // } else {
+        //     if (sWH > sWidthHeight) {
+        //         Matrix.orthoM(mProjectMatrix, 0, -1f, 1f, -1 / sWidthHeight * sWH, 1 / sWidthHeight * sWH, 3f, 7f)
+        //     } else {
+        //         Matrix.orthoM(mProjectMatrix, 0, -1f, 1f, -sWH / sWidthHeight, sWH / sWidthHeight, 3f, 7f)
+        //     }
+        // }
+        val halfViewWidth: Float = width/2f
+        val halfViewHeight: Float = height/2f
         if (width > height) {
             if (sWH > sWidthHeight) {
-                Matrix.orthoM(mProjectMatrix, 0, -sWidthHeight * sWH, sWidthHeight * sWH, -1f, 1f, 3f, 7f)
+                Matrix.orthoM(mProjectMatrix, 0, -halfViewWidth, halfViewWidth, -halfViewHeight, halfViewHeight, 10f, 40f)
             } else {
-                Matrix.orthoM(mProjectMatrix, 0, -sWidthHeight / sWH, sWidthHeight / sWH, -1f, 1f, 3f, 7f)
+                Matrix.orthoM(mProjectMatrix, 0, -halfViewWidth, halfViewWidth, -halfViewHeight, halfViewHeight, 10f, 40f)
             }
         } else {
             if (sWH > sWidthHeight) {
-                Matrix.orthoM(mProjectMatrix, 0, -1f, 1f, -1 / sWidthHeight * sWH, 1 / sWidthHeight * sWH, 3f, 7f)
+                Matrix.orthoM(mProjectMatrix, 0, -halfViewWidth, halfViewWidth, -halfViewHeight, halfViewHeight, 10f, 40f)
             } else {
-                Matrix.orthoM(mProjectMatrix, 0, -1f, 1f, -sWH / sWidthHeight, sWH / sWidthHeight, 3f, 7f)
+                Matrix.orthoM(mProjectMatrix, 0, -halfViewWidth, halfViewWidth, -halfViewHeight, halfViewHeight, 10f, 40f)
             }
         }
         //设置相机位置

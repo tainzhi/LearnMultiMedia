@@ -2,7 +2,6 @@ package com.tainzhi.sample.media.opengl2.glsv
 
 import android.content.Context
 import android.opengl.GLES20
-import android.util.AttributeSet
 import com.tainzhi.sample.media.opengl2.base.BaseGLSurfaceView
 import com.tainzhi.sample.media.opengl2.shape.triangle.CameraTriangle
 import com.tainzhi.sample.media.opengl2.shape.triangle.ColorfulTriangle
@@ -17,8 +16,8 @@ import javax.microedition.khronos.opengles.GL10
  * @description:
  **/
 
-class TriangleGLSurfaceView(context: Context, attributeSet: AttributeSet?) :
-    BaseGLSurfaceView(context, attributeSet) {
+class TriangleGLSurfaceView(context: Context) :
+    BaseGLSurfaceView(context) {
 
     init {
         setRenderer(TriangleRenderer())
@@ -41,8 +40,8 @@ class TriangleGLSurfaceView(context: Context, attributeSet: AttributeSet?) :
     }
 }
 
-class CameraTriangleGLSurfaceView(context: Context, attributeSet: AttributeSet?) :
-    BaseGLSurfaceView(context, attributeSet) {
+class CameraTriangleGLSurfaceView(context: Context) :
+    BaseGLSurfaceView(context) {
 
     init {
         setRenderer(CameraTriangleRenderer())
@@ -56,7 +55,7 @@ class CameraTriangleGLSurfaceView(context: Context, attributeSet: AttributeSet?)
         }
 
         override fun onSurfaceChanged(p0: GL10?, p1: Int, p2: Int) {
-            triangle.onSurfaceChanged(p1, p2)
+            triangle.onSurfaceChanged(p1/2, p2/2)
         }
 
         override fun onSurfaceCreated(p0: GL10?, p1: EGLConfig?) {
@@ -65,8 +64,7 @@ class CameraTriangleGLSurfaceView(context: Context, attributeSet: AttributeSet?)
     }
 }
 
-class ColorfulTriangleGLSurfaceView(context: Context, attributeSet: AttributeSet?) :
-    BaseGLSurfaceView(context, attributeSet) {
+class ColorfulTriangleGLSurfaceView(context: Context) : BaseGLSurfaceView(context) {
 
     init {
         setRenderer(ColorfulTriangleRenderer())

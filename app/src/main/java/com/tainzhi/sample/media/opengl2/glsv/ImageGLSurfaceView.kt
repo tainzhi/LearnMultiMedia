@@ -1,6 +1,7 @@
 package com.tainzhi.sample.media.opengl2.glsv
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.util.AttributeSet
 import com.tainzhi.sample.media.opengl2.base.BaseGLSurfaceView
 import com.tainzhi.sample.media.opengl2.image.ImageRenderer
@@ -14,18 +15,21 @@ import com.tainzhi.sample.media.opengl2.image.ImageRenderer
 
 class ImageGLSurfaceView(context: Context, attributes: AttributeSet? = null) : BaseGLSurfaceView(context, attributes) {
     init {
-        setRenderer(ImageRenderer(context)) // 展示图片渲染器
-        // setRenderer(ImageTransformRenderer(context, ImageTransformRenderer.Filter.COOL));  //
+        // setRenderer(ImageRenderer(context)) // 展示图片渲染器
+        // setRenderer(ImageTransformRenderer(context, COOL));  //
         // 展示图片处理渲染器
-        renderMode = RENDERMODE_WHEN_DIRTY
-        requestRender()
+        // renderMode = RENDERMODE_WHEN_DIRTY
+        // requestRender()
     }
     
-    // var bitmap: Bitmap?= null
-    //     set(value) {
-    //         render.mBitmap = value
-    //         field = value
-    //     }
+    var bitmap: Bitmap?= null
+        set(value) {
+            val render: ImageRenderer = ImageRenderer(context)
+            render.mBitmap = value
+            setRenderer(render)
+            renderMode = RENDERMODE_WHEN_DIRTY
+            field = value
+        }
     //
     // var render: ImageRenderer = ImageRenderer(context)
     //     set(value) {
