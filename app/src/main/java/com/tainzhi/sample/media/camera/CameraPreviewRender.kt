@@ -11,7 +11,7 @@ import com.tainzhi.sample.media.opengl2.camera.filter.OesFilter
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
 
-class MyGLCameraDrawer : GLSurfaceView.Renderer {
+class CameraPreviewRender : GLSurfaceView.Renderer {
     private lateinit var surfaceTexture: SurfaceTexture
     private val mOesFilter: BaseFilter = OesFilter()
     private var width = 0
@@ -19,14 +19,13 @@ class MyGLCameraDrawer : GLSurfaceView.Renderer {
     private var dataWidth = 0
     private var dataHeight = 0
     private val matrix = FloatArray(16)
-    var surfaceTextureListener: GLPreviewView.SurfaceTextureListener? = null
+    var surfaceTextureListener: CameraPreviewView.SurfaceTextureListener? = null
 
     override fun onSurfaceCreated(gl: GL10, config: EGLConfig) {
         Log.d(TAG, "onSurfaceCreated: ")
         val texture = createTextureID()
         surfaceTexture = SurfaceTexture(texture)
         surfaceTexture.setOnFrameAvailableListener{
-            Log.i(TAG, "onFrameAvailable")
             surfaceTextureListener?.onSurfaceTextureAvailable(surfaceTexture, width, height)
         }
         mOesFilter.create()
@@ -77,7 +76,7 @@ class MyGLCameraDrawer : GLSurfaceView.Renderer {
     }
 
     companion object {
-        private val TAG = MyGLCameraDrawer::class.java.simpleName
+        private val TAG = CameraPreviewRender::class.java.simpleName
 
         fun rotate(m: FloatArray, angle: Float): FloatArray {
             Matrix.rotateM(m, 0, angle, 0f, 0f, 1f)

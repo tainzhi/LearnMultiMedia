@@ -63,7 +63,7 @@ class CameraInfoCache(cameraManager: CameraManager, useFrontCamera: Boolean = fa
     }
 
 
-    fun isSupportZsl(): Boolean {
+    fun isSupportReproc(): Boolean {
         if (requestAvailableAbilities!= null &&
             requestAvailableAbilities!!.contains(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_YUV_REPROCESSING)  ||
             requestAvailableAbilities!!.contains(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_PRIVATE_REPROCESSING))

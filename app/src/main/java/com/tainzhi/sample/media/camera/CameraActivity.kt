@@ -32,8 +32,10 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
+import androidx.preference.PreferenceManager
 import com.tainzhi.sample.media.R
 import com.tainzhi.sample.media.camera.CameraInfoCache.Companion.chooseOptimalSize
+import com.tainzhi.sample.media.camera.util.SettingsManager
 import com.tainzhi.sample.media.databinding.ActivityCameraBinding
 import com.tainzhi.sample.media.util.Kpi
 import com.tainzhi.sample.media.util.toast
@@ -51,7 +53,7 @@ import java.util.concurrent.TimeUnit
  * @description:
  **/
 
-class CameraActivity : AppCompatActivity(), View.OnClickListener {
+class CameraActivity : AppCompatActivity() {
 
     private lateinit var rootView: View
     private lateinit var _binding: ActivityCameraBinding
@@ -67,19 +69,29 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
     // to play click sound when take picture
     private val mediaActionSound = MediaActionSound()
 
-    private lateinit var previewView: GLPreviewView
-    private lateinit var cameraPreviewRenderer: MyGLCameraDrawer
+    private lateinit var previewView: CameraPreviewView
+    private lateinit var cameraPreviewRenderer: CameraPreviewRender
     // 预览拍照的图片，用于相册打开
     private lateinit var ivThumbnail: CircleImageView
     private lateinit var ivTakePicture: ImageView
     private lateinit var ivRecord: ImageView
+    private lateinit var ivSettings: ImageView
 
     private lateinit var capturedImageUri: Uri
     private lateinit var cameraInfo: CameraInfoCache
 
+    // default open front-facing cameras/lens
     private var useCameraFront = false
 
-    private var surfaceTextureListener = object : GLPreviewView.SurfaceTextureListener {
+    private var isEnableZsl = false
+        set(value) {
+            val enableZsl = PreferenceManager.getDefaultSharedPreferences(this).getBoolean(SettingsManager.KEY_PHOTO_ZSL,
+                SettingsManager.PHOTO_ZSL_DEFAULT_VALUE
+            )
+            field = enableZsl && value
+        }
+
+    private var surfaceTextureListener = object : CameraPreviewView.SurfaceTextureListener {
         override fun onSurfaceTextureSizeChanged(p0: SurfaceTexture, width: Int, height: Int) {
             cameraPreviewRenderer.setViewSize(width, height)
             GLES20.glViewport(0, 0, width, height)
@@ -94,7 +106,6 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
         }
 
         override fun onSurfaceTextureAvailable(p0: SurfaceTexture, width: Int, height: Int) {
-            Log.d(TAG, "onSurfaceTextureAvailable: ")
             previewView.requestRender()
         }
 
@@ -122,12 +133,6 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
         false
     }
 
-    private var supportReprocess = false
-    // more fast than disableZSL
-    // e.g
-    // disableZSL 450ms
-    // enableZSL 278ms
-    private var enableZsl = true
     private lateinit var lastTotalCaptureResult: TotalCaptureResult
     private lateinit var zslImageWriter: ImageWriter
 
@@ -138,6 +143,10 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
     // for camera preview
     private var currentCaptureSession: CameraCaptureSession? = null
     private var cameraDevice: CameraDevice? = null
+    // default set to full screen size
+    private lateinit var viewSize: Size
+    // camera output surface size, maybe smaller than viewSize
+    // e.g. set camera preview 1:1 for a device 1080:2040, then previewSize 1080:1080, viewSize 1080:2040
     private lateinit var previewSize: Size
 
     private var flashSupported = false
@@ -260,16 +269,34 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
 
         setFullScreen()
 
-        findViewById<View>(R.id.picture).setOnClickListener(this)
-        findViewById<View>(R.id.iv_thumbnail).setOnClickListener(this)
-        findViewById<View>(R.id.iv_record).setOnClickListener(this)
-        findViewById<View>(R.id.iv_change_camera).setOnClickListener(this)
+        findViewById<View>(R.id.picture).setOnClickListener {
+            // Most device front lenses/camera have a fixed focal length
+            if (useCameraFront) captureStillPicture() else lockFocus()
+        }
+        findViewById<View>(R.id.iv_thumbnail).setOnClickListener {
+            viewPicture()
+        }
+        findViewById<View>(R.id.iv_record).setOnClickListener {
+            if (isRecordingVideo) stopRecordingVideo() else startRecordingVideo()
+        }
+        findViewById<View>(R.id.iv_change_camera).setOnClickListener {
+            useCameraFront = !useCameraFront
+            closeCamera()
+            if (previewView.isAvailable) {
+                openCamera(previewView.width, previewView.height)
+            }
+        }
         previewView = findViewById(R.id.previewView)
-        cameraPreviewRenderer = MyGLCameraDrawer()
+        cameraPreviewRenderer = CameraPreviewRender()
         previewView.setRender(cameraPreviewRenderer)
         ivThumbnail = findViewById(R.id.iv_thumbnail)
         ivTakePicture = findViewById(R.id.picture)
         ivRecord = findViewById(R.id.iv_record)
+        ivSettings = findViewById<ImageView?>(R.id.iv_setting).apply {
+            setOnClickListener {
+                startActivity(Intent(this@CameraActivity, SettingsActivity::class.java))
+            }
+        }
 
         _binding.cameraModePicker.apply {
             data = cameraModes.toList()
@@ -339,28 +366,10 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
             Log.i(TAG, "onRequestPermissionsResult: ")
         }
     }
-
-    override fun onClick(p0: View?) {
-        Log.d(TAG, "onClick: ")
-        when (p0?.id) {
-            R.id.picture -> lockFocus()
-            R.id.iv_record -> if (isRecordingVideo) stopRecordingVideo() else startRecordingVideo()
-            R.id.iv_thumbnail -> viewPicture()
-            R.id.iv_change_camera -> {
-                useCameraFront = !useCameraFront
-                closeCamera()
-                if (previewView.isAvailable) {
-                    openCamera(previewView.width, previewView.height)
-                }
-            }
-        }
-    }
-
     private fun openCamera(width: Int, height: Int) {
         Log.i(TAG, "openCamera: ")
         val manager = getSystemService(Context.CAMERA_SERVICE) as CameraManager
         setUpCameraOutputs(manager, width, height)
-        // configureTransform(width, height)
         try {
             // Wait for camera to open - 2.5 seconds is sufficient
             if (!cameraOpenCloseLock.tryAcquire(2500, TimeUnit.MILLISECONDS)) {
@@ -472,7 +481,7 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
     private fun setUpCameraOutputs(cameraManager: CameraManager, width: Int, height: Int) {
         try {
             cameraInfo = CameraInfoCache(cameraManager, useCameraFront)
-            supportReprocess = cameraInfo.isSupportZsl()
+            isEnableZsl = cameraInfo.isSupportReproc()
             cameraId = cameraInfo.cameraId
             videoSize = cameraInfo.videoSize
             jpgImageReader = ImageReader.newInstance(
@@ -487,7 +496,7 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
                 // val myMediaRecorder =  MyMediaRecorder()
                 // myMediaRecorder.addVideoData(data)
             }, imageReaderHandler)
-            if (enableZsl && supportReprocess) {
+            if (isEnableZsl) {
                 yuvImageReader = ImageReader.newInstance(
                     cameraInfo.largestYuvSize.width, cameraInfo.largestYuvSize.height,
                     ImageFormat.YUV_420_888,
@@ -501,9 +510,20 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
             }
             flashSupported = cameraInfo.isflashSupported
 
+            // device display rotation
+            // 0 [Surface.ROTATION_0]{android.view.Surface.ROTATION_0 = 0}  -> portrait, 把手机垂直放置且屏幕朝向我们的时候，即设备自然方向
+            // 90  -> landscape, 手机向右横放(前置镜头在右边)且屏幕朝向我们的时候，
+            // 180 -> portrait, 手机竖着倒放且屏幕朝我我们
+            // 270 -> 手机向左横放且屏幕朝向我们
             val displayRotation = windowManager?.defaultDisplay?.rotation
+            // reference: https://developer.android.com/training/camera2/camera-preview#device_rotation
+            // 对于大多数设备，portrait且屏幕面向用户
+            // 前置镜头 sensorOrientation = 270, 所以要相对于设备方向逆时针旋转 270
+            // 后置镜头 sensorOrientation = 90, 所以要相对于设备方向逆时针旋转 90
+            // 最终的 rotation = (sensorOrientationDegrees - deviceOrientationDegrees * sign + 360) % 360
+            // sign = 1, 前置镜头，-1 后置镜头
             sensorOrientation = cameraInfo.sensorOrientation
-
+            Log.d(TAG, "setUpCameraOutputs: displayRotation=$displayRotation, sensorOrientation=$sensorOrientation")
             val swappedDimensions = areDimensionsSwapped(displayRotation)
             val displaySize = Point()
             windowManager?.defaultDisplay?.getSize(displaySize)
@@ -511,23 +531,11 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
             val rotatedPreviewHeight = if (swappedDimensions) width else height
             var maxPreviewWidth = if (swappedDimensions) displaySize.y else displaySize.x
             var maxPreviewHeight = if (swappedDimensions) displaySize.x else displaySize.y
-//                if (maxPreviewWidth > MAX_PREVIEW_WIDTH) maxPreviewWidth = MAX_PREVIEW_WIDTH
-//                if (maxPreviewHeight > MAX_PREVIEW_HEIGHT) maxPreviewHeight = MAX_PREVIEW_HEIGHT
-
-            // Danger, W.R.! Attempting to use too large a preview size could exceed the camera
-            // bus' bandwidth limitation, resulting in gorgeous previews but the storage of
-            // garbage capture data.
             previewSize = chooseOptimalSize(
-                cameraInfo.getPreviewSurfaceSize(),
+                cameraInfo.getOutputPreviewSurfaceSize(),
                 maxPreviewWidth, maxPreviewHeight,
                 maxPreviewWidth, maxPreviewHeight,
-                cameraInfo.largestYuvSize
             )
-            // if (resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
-            //     textureView.setAspectRatio(previewSize.width, previewSize.height)
-            // } else {
-            //     textureView.setAspectRatio(previewSize.height, previewSize.width)
-            // }
             cameraPreviewRenderer.setDataSize(previewView.width, previewView.height)
         } catch (e: CameraAccessException) {
             Log.e(TAG, e.toString())
@@ -602,7 +610,7 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
                     previewConfiguration,
                     OutputConfiguration(jpgImageReader.surface)
                 )
-                if (enableZsl && supportReprocess) {
+                if (isEnableZsl) {
                     outputConfigurations.add(
                         OutputConfiguration(yuvImageReader.surface)
                     )
@@ -613,14 +621,13 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
                     cameraExecutor!!,
                     captureSessionStateCallback
                 )
-                if (enableZsl && supportReprocess) {
+                if (isEnableZsl) {
                     sessionConfiguration.inputConfiguration =
                         InputConfiguration(yuvImageReader.width, yuvImageReader.height, ImageFormat.YUV_420_888)
                 }
                 cameraDevice?.createCaptureSession(sessionConfiguration)
             } else {
-
-                if (enableZsl && supportReprocess) {
+                if (isEnableZsl) {
 
                 } else {
                     cameraDevice?.createCaptureSession(
@@ -641,7 +648,7 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
             previewRequestBuilder =
                 cameraDevice!!.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
             previewRequestBuilder.addTarget(previewSurface)
-            if (enableZsl && this::yuvImageReader.isInitialized){
+            if (isEnableZsl && this::yuvImageReader.isInitialized){
                 previewRequestBuilder.addTarget(yuvImageReader.surface)
             }
 
@@ -672,63 +679,6 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
         }
     }
 
-
-    /**
-     * Configures the necessary [android.graphics.Matrix] transformation to `textureView`.
-     * This method should be called after the camera preview size is determined in
-     * setUpCameraOutputs and also the size of `textureView` is fixed.
-     *
-     * @param viewWidth  The width of `textureView`
-     * @param viewHeight The height of `textureView`
-     */
-    private fun configureTransform( viewWidth: Int, viewHeight: Int) {
-        val rotation = windowManager?.defaultDisplay?.rotation
-        val matrix = Matrix()
-        val viewRect = RectF(0f, 0f, viewWidth.toFloat(), viewHeight.toFloat())
-        val bufferRect = RectF(0f, 0f, previewSize.height.toFloat(), previewSize.width.toFloat())
-        val centerX = viewRect.centerX()
-        val centerY = viewRect.centerY()
-
-        if (Surface.ROTATION_90 == rotation || Surface.ROTATION_270 == rotation) {
-            bufferRect.offset(centerX - bufferRect.centerX(), centerY - bufferRect.centerY())
-            val scale = Math.max(
-                viewHeight.toFloat() / previewSize.height,
-                viewWidth.toFloat() / previewSize.width
-            )
-            with(matrix) {
-                setRectToRect(viewRect, bufferRect, Matrix.ScaleToFit.FILL)
-                postScale(scale, scale, centerX, centerY)
-                postRotate((90 * (rotation - 2)).toFloat(), centerX, centerY)
-            }
-        } else if (Surface.ROTATION_180 == rotation) {
-            matrix.postRotate(180f, centerX, centerY)
-        }
-        // textureView.setTransform(matrix)
-    }
-
-    /**
-     * Lock the focus as the first step for a still image capture.
-     */
-    private fun lockFocus() {
-        Log.d(TAG, "lockFocus: ")
-        try {
-            // This is how to tell the camera to lock focus.
-            previewRequestBuilder.set(
-                CaptureRequest.CONTROL_AF_TRIGGER,
-                CameraMetadata.CONTROL_AF_TRIGGER_START
-            )
-            // Tell #captureCallback to wait for the lock.
-            cameraState = STATE_WAITING_LOCK
-            currentCaptureSession?.capture(
-                previewRequestBuilder.build(), captureCallback,
-                cameraHandler
-            )
-        } catch (e: CameraAccessException) {
-            Log.e(TAG, e.toString())
-        }
-
-    }
-
     /**
      * Run the precapture sequence for capturing a still image. This method should be called when
      * we get a response in [.captureCallback] from [.lockFocus].
@@ -754,18 +704,18 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
      * [.captureCallback] from both [.lockFocus].
      */
     private fun captureStillPicture() {
-        Log.d(TAG, "captureStillPicture: enableZsl=${enableZsl}, supportReprocess=${supportReprocess}")
+        Log.d(TAG, "captureStillPicture: enableZsl=${isEnableZsl}")
         mediaActionSound.play(MediaActionSound.SHUTTER_CLICK)
         Kpi.start(Kpi.TYPE.SHOT_TO_SHOT)
         try {
-            if (enableZsl && yuvLatestReceivedImage == null) {
+            if (isEnableZsl && yuvLatestReceivedImage == null) {
                 Log.e(TAG, "captureStillPicture: no yuv image available")
                 return
             }
             val rotation = windowManager.defaultDisplay.rotation
 
             val captureBuilder =
-                if (enableZsl && supportReprocess&&this::zslImageWriter.isInitialized) {
+                if (isEnableZsl && this::zslImageWriter.isInitialized) {
                     Log.d(TAG, "captureStillPicture: queueInput yuvLatestReceiveImage to HAL")
                     zslImageWriter.queueInputImage(yuvLatestReceivedImage)
                     cameraDevice!!.createReprocessCaptureRequest(lastTotalCaptureResult)
@@ -773,22 +723,20 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
                     cameraDevice!!.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
                 }
             captureBuilder.apply {
-//                zsl
-//                b1.set(CaptureRequest.JPEG_ORIENTATION, mCameraInfoCache.sensorOrientation());
                 addTarget(jpgImageReader.surface)
-                if (enableZsl) {
+                if (isEnableZsl) {
                     set(CaptureRequest.NOISE_REDUCTION_MODE, cameraInfo.reprocessingNoiseMode);
                     set(CaptureRequest.EDGE_MODE, cameraInfo.reprocessingEdgeMode);
                 }
                 set(CaptureRequest.JPEG_QUALITY, 95);
+                // https://developer.android.com/training/camera2/camera-preview#orientation_calculation
+                // rotation = (sensorOrientationDegrees - deviceOrientationDegrees * sign + 360) % 360
+                // sign 1 for front-facing cameras, -1 for back-facing cameras
                 set(
                     CaptureRequest.JPEG_ORIENTATION,
-                    (OREIENTATIONS.get(rotation) + sensorOrientation!! + 270) % 360
+                    ( sensorOrientation!! - OREIENTATIONS.get(rotation) * (if (useCameraFront) 1 else -1) + 360) % 360
                 )
-                set(CaptureRequest.JPEG_ORIENTATION, OREIENTATIONS.get(rotation)); set(
-                CaptureRequest.CONTROL_AF_MODE,
-                CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE
-            )
+                set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
                 if (flashSupported) {
                     set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH)
                 }
@@ -840,10 +788,28 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
         yuvLatestReceivedImage = null
     }
 
-    /**
-     * Unlock the focus. This method should be called when still image capture sequence is
-     * finished.
-     */
+    // Lock the focus as the first step for a still image capture.
+    private fun lockFocus() {
+        Log.d(TAG, "lockFocus: ")
+        try {
+            // This is how to tell the camera to lock focus.
+            previewRequestBuilder.set(
+                CaptureRequest.CONTROL_AF_TRIGGER,
+                CameraMetadata.CONTROL_AF_TRIGGER_START
+            )
+            // Tell #captureCallback to wait for the lock.
+            cameraState = STATE_WAITING_LOCK
+            currentCaptureSession?.capture(
+                previewRequestBuilder.build(), captureCallback,
+                cameraHandler
+            )
+        } catch (e: CameraAccessException) {
+            Log.e(TAG, e.toString())
+        }
+
+    }
+
+     // Unlock the focus. This method should be called when still image capture sequence is finished.
     private fun unlockFocus() {
         try {
             // Reset the auto-focus trigger
@@ -866,7 +832,6 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
         } catch (e: CameraAccessException) {
             Log.e(TAG, e.toString())
         }
-
     }
 
     private fun viewPicture() {
@@ -1000,6 +965,13 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
         }
     }
 
+    private fun isEnableZsl(): Boolean {
+        val enableZsl = PreferenceManager.getDefaultSharedPreferences(this).getBoolean(SettingsManager.KEY_PHOTO_ZSL,
+            SettingsManager.PHOTO_ZSL_DEFAULT_VALUE
+        )
+        return enableZsl
+    }
+
     companion object {
         private val TAG = CameraActivity::class.java.simpleName
         private val OREIENTATIONS = SparseIntArray()
@@ -1018,10 +990,10 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
         )
 
         init {
-            OREIENTATIONS.append(Surface.ROTATION_0, 90)
-            OREIENTATIONS.append(Surface.ROTATION_90, 0)
-            OREIENTATIONS.append(Surface.ROTATION_180, 270)
-            OREIENTATIONS.append(Surface.ROTATION_270, 180)
+            OREIENTATIONS.append(Surface.ROTATION_0, 0)
+            OREIENTATIONS.append(Surface.ROTATION_90, 90)
+            OREIENTATIONS.append(Surface.ROTATION_180, 180)
+            OREIENTATIONS.append(Surface.ROTATION_270, 270)
 
         }
 
@@ -1034,7 +1006,6 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
             append(Surface.ROTATION_180, 90)
             append(Surface.ROTATION_270, 0)
         }
-
 
         /**
          * Camera state: Showing camera preview.
@@ -1060,15 +1031,5 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener {
          * Camera state: Picture was taken.
          */
         private val STATE_PICTURE_TAKEN = 4
-
-        /**
-         * Max preview width that is guaranteed by Camera2 API
-         */
-        private val MAX_PREVIEW_WIDTH = 1920
-
-        /**
-         * Max preview height that is guaranteed by Camera2 API
-         */
-        private val MAX_PREVIEW_HEIGHT = 1080
     }
 }

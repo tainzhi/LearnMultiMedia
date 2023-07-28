@@ -14,7 +14,7 @@ import javax.microedition.khronos.egl.EGLContext
 import javax.microedition.khronos.egl.EGLDisplay
 import javax.microedition.khronos.egl.EGLSurface
 
-class GLPreviewView : GLSurfaceView {
+class CameraPreviewView : GLSurfaceView {
     constructor(context: Context): super(context) {}
 
     constructor(context: Context, attr: AttributeSet) : super(context, attr) {
@@ -25,7 +25,7 @@ class GLPreviewView : GLSurfaceView {
         setEGLContextClientVersion(2)
     }
 
-    lateinit var cameraDrawer: MyGLCameraDrawer
+    lateinit var cameraDrawer: CameraPreviewRender
 
     var isAvailable = false
     var surfaceTextureListener: SurfaceTextureListener? = null
@@ -36,7 +36,7 @@ class GLPreviewView : GLSurfaceView {
     fun setRender(render: GLSurfaceView.Renderer) {
         Log.d(TAG, "setRender: ")
         setRenderer(render)
-        cameraDrawer = render as MyGLCameraDrawer
+        cameraDrawer = render as CameraPreviewRender
         renderMode = RENDERMODE_WHEN_DIRTY
 
         val display = if (Build.VERSION.SDK_INT > Build.VERSION_CODES.R) context.display else {
@@ -91,6 +91,6 @@ class GLPreviewView : GLSurfaceView {
     }
 
     companion object {
-        private val TAG = GLPreviewView::class.java.simpleName
+        private val TAG = CameraPreviewView::class.java.simpleName
     }
 }
