@@ -21,7 +21,6 @@ import com.tainzhi.sample.media.opengl2.RotateTriangleActivity
 import com.tainzhi.sample.media.opengl2.SquareActivity
 import com.tainzhi.sample.media.opengl2.TriangleActivity
 import com.tainzhi.sample.media.opengl2.camera.TakePictureActivity
-import com.tainzhi.sample.media.opengl2.camera.preview.PreviewCameraActivity
 import com.tainzhi.sample.media.player.PlayActivity
 
 class MainActivity : AppCompatActivity() {
@@ -43,7 +42,6 @@ class MainActivity : AppCompatActivity() {
             ActivityItem("OpenGLES 绘制画笔点", "响应触摸事件，并在触摸出绘制点", PaintPointActivity::class.java),
             ActivityItem("OpenGLES 旋转三角形", "响应触摸事件，旋转三角形", RotateTriangleActivity::class.java),
             ActivityItem("OpenGLES 渲染图片", "渲染效果: 黑白, 冷色, 暖色, 模糊, 放大", ImageGLRendererActivity::class.java),
-            ActivityItem("OpenGLES 预览相机", "预览相机", PreviewCameraActivity::class.java),
             ActivityItem("OpenGLES 相机拍照", "相机拍照", TakePictureActivity::class.java),
             ActivityItem("OpenGLES && Native MediaCodec", "cpp层MediaCodec和GLSurfaceView", NativeCodecActivity::class.java))
     

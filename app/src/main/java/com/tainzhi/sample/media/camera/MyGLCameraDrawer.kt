@@ -8,7 +8,6 @@ import android.opengl.Matrix
 import android.util.Log
 import com.tainzhi.sample.media.opengl2.camera.filter.BaseFilter
 import com.tainzhi.sample.media.opengl2.camera.filter.OesFilter
-import com.tainzhi.sample.media.opengl2.camera.preview.CameraView
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
 
@@ -59,12 +58,8 @@ class MyGLCameraDrawer : GLSurfaceView.Renderer {
 
     private fun calculateMatrix() {
         getShowMatrix(matrix, dataWidth, dataHeight, width, height)
-        if (CameraView.Companion.cameraId == 1) {
-            flip(matrix, true, false)
-            rotate(matrix, 90f)
-        } else {
-            rotate(matrix, 270f)
-        }
+        flip(matrix, true, false)
+        rotate(matrix, 90f)
         mOesFilter.matrix = matrix
     }
 
