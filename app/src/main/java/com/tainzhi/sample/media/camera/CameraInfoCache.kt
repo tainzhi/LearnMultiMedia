@@ -6,16 +6,18 @@ import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
 import android.hardware.camera2.CameraMetadata
 import android.hardware.camera2.params.StreamConfigurationMap
-import android.media.MediaRecorder
 import android.util.Log
 import android.util.Size
+import java.lang.Long.signum
 import java.util.Collections
+import kotlin.math.abs
 
 class CameraInfoCache(cameraManager: CameraManager, useFrontCamera: Boolean = false) {
     private lateinit var cameraCharacteristics: CameraCharacteristics
     var cameraId: String = ""
     var largestJpgSize =  Size(0, 0)
     var largestYuvSize = Size(0, 0)
+    // to fixme
     var videoSize = Size(0, 0)
     var isflashSupported = false
     private var requestAvailableAbilities: IntArray? = null
@@ -40,7 +42,7 @@ class CameraInfoCache(cameraManager: CameraManager, useFrontCamera: Boolean = fa
             throw Exception("cannot get camera characteristics")
         }
         streamConfigurationMap = cameraCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
-        videoSize = chooseVideoSize(streamConfigurationMap!!.getOutputSizes(MediaRecorder::class.java))
+        // videoSize = chooseVideoSize(streamConfigurationMap!!.getOutputSizes(MediaRecorder::class.java))
         if (streamConfigurationMap == null) {
             throw Exception("cannot get stream configuration")
         }
@@ -73,7 +75,7 @@ class CameraInfoCache(cameraManager: CameraManager, useFrontCamera: Boolean = fa
         return false
     }
 
-    fun getPreviewSurfaceSize(): Array<Size> {
+    fun getOutputPreviewSurfaceSize(): Array<Size> {
         return streamConfigurationMap!!.getOutputSizes(SurfaceTexture::class.java)
     }
 
@@ -116,72 +118,71 @@ class CameraInfoCache(cameraManager: CameraManager, useFrontCamera: Boolean = fa
         }
 
         /**
-         * In this sample, we choose a video size with 3x4 aspect ratio. Also, we don't use sizes
-         * larger than 1080p, since MediaRecorder cannot handle such a high-resolution video.
-         *
-         * @param choices The list of available sizes
-         * @return The video size
-         */
-        private fun chooseVideoSize(choices: Array<Size>) = choices.firstOrNull {
-            it.width == it.height * 4 / 3 && it.width <= 1080
-        } ?: choices[choices.size - 1]
-
-        /**
-         * Given `choices` of `Size`s supported by a camera, choose the smallest one that
-         * is at least as large as the respective texture view size, and that is at most as large as
-         * the respective max size, and whose aspect ratio matches with the specified value. If such
-         * size doesn't exist, choose the largest one that is at most as large as the respective max
-         * size, and whose aspect ratio matches with the specified value.
-         *
-         * @param choices           The list of sizes that the camera supports for the intended
-         *                          output class
-         * @param textureViewWidth  The width of the texture view relative to sensor coordinate
-         * @param textureViewHeight The height of the texture view relative to sensor coordinate
-         * @param maxWidth          The maximum width that can be chosen
-         * @param maxHeight         The maximum height that can be chosen
-         * @param aspectRatio       The aspect ratio
-         * @return The optimal `Size`, or an arbitrary one if none were big enough
+         * @param viewSize 预览区域所在的窗口的大小，默认为整个屏幕大小，且不会改变。Portrait方向时，width < height转换下，
+         *                  landscape方向时，width > height 无需转换
+         *                  确保 viewSize.width > view.height
+         * @param aspectRatio 预览区域的宽高比 w:h，确保 w > h 恒成立，所以该值恒大于等于1
+         *      比如 1:1, 4:3, 16:9, full=device最长的边: device的短边
          */
         @JvmStatic
         fun chooseOptimalSize(
             choices: Array<Size>,
-            textureViewWidth: Int,
-            textureViewHeight: Int,
-            maxWidth: Int,
-            maxHeight: Int,
-            aspectRatio: Size
-        ): Size {
-
-            // Collect the supported resolutions that are at least as big as the preview Surface
-            val bigEnough = ArrayList<Size>()
-            // Collect the supported resolutions that are smaller than the preview Surface
-            val notBigEnough = ArrayList<Size>()
-            val w = aspectRatio.width
-            val h = aspectRatio.height
+            viewSize: Size,
+            aspectRatio: Float
+        ): Pair<Size, Float> {
+            Log.d(TAG, "chooseOptimalSize: viewSize=${viewSize}, aspectRatio=${aspectRatio}")
+            val choosedSizes = ArrayList<Size>()
             for (option in choices) {
-                if (option.width <= maxWidth && option.height <= maxHeight &&
-                    option.height == option.width * textureViewHeight / textureViewWidth
-                ) {
-                    if (option.width >= textureViewWidth && option.height >= textureViewHeight) {
-                        bigEnough.add(option)
-                    } else {
-                        notBigEnough.add(option)
-                    }
+                Log.d(TAG, "chooseOptimalSize: $option")
+                val tempRatio = option.width/option.height.toFloat()
+                if (abs(aspectRatio - tempRatio) < DIFF_FLOAT_EPS) {
+                    choosedSizes.add(option)
                 }
             }
-
-            // Pick the smallest of those big enough. If there is no one big enough, pick the
-            // largest of those not big enough.
-            if (bigEnough.size > 0) {
-                return Collections.min(bigEnough, CompareSizesByArea())
-            } else if (notBigEnough.size > 0) {
-                return Collections.max(notBigEnough, CompareSizesByArea())
-            } else {
-                Log.e(TAG, "Couldn't find any suitable preview size")
-                return choices[0]
+            // 首先选取宽高和预览窗口一直且最大的输出尺寸
+            if (choosedSizes.size > 0) {
+                Log.d(TAG, "optimal preview size by same w/h aspect ratio")
+                val result = Collections.min(choosedSizes, CompareSizesByArea())
+                return Pair(result, aspectRatio)
             }
+
+            var suboptimalSize = Size(0, 0)
+            var suboptimalAspectRatio = 1f
+            // 如果不存在宽高比与预览窗口一致的输出尺寸，则选择与其宽高最接近的尺寸
+            var minRatioDiff = Float.MAX_VALUE
+            choices.forEach { option ->
+                val tempRatio = option.width/option.height.toFloat()
+                if (abs(tempRatio - aspectRatio) < minRatioDiff) {
+                    minRatioDiff = abs(tempRatio - aspectRatio)
+                    suboptimalAspectRatio = tempRatio
+                    suboptimalSize = option
+                }
+            }
+            if (suboptimalSize != Size(0, 0)) {
+                Log.d(TAG, "optimal preview size by closet w/h aspect ratio")
+                return Pair(suboptimalSize, suboptimalAspectRatio)
+            }
+
+            // 选择面积与预览窗口最接近的输出尺寸
+            var minAreaDiff = Long.MAX_VALUE
+            val previewArea = viewSize.height * aspectRatio * viewSize.height
+            choices.forEach { option ->
+                val tempArea = option.width * option.height
+                if (abs(previewArea - tempArea) < minAreaDiff) {
+                    suboptimalAspectRatio = option.width / option.height.toFloat()
+                    suboptimalSize = option
+                }
+            }
+            Log.d(TAG, "optimal preview size by choset area")
+            return Pair(suboptimalSize, suboptimalAspectRatio)
         }
 
         private val TAG = CameraInfoCache::class.java.simpleName
+        private const val DIFF_FLOAT_EPS = 0.0001f
     }
+}
+
+class CompareSizesByArea : Comparator<Size> {
+    override fun compare(p0: Size, p1: Size) =
+        signum(p0.width * p0.height - p1.width.toLong() * p1.height)
 }

@@ -33,9 +33,11 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     class SettingsFragment : PreferenceFragmentCompat(), Preference.OnPreferenceChangeListener {
-        private val sp : SharedPreferences = PreferenceManager.getDefaultSharedPreferences(this@SettingsFragment.requireContext())
-        private val spEditor : SharedPreferences.Editor = sp.edit()
+        private lateinit var sp : SharedPreferences
+        private lateinit var spEditor : SharedPreferences.Editor
         override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
+            sp = PreferenceManager.getDefaultSharedPreferences(this@SettingsFragment.requireContext())
+            spEditor = sp.edit()
             setPreferencesFromResource(R.xml.root_preferences, rootKey)
             findPreference<Preference>(this@SettingsFragment.requireContext().getString(R.string.settings_key_photo_zsl))?.apply {
                 val enableZsl = sp.getBoolean(SettingsManager.KEY_PHOTO_ZSL, SettingsManager.PHOTO_ZSL_DEFAULT_VALUE)

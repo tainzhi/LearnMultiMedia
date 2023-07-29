@@ -57,8 +57,8 @@ class CameraPreviewRender : GLSurfaceView.Renderer {
 
     private fun calculateMatrix() {
         getShowMatrix(matrix, dataWidth, dataHeight, width, height)
-        flip(matrix, true, false)
-        rotate(matrix, 90f)
+        // flip(matrix, true, false)
+        rotate(matrix, 270f)
         mOesFilter.matrix = matrix
     }
 
@@ -91,6 +91,7 @@ class CameraPreviewRender : GLSurfaceView.Renderer {
         }
 
         fun getShowMatrix(matrix: FloatArray?, imgWidth: Int, imgHeight: Int, viewWidth: Int, viewHeight: Int) {
+            Log.d(TAG, "getShowMatrix: img:w${imgWidth}*h${imgHeight}, view:w${viewWidth}*h${viewHeight}")
             if (imgHeight > 0 && imgWidth > 0 && viewWidth > 0 && viewHeight > 0) {
                 val sWhView = viewWidth.toFloat() / viewHeight
                 val sWhImg = imgWidth.toFloat() / imgHeight

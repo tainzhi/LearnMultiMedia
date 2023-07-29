@@ -148,6 +148,7 @@ class CameraActivity : AppCompatActivity() {
     // camera output surface size, maybe smaller than viewSize
     // e.g. set camera preview 1:1 for a device 1080:2040, then previewSize 1080:1080, viewSize 1080:2040
     private lateinit var previewSize: Size
+    private var previewAspectRatio = 1f
 
     private var flashSupported = false
 
@@ -268,6 +269,11 @@ class CameraActivity : AppCompatActivity() {
         rootView = _binding.root
 
         setFullScreen()
+
+        val displaySize = Point()
+        windowManager?.defaultDisplay?.getSize(displaySize)
+        viewSize = Size(displaySize.x, displaySize.y)
+        previewAspectRatio = (viewSize.height /viewSize.width.toFloat()).toFloat()
 
         findViewById<View>(R.id.picture).setOnClickListener {
             // Most device front lenses/camera have a fixed focal length
@@ -524,17 +530,21 @@ class CameraActivity : AppCompatActivity() {
             // sign = 1, 前置镜头，-1 后置镜头
             sensorOrientation = cameraInfo.sensorOrientation
             Log.d(TAG, "setUpCameraOutputs: displayRotation=$displayRotation, sensorOrientation=$sensorOrientation")
+            // device portrait orientation ,then deviceHeight > deviceWidth
+            // device landscape orientation, then deviceHeight < deviceWidth
+            // whether device orientation, sensorWidth > deviceHeight is always true
             val swappedDimensions = areDimensionsSwapped(displayRotation)
-            val displaySize = Point()
-            windowManager?.defaultDisplay?.getSize(displaySize)
-            val rotatedPreviewWidth = if (swappedDimensions) height else width
-            val rotatedPreviewHeight = if (swappedDimensions) width else height
-            var maxPreviewWidth = if (swappedDimensions) displaySize.y else displaySize.x
-            var maxPreviewHeight = if (swappedDimensions) displaySize.x else displaySize.y
-            previewSize = chooseOptimalSize(
+            if (swappedDimensions) {
+                Log.d(TAG, "setUpCameraOutputs: roate switch width/height")
+                viewSize = Size(viewSize.height, viewSize.width)
+            }
+            val (choosedSize, choosedSizeAspectRatio) = chooseOptimalSize(
                 cameraInfo.getOutputPreviewSurfaceSize(),
-                maxPreviewWidth, maxPreviewHeight,
-                maxPreviewWidth, maxPreviewHeight,
+                viewSize,
+                previewAspectRatio
+            )
+            Log.d(TAG, "setUpCameraOutputs: choosed optimal preview size:${choosedSize}," +
+                    "previewAspectRatio=${previewAspectRatio},choosed optimal preview size:${choosedSizeAspectRatio}"
             )
             cameraPreviewRenderer.setDataSize(previewView.width, previewView.height)
         } catch (e: CameraAccessException) {
@@ -547,22 +557,17 @@ class CameraActivity : AppCompatActivity() {
     }
 
 
-    /**
-     * Determines if the dimensions are swapped given the phone's current rotation.
-     *
-     * @param displayRotation The current rotation of the display
-     *
-     * @return true if the dimensions are swapped, false otherwise.
-     */
+    // device portrait orientation ,then deviceHeight > deviceWidth
+    // device landscape orientation, then deviceHeight < deviceWidth
+    // whether device orientation, sensorWidth > deviceHeight is always true
     private fun areDimensionsSwapped(displayRotation: Int?): Boolean {
         var swappedDimensions = false
         when (displayRotation) {
             Surface.ROTATION_0, Surface.ROTATION_180 -> {
                 if (sensorOrientation == 90 || sensorOrientation == 270) {
-                    swappedDimensions = true
+                    swappedDimensions = false
                 }
             }
-
             Surface.ROTATION_90, Surface.ROTATION_270 -> {
                 if (sensorOrientation == 0 || sensorOrientation == 180) {
                     swappedDimensions = true
