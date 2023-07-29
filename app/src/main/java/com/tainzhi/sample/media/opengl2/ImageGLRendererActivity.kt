@@ -21,7 +21,7 @@ class ImageGLRendererActivity : AppCompatActivity() {
         setContentView(binding.root)
         // binding.imageGLSurfaceView.bitmap = BitmapFactory.decodeResource(resources, R.drawable.huge)
         try {
-            val inputStream = assets.open("one_piece.jpg");
+            val inputStream = assets.open("img.png");
             binding.imageGLSurfaceView.bitmap = BitmapFactory.decodeStream(inputStream);
         } catch (e: IOException) {
             Log.d(TAG, Log.getStackTraceString(e))

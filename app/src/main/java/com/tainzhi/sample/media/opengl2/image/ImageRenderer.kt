@@ -6,6 +6,7 @@ import android.opengl.GLES20
 import android.opengl.GLSurfaceView
 import android.opengl.GLUtils
 import android.opengl.Matrix
+import android.util.Log
 import com.tainzhi.sample.media.opengl2.base.BaseGLSL
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -47,38 +48,39 @@ class ImageRenderer(private val mContext: Context) : BaseGLSL(), GLSurfaceView.R
         val h = mBitmap!!.height
         val sWH = w / h.toFloat()
         val sWidthHeight = width / height.toFloat()
-        // if (width > height) {
-        //     if (sWH > sWidthHeight) {
-        //         Matrix.orthoM(mProjectMatrix, 0, -sWidthHeight * sWH, sWidthHeight * sWH, -1f, 1f, 3f, 7f)
-        //     } else {
-        //         Matrix.orthoM(mProjectMatrix, 0, -sWidthHeight / sWH, sWidthHeight / sWH, -1f, 1f, 3f, 7f)
-        //     }
-        // } else {
-        //     if (sWH > sWidthHeight) {
-        //         Matrix.orthoM(mProjectMatrix, 0, -1f, 1f, -1 / sWidthHeight * sWH, 1 / sWidthHeight * sWH, 3f, 7f)
-        //     } else {
-        //         Matrix.orthoM(mProjectMatrix, 0, -1f, 1f, -sWH / sWidthHeight, sWH / sWidthHeight, 3f, 7f)
-        //     }
-        // }
-        val halfViewWidth: Float = width/2f
-        val halfViewHeight: Float = height/2f
+        val modelMatrix = FloatArray(16)
+        Matrix.setIdentityM(modelMatrix, 0)
+        val scale: Float =  width.toFloat()
+        Matrix.scaleM(modelMatrix, 0, scale, scale, 1f)
+        val translate = (height - width) / 2f
+        // Matrix.translateM(modelMatrix, 0,0f, -translate,0f)
+        Log.d(TAG, "onSurfaceChanged: width:$width,height:$height,bitmapW:$w, bitmapH:$h")
         if (width > height) {
             if (sWH > sWidthHeight) {
-                Matrix.orthoM(mProjectMatrix, 0, -halfViewWidth, halfViewWidth, -halfViewHeight, halfViewHeight, 10f, 40f)
+                Matrix.orthoM(mProjectMatrix, 0, -sWidthHeight * sWH, sWidthHeight * sWH, -1f, 1f, 3f, 7f)
             } else {
-                Matrix.orthoM(mProjectMatrix, 0, -halfViewWidth, halfViewWidth, -halfViewHeight, halfViewHeight, 10f, 40f)
+                Matrix.orthoM(mProjectMatrix, 0, -sWidthHeight / sWH, sWidthHeight / sWH, -1f, 1f, 3f, 7f)
             }
         } else {
             if (sWH > sWidthHeight) {
-                Matrix.orthoM(mProjectMatrix, 0, -halfViewWidth, halfViewWidth, -halfViewHeight, halfViewHeight, 10f, 40f)
+                // Matrix.orthoM(mProjectMatrix, 0, -width/2f, width/2f, -width/2f, width/2f, 3f, 7f)
+                // Matrix.orthoM(mProjectMatrix, 0, -1/2f, 1/2f, -1 / sWidthHeight * sWH * 1/2f, 1 / sWidthHeight * sWH * 1/2f, 3f, 7f)
+                Matrix.orthoM(mProjectMatrix, 0, -1/2f * width, 1/2f * width, -1 / sWidthHeight * sWH * 1/2f * width, 1 / sWidthHeight * sWH * 1/2f * width, 3f, 7f)
+                // Matrix.orthoM(mProjectMatrix, 0, -width/2f, width/2f, -height/2f, height/2f, 10f, 50f)
+                // Log.d(TAG, "onSurfaceChanged: pMatrix=${mProjectMatrix}")
             } else {
-                Matrix.orthoM(mProjectMatrix, 0, -halfViewWidth, halfViewWidth, -halfViewHeight, halfViewHeight, 10f, 40f)
+                Matrix.orthoM(mProjectMatrix, 0, -1f, 1f, -sWH / sWidthHeight, sWH / sWidthHeight, 3f, 7f)
             }
         }
         //设置相机位置
         Matrix.setLookAtM(mViewMatrix, 0, 0f, 0f, 7.0f, 0f, 0f, 0f, 0f, 1.0f, 0.0f)
         //计算变换矩阵
-        Matrix.multiplyMM(mMVPMatrix, 0, mProjectMatrix, 0, mViewMatrix, 0)
+        Matrix.multiplyMM(mMVPMatrix, 0, mViewMatrix, 0, modelMatrix, 0)
+        Matrix.multiplyMM(mMVPMatrix, 0, mProjectMatrix, 0, mMVPMatrix, 0)
+        logMatrix("modelMatrix", modelMatrix)
+        logMatrix("viewMatrix", mViewMatrix)
+        logMatrix("proMatrix", mProjectMatrix)
+        GLES20.glViewport(0, 0, width, height)
     }
 
     override fun onDrawFrame(gl: GL10) {
@@ -118,6 +120,7 @@ class ImageRenderer(private val mContext: Context) : BaseGLSL(), GLSurfaceView.R
     }
 
     companion object {
+        private val TAG = ImageRenderer::class.java.simpleName
         private const val vertexMatrixShaderCode = "attribute vec4 vPosition;\n" +
                 "attribute vec2 vCoordinate;\n" +
                 "uniform mat4 vMatrix;\n" +
@@ -143,6 +146,21 @@ class ImageRenderer(private val mContext: Context) : BaseGLSL(), GLSurfaceView.R
                 0.0f, 1.0f,
                 1.0f, 0.0f,
                 1.0f, 1.0f)
+        private fun logMatrix(name: String, floatArray: FloatArray) {
+            if (floatArray.size == 16) {
+                val stringBuilder = StringBuilder()
+                for (i in 0 until 4) {
+                    for (j in 0 until 4) {
+                        val index = i * 4 + j
+                        stringBuilder.append(floatArray[index]).append(" ")
+                    }
+                    stringBuilder.append("\n")
+                }
+                Log.d(TAG, "Matrix($name):\n$stringBuilder")
+            } else {
+                Log.e(TAG, "The FloatArray should have exactly 16 elements.")
+            }
+        }
     }
 
     init {
