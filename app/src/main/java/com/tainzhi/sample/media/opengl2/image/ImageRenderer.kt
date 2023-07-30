@@ -43,6 +43,7 @@ class ImageRenderer(private val mContext: Context) : BaseGLSL(), GLSurfaceView.R
     }
 
     override fun onSurfaceChanged(gl: GL10, width: Int, height: Int) {
+        GLES20.glClearColor(1f, 1f, 1f,1f)
         GLES20.glViewport(0, 0, width, height)
         val w = mBitmap!!.width
         val h = mBitmap!!.height
@@ -50,10 +51,16 @@ class ImageRenderer(private val mContext: Context) : BaseGLSL(), GLSurfaceView.R
         val sWidthHeight = width / height.toFloat()
         val modelMatrix = FloatArray(16)
         Matrix.setIdentityM(modelMatrix, 0)
-        val scale: Float =  width.toFloat()
-        Matrix.scaleM(modelMatrix, 0, scale, scale, 1f)
+        val scale: Float =  width.toFloat()/2f
+        Matrix.scaleM(modelMatrix, 0, scale*w/h.toFloat(), scale, 1f)
+        // modelMatrix = transMatrix * scalematrix
+        // 先scale，再translate使得靠近屏幕下边缘
         val translate = (height - width) / 2f
-        // Matrix.translateM(modelMatrix, 0,0f, -translate,0f)
+        val transMatrix = FloatArray(16)
+        Matrix.setIdentityM(transMatrix, 0)
+        Matrix.translateM(transMatrix, 0,0f, -translate,0f)
+
+        Matrix.multiplyMM(modelMatrix, 0, transMatrix, 0, modelMatrix, 0)
         Log.d(TAG, "onSurfaceChanged: width:$width,height:$height,bitmapW:$w, bitmapH:$h")
         if (width > height) {
             if (sWH > sWidthHeight) {
@@ -63,11 +70,8 @@ class ImageRenderer(private val mContext: Context) : BaseGLSL(), GLSurfaceView.R
             }
         } else {
             if (sWH > sWidthHeight) {
-                // Matrix.orthoM(mProjectMatrix, 0, -width/2f, width/2f, -width/2f, width/2f, 3f, 7f)
                 // Matrix.orthoM(mProjectMatrix, 0, -1/2f, 1/2f, -1 / sWidthHeight * sWH * 1/2f, 1 / sWidthHeight * sWH * 1/2f, 3f, 7f)
-                Matrix.orthoM(mProjectMatrix, 0, -1/2f * width, 1/2f * width, -1 / sWidthHeight * sWH * 1/2f * width, 1 / sWidthHeight * sWH * 1/2f * width, 3f, 7f)
-                // Matrix.orthoM(mProjectMatrix, 0, -width/2f, width/2f, -height/2f, height/2f, 10f, 50f)
-                // Log.d(TAG, "onSurfaceChanged: pMatrix=${mProjectMatrix}")
+                Matrix.orthoM(mProjectMatrix, 0, -width.toFloat()/2f, width.toFloat()/2f, -height.toFloat()/2f,height.toFloat()/2f, -1f, 70f)
             } else {
                 Matrix.orthoM(mProjectMatrix, 0, -1f, 1f, -sWH / sWidthHeight, sWH / sWidthHeight, 3f, 7f)
             }
