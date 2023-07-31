@@ -92,25 +92,27 @@ class CameraActivity : AppCompatActivity() {
         }
 
     private var surfaceTextureListener = object : CameraPreviewView.SurfaceTextureListener {
-        override fun onSurfaceTextureSizeChanged(p0: SurfaceTexture, width: Int, height: Int) {
+        override fun onSurfaceTextureSizeChanged(surfaceTexture: SurfaceTexture, width: Int, height: Int) {
+            Log.d(TAG, "onSurfaceTextureSizeChanged: ${width}x${height}")
             cameraPreviewRenderer.setViewSize(width, height)
             GLES20.glViewport(0, 0, width, height)
         }
 
-        override fun onSurfaceTextureUpdated(p0: SurfaceTexture) {
+        override fun onSurfaceTextureUpdated(surfaceTexture: SurfaceTexture) {
         }
 
-        override fun onSurfaceTextureDestroyed(p0: SurfaceTexture): Boolean {
+        override fun onSurfaceTextureDestroyed(surfaceTexture: SurfaceTexture): Boolean {
             Log.d(TAG, "onSurfaceTextureDestroyed: ")
             return true
         }
 
-        override fun onSurfaceTextureAvailable(p0: SurfaceTexture, width: Int, height: Int) {
+        override fun onSurfaceTextureAvailable(surfaceTexture: SurfaceTexture, width: Int, height: Int) {
             previewView.requestRender()
         }
 
         override fun onSurfaceTextureCreated(surface: SurfaceTexture, width: Int, height: Int) {
-            Log.d(TAG, "onSurfaceTextureCreated: ")
+            Log.d(TAG, "onSurfaceTextureCreated: ${width}x${height}")
+            viewSize = Size(width, height)
             previewSurface = Surface(surface)
             openCamera(width, height)
         }
@@ -269,11 +271,6 @@ class CameraActivity : AppCompatActivity() {
         rootView = _binding.root
 
         setFullScreen()
-
-        val displaySize = Point()
-        windowManager?.defaultDisplay?.getSize(displaySize)
-        viewSize = Size(displaySize.x, displaySize.y)
-        previewAspectRatio = (viewSize.height /viewSize.width.toFloat()).toFloat()
 
         findViewById<View>(R.id.picture).setOnClickListener {
             // Most device front lenses/camera have a fixed focal length
@@ -535,17 +532,19 @@ class CameraActivity : AppCompatActivity() {
             // whether device orientation, sensorWidth > deviceHeight is always true
             val swappedDimensions = areDimensionsSwapped(displayRotation)
             if (swappedDimensions) {
-                Log.d(TAG, "setUpCameraOutputs: roate switch width/height")
+                Log.d(TAG, "setUpCameraOutputs: rotate switch width/height")
                 viewSize = Size(viewSize.height, viewSize.width)
             }
-            val (choosedSize, choosedSizeAspectRatio) = chooseOptimalSize(
+            val (chosenSize, chosenSizeAspectRatio) = chooseOptimalSize(
                 cameraInfo.getOutputPreviewSurfaceSize(),
                 viewSize,
-                previewAspectRatio
+                previewAspectRatio,
+                true
             )
-            Log.d(TAG, "setUpCameraOutputs: choosed optimal preview size:${choosedSize}," +
-                    "previewAspectRatio=${previewAspectRatio},choosed optimal preview size:${choosedSizeAspectRatio}"
+            Log.d(TAG, "viewSize: ${viewSize}, previewSize:${chosenSize}," +
+                    "previewAspectRatio=${previewAspectRatio}, chosen previewSizeAspectRatio:${chosenSizeAspectRatio}"
             )
+            previewSize = chosenSize
             cameraPreviewRenderer.setDataSize(previewView.width, previewView.height)
         } catch (e: CameraAccessException) {
             Log.e(TAG, e.toString())

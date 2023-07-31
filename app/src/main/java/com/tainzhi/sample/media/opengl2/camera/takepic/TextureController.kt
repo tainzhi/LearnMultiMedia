@@ -1,7 +1,6 @@
 package com.tainzhi.sample.media.opengl2.camera.takepic
 
 import android.content.Context
-import android.graphics.ImageFormat
 import android.graphics.PixelFormat
 import android.graphics.Point
 import android.graphics.SurfaceTexture
@@ -29,7 +28,7 @@ import javax.microedition.khronos.opengles.GL10
  * 的Surface上，而是将内容绘制到外部提供的Surface、SurfaceHolder或者SurfaceTexture上。
  */
 class TextureController(private val mContext: Context, val holder: SurfaceHolder) : GLSurfaceView.Renderer {
-    private var surface: Any? = null
+    private var surface = holder.surface
     private var mGLView: GLView? = null
     private var mRenderer //用户附加的Renderer或用来监听Renderer
             : Renderer? = null

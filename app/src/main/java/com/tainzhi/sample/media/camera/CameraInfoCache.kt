@@ -11,6 +11,8 @@ import android.util.Size
 import java.lang.Long.signum
 import java.util.Collections
 import kotlin.math.abs
+import kotlin.math.max
+import kotlin.math.min
 
 class CameraInfoCache(cameraManager: CameraManager, useFrontCamera: Boolean = false) {
     private lateinit var cameraCharacteristics: CameraCharacteristics
@@ -128,21 +130,26 @@ class CameraInfoCache(cameraManager: CameraManager, useFrontCamera: Boolean = fa
         fun chooseOptimalSize(
             choices: Array<Size>,
             viewSize: Size,
-            aspectRatio: Float
+            aspectRatio: Float,
+            isPreview: Boolean = false
         ): Pair<Size, Float> {
-            Log.d(TAG, "chooseOptimalSize: viewSize=${viewSize}, aspectRatio=${aspectRatio}")
-            val choosedSizes = ArrayList<Size>()
-            for (option in choices) {
-                Log.d(TAG, "chooseOptimalSize: $option")
+            val filterChoices = choices.filter {
+                if (isPreview)
+                    it.width <= max(viewSize.width, viewSize.height) && it.height >= min(viewSize.width, viewSize.height)
+                else
+                    true
+            }
+            val chosenSizes = ArrayList<Size>()
+            for (option in filterChoices) {
                 val tempRatio = option.width/option.height.toFloat()
                 if (abs(aspectRatio - tempRatio) < DIFF_FLOAT_EPS) {
-                    choosedSizes.add(option)
+                    chosenSizes.add(option)
                 }
             }
             // 首先选取宽高和预览窗口一直且最大的输出尺寸
-            if (choosedSizes.size > 0) {
-                Log.d(TAG, "optimal preview size by same w/h aspect ratio")
-                val result = Collections.min(choosedSizes, CompareSizesByArea())
+            if (chosenSizes.size > 0) {
+                Log.d(TAG, "optimal size by same w/h aspect ratio")
+                val result = Collections.min(chosenSizes, CompareSizesByArea())
                 return Pair(result, aspectRatio)
             }
 
@@ -150,7 +157,7 @@ class CameraInfoCache(cameraManager: CameraManager, useFrontCamera: Boolean = fa
             var suboptimalAspectRatio = 1f
             // 如果不存在宽高比与预览窗口一致的输出尺寸，则选择与其宽高最接近的尺寸
             var minRatioDiff = Float.MAX_VALUE
-            choices.forEach { option ->
+            filterChoices.forEach { option ->
                 val tempRatio = option.width/option.height.toFloat()
                 if (abs(tempRatio - aspectRatio) < minRatioDiff) {
                     minRatioDiff = abs(tempRatio - aspectRatio)
@@ -159,21 +166,21 @@ class CameraInfoCache(cameraManager: CameraManager, useFrontCamera: Boolean = fa
                 }
             }
             if (suboptimalSize != Size(0, 0)) {
-                Log.d(TAG, "optimal preview size by closet w/h aspect ratio")
+                Log.d(TAG, "optimal size by closet w/h aspect ratio")
                 return Pair(suboptimalSize, suboptimalAspectRatio)
             }
 
             // 选择面积与预览窗口最接近的输出尺寸
             var minAreaDiff = Long.MAX_VALUE
             val previewArea = viewSize.height * aspectRatio * viewSize.height
-            choices.forEach { option ->
+            filterChoices.forEach { option ->
                 val tempArea = option.width * option.height
                 if (abs(previewArea - tempArea) < minAreaDiff) {
                     suboptimalAspectRatio = option.width / option.height.toFloat()
                     suboptimalSize = option
                 }
             }
-            Log.d(TAG, "optimal preview size by choset area")
+            Log.d(TAG, "optimal size by choset area")
             return Pair(suboptimalSize, suboptimalAspectRatio)
         }
 

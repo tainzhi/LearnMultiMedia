@@ -22,9 +22,12 @@ class CameraPreviewRender : GLSurfaceView.Renderer {
     var surfaceTextureListener: CameraPreviewView.SurfaceTextureListener? = null
 
     override fun onSurfaceCreated(gl: GL10, config: EGLConfig) {
-        Log.d(TAG, "onSurfaceCreated: ")
+        Log.d(TAG, "onSurfaceCreated: ${width}x${height}")
+        // texture 不能在UI thread创建，只能在其他线程创建，比如 GLThread
+        // 在 onSurfaceCreated回调就在 GLThread 被执行
         val texture = createTextureID()
         surfaceTexture = SurfaceTexture(texture)
+        surfaceTexture.setDefaultBufferSize(width, height)
         surfaceTexture.setOnFrameAvailableListener{
             surfaceTextureListener?.onSurfaceTextureAvailable(surfaceTexture, width, height)
         }
@@ -35,10 +38,13 @@ class CameraPreviewRender : GLSurfaceView.Renderer {
 
     override fun onSurfaceChanged(gl: GL10, width: Int, height: Int) {
         surfaceTextureListener?.onSurfaceTextureSizeChanged(surfaceTexture, width, height)
+        // 在全屏模式下，onSurfaceCreated和onSurfaceChanged的宽高不一样，需要重新设置输出预览大小
+        surfaceTexture.setDefaultBufferSize(width, height)
         setViewSize(width, height)
     }
 
     override fun onDrawFrame(gl: GL10) {
+        surfaceTextureListener?.onSurfaceTextureUpdated(surfaceTexture)
         surfaceTexture.updateTexImage()
         mOesFilter.draw()
     }
@@ -58,7 +64,6 @@ class CameraPreviewRender : GLSurfaceView.Renderer {
     private fun calculateMatrix() {
         getShowMatrix(matrix, dataWidth, dataHeight, width, height)
         // flip(matrix, true, false)
-        rotate(matrix, 270f)
         mOesFilter.matrix = matrix
     }
 
@@ -90,20 +95,23 @@ class CameraPreviewRender : GLSurfaceView.Renderer {
             return m
         }
 
-        fun getShowMatrix(matrix: FloatArray?, imgWidth: Int, imgHeight: Int, viewWidth: Int, viewHeight: Int) {
+        fun getShowMatrix(mvpMatrix: FloatArray?, imgWidth: Int, imgHeight: Int, viewWidth: Int, viewHeight: Int) {
             Log.d(TAG, "getShowMatrix: img:w${imgWidth}*h${imgHeight}, view:w${viewWidth}*h${viewHeight}")
             if (imgHeight > 0 && imgWidth > 0 && viewWidth > 0 && viewHeight > 0) {
                 val sWhView = viewWidth.toFloat() / viewHeight
                 val sWhImg = imgWidth.toFloat() / imgHeight
-                val projection = FloatArray(16)
-                val camera = FloatArray(16)
-                if (sWhImg > sWhView) {
-                    Matrix.orthoM(projection, 0, -sWhView / sWhImg, sWhView / sWhImg, -1f, 1f, 1f, 3f)
-                } else {
-                    Matrix.orthoM(projection, 0, -1f, 1f, -sWhImg / sWhView, sWhImg / sWhView, 1f, 3f)
-                }
-                Matrix.setLookAtM(camera, 0, 0f, 0f, 1f, 0f, 0f, 0f, 0f, 1f, 0f)
-                Matrix.multiplyMM(matrix, 0, projection, 0, camera, 0)
+
+                val modelMatrix = FloatArray(16)
+                Matrix.setIdentityM(modelMatrix, 0)
+                Matrix.rotateM(modelMatrix, 0, 270f, 0f, 0f, 1f)
+                val scale: Float =  viewWidth/2f
+                Matrix.scaleM(modelMatrix, 0, scale /(imgWidth/imgHeight.toFloat()), scale, 1f)
+                val viewMatrix = FloatArray(16)
+                Matrix.setLookAtM(viewMatrix, 0, 0f, 0f, 1f, 0f, 0f, 0f, 0f, 1f, 0f)
+                val projectionMatrix = FloatArray(16)
+                Matrix.orthoM(projectionMatrix, 0, -viewWidth/2f, viewWidth/2f, -viewHeight/2f, viewHeight/2f, 1f, 3f)
+                Matrix.multiplyMM(mvpMatrix, 0, viewMatrix, 0, modelMatrix, 0)
+                Matrix.multiplyMM(mvpMatrix, 0, projectionMatrix, 0, mvpMatrix, 0)
             }
         }
     }
