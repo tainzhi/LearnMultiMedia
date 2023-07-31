@@ -27,7 +27,7 @@ class CameraPreviewRender : GLSurfaceView.Renderer {
         // 在 onSurfaceCreated回调就在 GLThread 被执行
         val texture = createTextureID()
         surfaceTexture = SurfaceTexture(texture)
-        surfaceTexture.setDefaultBufferSize(width, height)
+        surfaceTexture.setDefaultBufferSize(2400, 1080)
         surfaceTexture.setOnFrameAvailableListener{
             surfaceTextureListener?.onSurfaceTextureAvailable(surfaceTexture, width, height)
         }
@@ -39,7 +39,7 @@ class CameraPreviewRender : GLSurfaceView.Renderer {
     override fun onSurfaceChanged(gl: GL10, width: Int, height: Int) {
         surfaceTextureListener?.onSurfaceTextureSizeChanged(surfaceTexture, width, height)
         // 在全屏模式下，onSurfaceCreated和onSurfaceChanged的宽高不一样，需要重新设置输出预览大小
-        surfaceTexture.setDefaultBufferSize(width, height)
+        surfaceTexture.setDefaultBufferSize(height, width)
         setViewSize(width, height)
     }
 
@@ -105,7 +105,7 @@ class CameraPreviewRender : GLSurfaceView.Renderer {
                 Matrix.setIdentityM(modelMatrix, 0)
                 Matrix.rotateM(modelMatrix, 0, 270f, 0f, 0f, 1f)
                 val scale: Float =  viewWidth/2f
-                Matrix.scaleM(modelMatrix, 0, scale /(imgWidth/imgHeight.toFloat()), scale, 1f)
+                Matrix.scaleM(modelMatrix, 0, scale * (imgWidth / imgHeight.toFloat()), scale, 1f)
                 val viewMatrix = FloatArray(16)
                 Matrix.setLookAtM(viewMatrix, 0, 0f, 0f, 1f, 0f, 0f, 0f, 0f, 1f, 0f)
                 val projectionMatrix = FloatArray(16)

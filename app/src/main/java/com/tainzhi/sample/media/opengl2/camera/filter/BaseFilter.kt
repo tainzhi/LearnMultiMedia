@@ -6,7 +6,7 @@ import com.tainzhi.sample.media.opengl2.base.BaseGLSL
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.FloatBuffer
-import java.util.*
+import java.util.Arrays
 
 /**
  * 基础颜色过滤器
@@ -130,7 +130,8 @@ abstract class BaseFilter : BaseGLSL() {
      * 清除画布
      */
     protected open fun onClear() {
-        GLES20.glClearColor(1.0f, 1.0f, 1.0f, 1.0f)
+        // set black background
+        GLES20.glClearColor(0.0f, 0.0f, 0.0f, 1.0f)
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT or GLES20.GL_DEPTH_BUFFER_BIT)
     }
 

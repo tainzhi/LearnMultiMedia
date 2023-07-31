@@ -27,7 +27,6 @@ class CameraPreviewView : GLSurfaceView {
 
     lateinit var cameraDrawer: CameraPreviewRender
 
-    var isAvailable = false
     var surfaceTextureListener: SurfaceTextureListener? = null
         set(value) {
             cameraDrawer.surfaceTextureListener = value
@@ -48,10 +47,12 @@ class CameraPreviewView : GLSurfaceView {
     }
 
     override fun onResume() {
+        Log.d(TAG, "onResume: ")
         super.onResume()
     }
 
     override fun onPause() {
+        Log.d(TAG, "onPause: ")
         super.onPause()
     }
 
