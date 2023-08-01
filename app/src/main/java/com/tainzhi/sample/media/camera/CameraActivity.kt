@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.res.Configuration
 import android.graphics.*
 import android.hardware.camera2.*
 import android.hardware.camera2.params.InputConfiguration
@@ -23,6 +24,7 @@ import android.util.Log
 import android.util.Size
 import android.util.SparseIntArray
 import android.view.*
+import android.widget.ImageButton
 import android.widget.ImageView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -35,6 +37,8 @@ import androidx.core.view.updatePadding
 import androidx.preference.PreferenceManager
 import com.tainzhi.sample.media.R
 import com.tainzhi.sample.media.camera.CameraInfoCache.Companion.chooseOptimalSize
+import com.tainzhi.sample.media.camera.util.RotationChangeListener
+import com.tainzhi.sample.media.camera.util.RotationChangeMonitor
 import com.tainzhi.sample.media.camera.util.SettingsManager
 import com.tainzhi.sample.media.databinding.ActivityCameraBinding
 import com.tainzhi.sample.media.util.Kpi
@@ -76,12 +80,16 @@ class CameraActivity : AppCompatActivity() {
     private lateinit var ivTakePicture: ImageView
     private lateinit var ivRecord: ImageView
     private lateinit var ivSettings: ImageView
+    private lateinit var btnSwitchCamera: ImageButton
 
     private lateinit var capturedImageUri: Uri
     private lateinit var cameraInfo: CameraInfoCache
 
     // default open front-facing cameras/lens
     private var useCameraFront = false
+
+    private lateinit var rotationChangeMonitor : RotationChangeMonitor
+    private var thumbnailOrientation = 0
 
     private var isEnableZsl = false
         set(value) {
@@ -274,30 +282,36 @@ class CameraActivity : AppCompatActivity() {
 
         setFullScreen()
 
-        findViewById<View>(R.id.picture).setOnClickListener {
-            // Most device front lenses/camera have a fixed focal length
-            if (useCameraFront) captureStillPicture() else lockFocus()
+        previewView = findViewById<CameraPreviewView>(R.id.previewView).apply {
+            cameraPreviewRenderer = CameraPreviewRender()
+            setRender(cameraPreviewRenderer)
         }
-        findViewById<View>(R.id.iv_thumbnail).setOnClickListener {
-            viewPicture()
+        ivThumbnail = findViewById<CircleImageView>(R.id.iv_thumbnail).apply {
+            setOnClickListener {
+                viewPicture()
+            }
         }
-        findViewById<View>(R.id.iv_record).setOnClickListener {
-            if (isRecordingVideo) stopRecordingVideo() else startRecordingVideo()
+        ivTakePicture = findViewById<ImageView>(R.id.picture).apply {
+            setOnClickListener {
+                // Most device front lenses/camera have a fixed focal length
+                if (useCameraFront) captureStillPicture() else lockFocus()
+            }
         }
-        findViewById<View>(R.id.iv_change_camera).setOnClickListener {
-            useCameraFront = !useCameraFront
-            closeCamera()
-            openCamera(previewView.width, previewView.height)
+        ivRecord = findViewById<ImageView>(R.id.iv_record).apply {
+            setOnClickListener {
+                if (isRecordingVideo) stopRecordingVideo() else startRecordingVideo()
+            }
         }
-        previewView = findViewById(R.id.previewView)
-        cameraPreviewRenderer = CameraPreviewRender()
-        previewView.setRender(cameraPreviewRenderer)
-        ivThumbnail = findViewById(R.id.iv_thumbnail)
-        ivTakePicture = findViewById(R.id.picture)
-        ivRecord = findViewById(R.id.iv_record)
         ivSettings = findViewById<ImageView?>(R.id.iv_setting).apply {
             setOnClickListener {
                 startActivity(Intent(this@CameraActivity, SettingsActivity::class.java))
+            }
+        }
+        btnSwitchCamera = findViewById<ImageButton>(R.id.iv_switch_camera).apply {
+            setOnClickListener {
+                useCameraFront = !useCameraFront
+                closeCamera()
+                openCamera(previewView.width, previewView.height)
             }
         }
 
@@ -324,12 +338,21 @@ class CameraActivity : AppCompatActivity() {
 
         mediaActionSound.load(MediaActionSound.SHUTTER_CLICK)
         checkPermissions()
+        rotationChangeMonitor = RotationChangeMonitor(this).apply {
+            rotationChangeListener = object: RotationChangeListener {
+                override fun onRotateChange(oldOrientation: Int, newOrientation: Int) {
+                    Log.d(TAG, "orientation change from ${oldOrientation} -> ${newOrientation}")
+                    handleRotation(newOrientation - oldOrientation)
+                }
+            }
+        }
     }
 
     override fun onResume() {
-        Log.i(TAG, "onResume: ")
         super.onResume()
+        Log.i(TAG, "onResume: ")
         previewView.onResume()
+        rotationChangeMonitor.enable()
         if (false) {
             openCamera(previewView.width, previewView.height)
         } else {
@@ -339,6 +362,7 @@ class CameraActivity : AppCompatActivity() {
 
     override fun onPause() {
         Log.i(TAG, "onPause: ")
+        rotationChangeMonitor.disable()
         previewView.onPause()
         closeCamera()
         super.onPause()
@@ -371,6 +395,12 @@ class CameraActivity : AppCompatActivity() {
             Log.i(TAG, "onRequestPermissionsResult: ")
         }
     }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        Log.d(TAG, "onConfigurationChanged")
+    }
+
     private fun openCamera(width: Int, height: Int) {
         Log.i(TAG, "openCamera: ")
         val manager = getSystemService(Context.CAMERA_SERVICE) as CameraManager
@@ -849,7 +879,8 @@ class CameraActivity : AppCompatActivity() {
     private fun viewPicture() {
         if (this::capturedImageUri.isInitialized) {
             val intent = Intent().apply {
-                action = Intent.ACTION_VIEW
+                // action = Intent.ACTION_VIEW
+                action = "com.android.camera.action.REVIEW"
                 setDataAndType(capturedImageUri, "image/*")
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK
             }
@@ -860,6 +891,19 @@ class CameraActivity : AppCompatActivity() {
     }
 
     private fun updateThumbnail(capturedImageUri: Uri) {
+        // scale animation from 1 - 1.2 - 1
+        ivThumbnail.animate()
+            .setDuration(80)
+            .scaleX(1.2f)
+            .scaleY(1.2f)
+            .withEndAction {
+                ivThumbnail.animate()
+                    .setDuration(80)
+                    .scaleX(1f)
+                    .scaleY(1f)
+                    .start()
+            }
+            .start()
         val thumbnail = if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
             val temp = MediaStore.Images.Media.getBitmap(contentResolver, capturedImageUri)
             ThumbnailUtils.extractThumbnail(temp, 100, 100)
@@ -977,11 +1021,18 @@ class CameraActivity : AppCompatActivity() {
         }
     }
 
-    private fun isEnableZsl(): Boolean {
-        val enableZsl = PreferenceManager.getDefaultSharedPreferences(this).getBoolean(SettingsManager.KEY_PHOTO_ZSL,
-            SettingsManager.PHOTO_ZSL_DEFAULT_VALUE
-        )
-        return enableZsl
+    private fun handleRotation(rotateAngle: Int) {
+        Log.d(TAG, "handleRotation: thumbnailOrientation:$thumbnailOrientation")
+        thumbnailOrientation = (-rotateAngle + thumbnailOrientation +
+                (if (rotateAngle > 180) 360 else 0)) % 360
+        ivThumbnail.animate()
+            .setDuration(800)
+            .rotation(thumbnailOrientation.toFloat())
+            .start()
+        btnSwitchCamera.animate()
+            .setDuration(800)
+            .rotation(thumbnailOrientation.toFloat())
+            .start()
     }
 
     companion object {

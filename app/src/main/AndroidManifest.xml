@@ -32,6 +32,8 @@
 			android:theme="@android:style/Theme.Holo.NoActionBar.Fullscreen" />
 		<activity
 			android:name=".camera.CameraActivity"
+			android:screenOrientation="nosensor"
+			android:configChanges="orientation|uiMode|screenLayout|screenSize|layoutDirection|keyboardHidden|keyboard|smallestScreenSize"
 			android:theme="@style/AppTheme.FullScreen" />
 		<activity android:name=".native_codec.NativeCodecActivity" />
 		<activity android:name=".opengl2.camera.TakePictureActivity" />

@@ -47,12 +47,10 @@ class CameraPreviewView : GLSurfaceView {
     }
 
     override fun onResume() {
-        Log.d(TAG, "onResume: ")
         super.onResume()
     }
 
     override fun onPause() {
-        Log.d(TAG, "onPause: ")
         super.onPause()
     }
 

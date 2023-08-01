@@ -106,7 +106,7 @@
                 />
 
         <ImageButton
-                android:id="@+id/iv_change_camera"
+                android:id="@+id/iv_switch_camera"
                 style="@android:style/Widget.Material.Light.Button.Borderless"
                 android:layout_width="86dp"
                 android:layout_height="86dp"
