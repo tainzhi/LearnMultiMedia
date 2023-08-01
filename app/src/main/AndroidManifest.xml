@@ -30,11 +30,12 @@
 		<activity
 			android:name=".player.PlayActivity"
 			android:theme="@android:style/Theme.Holo.NoActionBar.Fullscreen" />
-		<activity
-			android:name=".camera.CameraActivity"
-			android:screenOrientation="nosensor"
-			android:configChanges="orientation|uiMode|screenLayout|screenSize|layoutDirection|keyboardHidden|keyboard|smallestScreenSize"
-			android:theme="@style/AppTheme.FullScreen" />
+		<!--<activity-->
+		<!--	android:name=".camera.CameraActivity"-->
+		<!--	android:screenOrientation="nosensor"-->
+		<!--	android:configChanges="orientation|uiMode|screenLayout|screenSize|layoutDirection|keyboardHidden|keyboard|smallestScreenSize"-->
+		<!--	android:theme="@style/AppTheme.FullScreen" >-->
+		<!--</activity>-->
 		<activity android:name=".native_codec.NativeCodecActivity" />
 		<activity android:name=".opengl2.camera.TakePictureActivity" />
 		<activity
@@ -76,11 +77,17 @@
 			android:name=".AudioRecordPlayActivity"
 			android:label="@string/title_activity_audio_record_play"
 			android:theme="@style/AppTheme.NoActionBar" />
+		<!--<activity-->
+		<!--	android:name=".MainActivity"-->
+		<!--	android:exported="true"-->
+		<!--	android:label="@string/app_name"-->
+		<!--	android:theme="@style/AppTheme.NoActionBar">-->
 		<activity
-			android:name=".MainActivity"
-			android:exported="true"
-			android:label="@string/app_name"
-			android:theme="@style/AppTheme.NoActionBar">
+			android:name=".camera.CameraActivity"
+			android:screenOrientation="nosensor"
+			android:configChanges="orientation|uiMode|screenLayout|screenSize|layoutDirection|keyboardHidden|keyboard|smallestScreenSize"
+			android:theme="@style/AppTheme.FullScreen"
+			android:exported="true">
 			<intent-filter>
 				<action android:name="android.intent.action.MAIN" />
 

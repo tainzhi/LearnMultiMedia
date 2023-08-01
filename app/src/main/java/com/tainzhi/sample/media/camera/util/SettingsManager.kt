@@ -7,4 +7,10 @@ object SettingsManager {
     // enableZSL 278ms
     val KEY_PHOTO_ZSL = "photo_zsl"
     val PHOTO_ZSL_DEFAULT_VALUE = true
+    enum class PreviewRatio {
+        RATIO_1x1,
+        RATIO_3x4,
+        RATIO_6x19,
+        RATIO_FULL,
+    }
 }

@@ -27,6 +27,7 @@ import android.view.*
 import android.widget.ImageButton
 import android.widget.ImageView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.constraintlayout.widget.Group
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.os.ExecutorCompat
@@ -80,7 +81,10 @@ class CameraActivity : AppCompatActivity() {
     private lateinit var ivTakePicture: ImageView
     private lateinit var ivRecord: ImageView
     private lateinit var ivSettings: ImageView
+    private lateinit var ivRatio: ImageView
     private lateinit var btnSwitchCamera: ImageButton
+    private lateinit var clGroupControlBar: Group
+    private lateinit var vsControlBarRatio: ViewStub
 
     private lateinit var capturedImageUri: Uri
     private lateinit var cameraInfo: CameraInfoCache
@@ -286,6 +290,18 @@ class CameraActivity : AppCompatActivity() {
             cameraPreviewRenderer = CameraPreviewRender()
             setRender(cameraPreviewRenderer)
         }
+        clGroupControlBar = _binding.clGroupControlBar
+        vsControlBarRatio =_binding.vsControlBarRatio
+        ivRatio = _binding.ivRatio.apply {
+            setOnClickListener {
+                changePreviewRatio()
+            }
+        }
+        ivSettings = findViewById<ImageView?>(R.id.iv_setting).apply {
+            setOnClickListener {
+                startActivity(Intent(this@CameraActivity, SettingsActivity::class.java))
+            }
+        }
         ivThumbnail = findViewById<CircleImageView>(R.id.iv_thumbnail).apply {
             setOnClickListener {
                 viewPicture()
@@ -300,11 +316,6 @@ class CameraActivity : AppCompatActivity() {
         ivRecord = findViewById<ImageView>(R.id.iv_record).apply {
             setOnClickListener {
                 if (isRecordingVideo) stopRecordingVideo() else startRecordingVideo()
-            }
-        }
-        ivSettings = findViewById<ImageView?>(R.id.iv_setting).apply {
-            setOnClickListener {
-                startActivity(Intent(this@CameraActivity, SettingsActivity::class.java))
             }
         }
         btnSwitchCamera = findViewById<ImageButton>(R.id.iv_switch_camera).apply {
@@ -1033,6 +1044,11 @@ class CameraActivity : AppCompatActivity() {
             .setDuration(800)
             .rotation(thumbnailOrientation.toFloat())
             .start()
+    }
+
+    private fun changePreviewRatio() {
+        _binding.clGroupControlBar.visibility = View.INVISIBLE
+        vsControlBarRatio.inflate()
     }
 
     companion object {
