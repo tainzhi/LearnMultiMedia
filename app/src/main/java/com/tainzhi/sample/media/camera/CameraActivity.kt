@@ -35,7 +35,6 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
-import androidx.preference.PreferenceManager
 import com.tainzhi.sample.media.R
 import com.tainzhi.sample.media.camera.CameraInfoCache.Companion.chooseOptimalSize
 import com.tainzhi.sample.media.camera.util.RotationChangeListener
@@ -95,13 +94,8 @@ class CameraActivity : AppCompatActivity() {
     private lateinit var rotationChangeMonitor : RotationChangeMonitor
     private var thumbnailOrientation = 0
 
-    private var isEnableZsl = false
-        set(value) {
-            val enableZsl = PreferenceManager.getDefaultSharedPreferences(this).getBoolean(SettingsManager.KEY_PHOTO_ZSL,
-                SettingsManager.PHOTO_ZSL_DEFAULT_VALUE
-            )
-            field = enableZsl && value
-        }
+    private var isEnableZsl = SettingsManager.getInstance()!!
+            .getBoolean(SettingsManager.KEY_PHOTO_ZSL, SettingsManager.PHOTO_ZSL_DEFAULT_VALUE)
 
     private var surfaceTextureListener = object : CameraPreviewView.SurfaceTextureListener {
         override fun onSurfaceTextureSizeChanged(surfaceTexture: SurfaceTexture, width: Int, height: Int) {
@@ -530,7 +524,9 @@ class CameraActivity : AppCompatActivity() {
     private fun setUpCameraOutputs(cameraManager: CameraManager, width: Int, height: Int) {
         try {
             cameraInfo = CameraInfoCache(cameraManager, useCameraFront)
-            isEnableZsl = cameraInfo.isSupportReproc()
+            isEnableZsl = cameraInfo.isSupportReproc() &&
+                        SettingsManager.getInstance()!!
+                                    .getBoolean(SettingsManager.KEY_PHOTO_ZSL, SettingsManager.PHOTO_ZSL_DEFAULT_VALUE)
             cameraId = cameraInfo.cameraId
             videoSize = cameraInfo.videoSize
             jpgImageReader = ImageReader.newInstance(
@@ -720,7 +716,7 @@ class CameraActivity : AppCompatActivity() {
 //            }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 val controlZsl: Boolean? = previewRequestBuilder.get(CaptureRequest.CONTROL_ENABLE_ZSL)
-                Log.d(TAG, "updatePreview: controlZsl=${controlZsl}")
+                Log.d(TAG, "CaptureRequest: controlZsl=${controlZsl}")
             }
             previewRequest = previewRequestBuilder.build()
             currentCaptureSession?.setRepeatingRequest(

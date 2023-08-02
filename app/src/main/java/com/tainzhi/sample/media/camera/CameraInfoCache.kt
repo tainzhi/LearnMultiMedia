@@ -72,8 +72,10 @@ class CameraInfoCache(cameraManager: CameraManager, useFrontCamera: Boolean = fa
             requestAvailableAbilities!!.contains(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_YUV_REPROCESSING)  ||
             requestAvailableAbilities!!.contains(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_PRIVATE_REPROCESSING))
         {
+            Log.d(TAG, "isSupportReproc: true")
             return true
         }
+        Log.d(TAG, "isSupportReproc: false")
         return false
     }
 
