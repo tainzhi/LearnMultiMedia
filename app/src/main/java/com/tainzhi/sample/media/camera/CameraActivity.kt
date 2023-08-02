@@ -1,6 +1,7 @@
 package com.tainzhi.sample.media.camera
 
 import android.Manifest
+import android.animation.AnimatorInflater
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -27,7 +28,10 @@ import android.view.*
 import android.widget.ImageButton
 import android.widget.ImageView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.AppCompatImageButton
 import androidx.constraintlayout.widget.Group
+import androidx.core.animation.addPauseListener
+import androidx.core.animation.doOnEnd
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.os.ExecutorCompat
@@ -63,8 +67,8 @@ class CameraActivity : AppCompatActivity() {
     private lateinit var _binding: ActivityCameraBinding
 
     private val permissions_exclude_storage = arrayOf(
-        Manifest.permission.RECORD_AUDIO,
-        Manifest.permission.CAMERA,
+            Manifest.permission.RECORD_AUDIO,
+            Manifest.permission.CAMERA,
     )
     private val permission_storage = Manifest.permission.WRITE_EXTERNAL_STORAGE
 
@@ -75,12 +79,13 @@ class CameraActivity : AppCompatActivity() {
 
     private lateinit var previewView: CameraPreviewView
     private lateinit var cameraPreviewRenderer: CameraPreviewRender
+
     // 预览拍照的图片，用于相册打开
     private lateinit var ivThumbnail: CircleImageView
     private lateinit var ivTakePicture: ImageView
     private lateinit var ivRecord: ImageView
-    private lateinit var ivSettings: ImageView
-    private lateinit var ivRatio: ImageView
+    private lateinit var ivSettings: ImageButton
+    private lateinit var ivRatio: ImageButton
     private lateinit var btnSwitchCamera: ImageButton
     private lateinit var clGroupControlBar: Group
     private lateinit var vsControlBarRatio: ViewStub
@@ -91,7 +96,7 @@ class CameraActivity : AppCompatActivity() {
     // default open front-facing cameras/lens
     private var useCameraFront = false
 
-    private lateinit var rotationChangeMonitor : RotationChangeMonitor
+    private lateinit var rotationChangeMonitor: RotationChangeMonitor
     private var thumbnailOrientation = 0
 
     private var isEnableZsl = SettingsManager.getInstance()!!
@@ -102,9 +107,17 @@ class CameraActivity : AppCompatActivity() {
             Log.d(TAG, "onSurfaceTextureSizeChanged: ${width}x${height}")
             GLES20.glViewport(0, 0, width, height)
             viewSize = Size(width, height)
-            previewAspectRatio = viewSize.height/viewSize.width.toFloat()
+//            previewAspectRatio = viewSize.height/viewSize.width.toFloat()
+            previewAspectRatio = SettingsManager.getInstance()!!.getPreviewAspectRatio()
             cameraPreviewRenderer.setViewSize(width, height)
-            setUpCameraPreview()
+            val ratioValue: Float = when (previewAspectRatio) {
+                SettingsManager.PreviewAspectRatio.RATIO_1x1 -> 1.toFloat()
+                SettingsManager.PreviewAspectRatio.RATIO_4x3 -> 4 / 3.toFloat()
+                SettingsManager.PreviewAspectRatio.RATIO_16x9 -> 16 / 9.toFloat()
+                SettingsManager.PreviewAspectRatio.RATIO_FULL -> height / width.toFloat()
+                else -> height / width.toFloat()
+            }
+            setUpCameraPreview(ratioValue)
         }
 
         override fun onSurfaceTextureUpdated(surfaceTexture: SurfaceTexture) {
@@ -150,15 +163,18 @@ class CameraActivity : AppCompatActivity() {
     private val cameraOpenCloseLock = Semaphore(1)
 
     private lateinit var cameraId: String
+
     // for camera preview
     private var currentCaptureSession: CameraCaptureSession? = null
     private var cameraDevice: CameraDevice? = null
+
     // default set to full screen size
     private lateinit var viewSize: Size
+
     // camera output surface size, maybe smaller than viewSize
     // e.g. set camera preview 1:1 for a device 1080:2040, then previewSize 1080:1080, viewSize 1080:2040
     private lateinit var previewSize: Size
-    private var previewAspectRatio = 1f
+    private lateinit var previewAspectRatio: SettingsManager.PreviewAspectRatio
 
     private var flashSupported = false
 
@@ -211,13 +227,14 @@ class CameraActivity : AppCompatActivity() {
             when (cameraState) {
                 STATE_PREVIEW -> {
                 }
+
                 STATE_WAITING_LOCK -> capturePicture(result)
                 STATE_WAITING_PRECAPTURE -> {
                     // CONTROL_AE_STATE can be null on some devices
                     val aeState = result.get(CaptureResult.CONTROL_AE_STATE)
                     if (aeState == null ||
-                        aeState == CaptureResult.CONTROL_AE_STATE_PRECAPTURE ||
-                        aeState == CaptureRequest.CONTROL_AE_STATE_FLASH_REQUIRED
+                            aeState == CaptureResult.CONTROL_AE_STATE_PRECAPTURE ||
+                            aeState == CaptureRequest.CONTROL_AE_STATE_FLASH_REQUIRED
                     ) {
                         cameraState = STATE_WAITING_NON_PRECAPTURE
                     }
@@ -239,7 +256,7 @@ class CameraActivity : AppCompatActivity() {
             if (afState == null) {
                 Log.e(TAG, "capturePicture: afState is null")
             } else if (afState == CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED
-                || afState == CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED
+                    || afState == CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED
             ) {
                 // CONTROL_AE_STATE can be null on some devices
                 Log.e(TAG, "capturePicture: afState is ${afState}")
@@ -254,18 +271,18 @@ class CameraActivity : AppCompatActivity() {
         }
 
         override fun onCaptureCompleted(
-            session: CameraCaptureSession,
-            request: CaptureRequest,
-            result: TotalCaptureResult
+                session: CameraCaptureSession,
+                request: CaptureRequest,
+                result: TotalCaptureResult
         ) {
             lastTotalCaptureResult = result
             process(result)
         }
 
         override fun onCaptureProgressed(
-            session: CameraCaptureSession,
-            request: CaptureRequest,
-            partialResult: CaptureResult
+                session: CameraCaptureSession,
+                request: CaptureRequest,
+                partialResult: CaptureResult
         ) {
             process(partialResult)
         }
@@ -285,13 +302,29 @@ class CameraActivity : AppCompatActivity() {
             setRender(cameraPreviewRenderer)
         }
         clGroupControlBar = _binding.clGroupControlBar
-        vsControlBarRatio =_binding.vsControlBarRatio
+        vsControlBarRatio = _binding.vsControlBarRatio
         ivRatio = _binding.ivRatio.apply {
             setOnClickListener {
-                changePreviewRatio()
+                AnimatorInflater.loadAnimator(this@CameraActivity, R.animator.roate_x).apply {
+                    setTarget(ivRatio)
+                    addPauseListener { }
+                    doOnEnd {
+                        _binding.clGroupControlBar.visibility = View.INVISIBLE
+                        changePreviewAspectRatio()
+                    }
+                    start()
+                }
+                AnimatorInflater.loadAnimator(this@CameraActivity, R.animator.roate_x).apply {
+                    setTarget(ivSettings)
+                    start()
+                }
+                AnimatorInflater.loadAnimator(this@CameraActivity, R.animator.roate_x).apply {
+                    setTarget(_binding.ivHdr)
+                    start()
+                }
             }
         }
-        ivSettings = findViewById<ImageView?>(R.id.iv_setting).apply {
+        ivSettings = findViewById<ImageButton?>(R.id.iv_setting).apply {
             setOnClickListener {
                 startActivity(Intent(this@CameraActivity, SettingsActivity::class.java))
             }
@@ -344,7 +377,7 @@ class CameraActivity : AppCompatActivity() {
         mediaActionSound.load(MediaActionSound.SHUTTER_CLICK)
         checkPermissions()
         rotationChangeMonitor = RotationChangeMonitor(this).apply {
-            rotationChangeListener = object: RotationChangeListener {
+            rotationChangeListener = object : RotationChangeListener {
                 override fun onRotateChange(oldOrientation: Int, newOrientation: Int) {
                     Log.d(TAG, "orientation change from ${oldOrientation} -> ${newOrientation}")
                     handleRotation(newOrientation - oldOrientation)
@@ -382,9 +415,9 @@ class CameraActivity : AppCompatActivity() {
     }
 
     override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<String>,
-        grantResults: IntArray
+            requestCode: Int,
+            permissions: Array<String>,
+            grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == MY_PERMISSIONS_REQUEST) {
@@ -416,9 +449,9 @@ class CameraActivity : AppCompatActivity() {
                 throw RuntimeException("Time out waiting to lock camera opening.")
             }
             if (ActivityCompat.checkSelfPermission(
-                    this,
-                    Manifest.permission.CAMERA
-                ) != PackageManager.PERMISSION_GRANTED
+                            this,
+                            Manifest.permission.CAMERA
+                    ) != PackageManager.PERMISSION_GRANTED
             ) {
                 // TODO: Consider calling
                 //    ActivityCompat#requestPermissions
@@ -447,8 +480,10 @@ class CameraActivity : AppCompatActivity() {
             cameraDevice?.close()
             cameraDevice = null
             jpgImageReader.close()
-            yuvImageReader.close()
-            zslImageWriter.close()
+            if (isEnableZsl) {
+                yuvImageReader.close()
+                zslImageWriter.close()
+            }
         } catch (e: InterruptedException) {
             throw RuntimeException("Interrupted while trying to lock camera closing.", e)
         } finally {
@@ -462,14 +497,14 @@ class CameraActivity : AppCompatActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             for (permission in permissions_exclude_storage) {
                 if (ContextCompat.checkSelfPermission(this, permission)
-                    != PackageManager.PERMISSION_GRANTED
+                        != PackageManager.PERMISSION_GRANTED
                 ) {
                     unGrantedPermissionList.add(permission)
                 }
             }
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
                 if (ContextCompat.checkSelfPermission(this, permission_storage)
-                    != PackageManager.PERMISSION_GRANTED
+                        != PackageManager.PERMISSION_GRANTED
                 ) {
                     unGrantedPermissionList.add(permission_storage)
                 }
@@ -525,13 +560,13 @@ class CameraActivity : AppCompatActivity() {
         try {
             cameraInfo = CameraInfoCache(cameraManager, useCameraFront)
             isEnableZsl = cameraInfo.isSupportReproc() &&
-                        SettingsManager.getInstance()!!
-                                    .getBoolean(SettingsManager.KEY_PHOTO_ZSL, SettingsManager.PHOTO_ZSL_DEFAULT_VALUE)
+                    SettingsManager.getInstance()!!
+                            .getBoolean(SettingsManager.KEY_PHOTO_ZSL, SettingsManager.PHOTO_ZSL_DEFAULT_VALUE)
             cameraId = cameraInfo.cameraId
             videoSize = cameraInfo.videoSize
             jpgImageReader = ImageReader.newInstance(
-                cameraInfo.largestJpgSize.width, cameraInfo.largestJpgSize.height,
-                ImageFormat.JPEG, IMAGE_BUFFER_SIZE
+                    cameraInfo.largestJpgSize.width, cameraInfo.largestJpgSize.height,
+                    ImageFormat.JPEG, IMAGE_BUFFER_SIZE
             )
             jpgImageReader.setOnImageAvailableListener({ reader ->
                 val image = reader.acquireLatestImage()
@@ -543,9 +578,9 @@ class CameraActivity : AppCompatActivity() {
             }, imageReaderHandler)
             if (isEnableZsl) {
                 yuvImageReader = ImageReader.newInstance(
-                    cameraInfo.largestYuvSize.width, cameraInfo.largestYuvSize.height,
-                    ImageFormat.YUV_420_888,
-                    YUV_IMAGE_READER_SIZE
+                        cameraInfo.largestYuvSize.width, cameraInfo.largestYuvSize.height,
+                        ImageFormat.YUV_420_888,
+                        YUV_IMAGE_READER_SIZE
                 )
                 yuvImageReader.setOnImageAvailableListener({ reader ->
                     val image = reader.acquireLatestImage()
@@ -560,11 +595,11 @@ class CameraActivity : AppCompatActivity() {
         } catch (e: Exception) {
             Log.e(TAG, Log.getStackTraceString(e))
             ErrorDialog.newInstance(getString(R.string.camera_error))
-                .show(supportFragmentManager, "fragment_dialog")
+                    .show(supportFragmentManager, "fragment_dialog")
         }
     }
 
-    private fun setUpCameraPreview() {
+    private fun setUpCameraPreview(ratioValue: Float) {
         // device display rotation
         // 0 [Surface.ROTATION_0]{android.view.Surface.ROTATION_0 = 0}  -> portrait, 把手机垂直放置且屏幕朝向我们的时候，即设备自然方向
         // 90  -> landscape, 手机向右横放(前置镜头在右边)且屏幕朝向我们的时候，
@@ -588,13 +623,13 @@ class CameraActivity : AppCompatActivity() {
             viewSize = Size(viewSize.height, viewSize.width)
         }
         val (chosenSize, chosenSizeAspectRatio) = chooseOptimalSize(
-            cameraInfo.getOutputPreviewSurfaceSize(),
-            viewSize,
-            previewAspectRatio,
-            true
+                cameraInfo.getOutputPreviewSurfaceSize(),
+                viewSize,
+                ratioValue,
+                true
         )
         Log.d(TAG, "viewSize: ${viewSize}, previewSize:${chosenSize}," +
-                "previewAspectRatio=${previewAspectRatio}, chosen previewSizeAspectRatio:${chosenSizeAspectRatio}"
+                "previewAspectRatio=${previewAspectRatio}-${ratioValue}, chosen previewSizeAspectRatio:${chosenSizeAspectRatio}"
         )
         previewSize = chosenSize
         cameraPreviewRenderer.setDataSize(previewSize.width, previewSize.height)
@@ -612,6 +647,7 @@ class CameraActivity : AppCompatActivity() {
                     swappedDimensions = false
                 }
             }
+
             Surface.ROTATION_90, Surface.ROTATION_270 -> {
                 if (sensorOrientation == 0 || sensorOrientation == 180) {
                     swappedDimensions = true
@@ -629,50 +665,52 @@ class CameraActivity : AppCompatActivity() {
         Log.i(TAG, "startCaptureSession: ")
         try {
             val captureSessionStateCallback = object : CameraCaptureSession.StateCallback() {
-                    override fun onConfigureFailed(p0: CameraCaptureSession) {
-                        toast("Failed")
-                    }
+                override fun onConfigureFailed(p0: CameraCaptureSession) {
+                    toast("Failed")
+                }
 
-                    override fun onConfigured(cameraCaptureSession: CameraCaptureSession) {
-                    }
+                override fun onConfigured(cameraCaptureSession: CameraCaptureSession) {
+                }
 
-                    override fun onReady(session: CameraCaptureSession) {
-                        // When the session is ready, we start displaying the preview.
-                        super.onReady(session)
-                        Log.d(TAG, "capture session onReady()")
-                        currentCaptureSession = session
-                        updatePreview()
-                        Log.d(TAG, "startCaptureSession onReady isReprocessable=${session.isReprocessable} ")
-                        if (session.isReprocessable) {
-                            zslImageWriter = ImageWriter.newInstance(session.inputSurface!!, ZSL_IMAGE_WRITER_SIZE)
-                            zslImageWriter.setOnImageReleasedListener({ _ -> {
+                override fun onReady(session: CameraCaptureSession) {
+                    // When the session is ready, we start displaying the preview.
+                    super.onReady(session)
+                    Log.d(TAG, "capture session onReady()")
+                    currentCaptureSession = session
+                    updatePreview()
+                    Log.d(TAG, "startCaptureSession onReady isReprocessable=${session.isReprocessable} ")
+                    if (session.isReprocessable) {
+                        zslImageWriter = ImageWriter.newInstance(session.inputSurface!!, ZSL_IMAGE_WRITER_SIZE)
+                        zslImageWriter.setOnImageReleasedListener({ _ ->
+                            {
                                 Log.d(TAG, "ZslImageWriter onImageReleased()")
-                            }}, cameraHandler)
-                            Log.d(TAG, "create ImageWriter")
-                        }
+                            }
+                        }, cameraHandler)
+                        Log.d(TAG, "create ImageWriter")
                     }
+                }
             }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 val previewConfiguration = OutputConfiguration(previewSurface)
 
                 val outputConfigurations = mutableListOf<OutputConfiguration>(
-                    previewConfiguration,
-                    OutputConfiguration(jpgImageReader.surface)
+                        previewConfiguration,
+                        OutputConfiguration(jpgImageReader.surface)
                 )
                 if (isEnableZsl) {
                     outputConfigurations.add(
-                        OutputConfiguration(yuvImageReader.surface)
+                            OutputConfiguration(yuvImageReader.surface)
                     )
                 }
                 val sessionConfiguration = SessionConfiguration(
-                    SessionConfiguration.SESSION_REGULAR,
-                    outputConfigurations,
-                    cameraExecutor!!,
-                    captureSessionStateCallback
+                        SessionConfiguration.SESSION_REGULAR,
+                        outputConfigurations,
+                        cameraExecutor!!,
+                        captureSessionStateCallback
                 )
                 if (isEnableZsl) {
                     sessionConfiguration.inputConfiguration =
-                        InputConfiguration(yuvImageReader.width, yuvImageReader.height, ImageFormat.YUV_420_888)
+                            InputConfiguration(yuvImageReader.width, yuvImageReader.height, ImageFormat.YUV_420_888)
                 }
                 cameraDevice?.createCaptureSession(sessionConfiguration)
             } else {
@@ -680,8 +718,8 @@ class CameraActivity : AppCompatActivity() {
 
                 } else {
                     cameraDevice?.createCaptureSession(
-                        arrayListOf(previewSurface, jpgImageReader?.surface),
-                        captureSessionStateCallback, cameraHandler
+                            arrayListOf(previewSurface, jpgImageReader?.surface),
+                            captureSessionStateCallback, cameraHandler
                     )
                 }
 
@@ -695,9 +733,9 @@ class CameraActivity : AppCompatActivity() {
         if (cameraDevice == null) return
         try {
             previewRequestBuilder =
-                cameraDevice!!.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
+                    cameraDevice!!.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
             previewRequestBuilder.addTarget(previewSurface)
-            if (isEnableZsl && this::yuvImageReader.isInitialized){
+            if (isEnableZsl && this::yuvImageReader.isInitialized) {
                 previewRequestBuilder.addTarget(yuvImageReader.surface)
             }
 
@@ -720,8 +758,8 @@ class CameraActivity : AppCompatActivity() {
             }
             previewRequest = previewRequestBuilder.build()
             currentCaptureSession?.setRepeatingRequest(
-                previewRequest,
-                captureCallback, cameraHandler
+                    previewRequest,
+                    captureCallback, cameraHandler
             )
         } catch (e: CameraAccessException) {
             Log.e(TAG, e.toString())
@@ -735,13 +773,13 @@ class CameraActivity : AppCompatActivity() {
     private fun runPrecaptureSequence() {
         try {
             previewRequestBuilder.set(
-                CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER,
-                CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_START
+                    CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER,
+                    CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_START
             )
             cameraState = STATE_WAITING_PRECAPTURE
             currentCaptureSession?.capture(
-                previewRequestBuilder.build(), captureCallback,
-                cameraHandler
+                    previewRequestBuilder.build(), captureCallback,
+                    cameraHandler
             )
         } catch (e: CameraAccessException) {
             Log.e(TAG, e.toString())
@@ -764,13 +802,13 @@ class CameraActivity : AppCompatActivity() {
             val rotation = windowManager.defaultDisplay.rotation
 
             val captureBuilder =
-                if (isEnableZsl && this::zslImageWriter.isInitialized) {
-                    Log.d(TAG, "captureStillPicture: queueInput yuvLatestReceiveImage to HAL")
-                    zslImageWriter.queueInputImage(yuvLatestReceivedImage)
-                    cameraDevice!!.createReprocessCaptureRequest(lastTotalCaptureResult)
-                } else {
-                    cameraDevice!!.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
-                }
+                    if (isEnableZsl && this::zslImageWriter.isInitialized) {
+                        Log.d(TAG, "captureStillPicture: queueInput yuvLatestReceiveImage to HAL")
+                        zslImageWriter.queueInputImage(yuvLatestReceivedImage)
+                        cameraDevice!!.createReprocessCaptureRequest(lastTotalCaptureResult)
+                    } else {
+                        cameraDevice!!.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
+                    }
             captureBuilder.apply {
                 addTarget(jpgImageReader.surface)
                 if (isEnableZsl) {
@@ -782,8 +820,8 @@ class CameraActivity : AppCompatActivity() {
                 // rotation = (sensorOrientationDegrees - deviceOrientationDegrees * sign + 360) % 360
                 // sign 1 for front-facing cameras, -1 for back-facing cameras
                 set(
-                    CaptureRequest.JPEG_ORIENTATION,
-                    ( sensorOrientation!! - OREIENTATIONS.get(rotation) * (if (useCameraFront) 1 else -1) + 360) % 360
+                        CaptureRequest.JPEG_ORIENTATION,
+                        (sensorOrientation!! - OREIENTATIONS.get(rotation) * (if (useCameraFront) 1 else -1) + 360) % 360
                 )
                 set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
                 if (flashSupported) {
@@ -793,18 +831,18 @@ class CameraActivity : AppCompatActivity() {
 
             val captureCallback = object : CameraCaptureSession.CaptureCallback() {
                 override fun onCaptureStarted(
-                    session: CameraCaptureSession,
-                    request: CaptureRequest,
-                    timestamp: Long,
-                    frameNumber: Long
+                        session: CameraCaptureSession,
+                        request: CaptureRequest,
+                        timestamp: Long,
+                        frameNumber: Long
                 ) {
                     super.onCaptureStarted(session, request, timestamp, frameNumber)
                 }
 
                 override fun onCaptureCompleted(
-                    session: CameraCaptureSession,
-                    request: CaptureRequest,
-                    result: TotalCaptureResult
+                        session: CameraCaptureSession,
+                        request: CaptureRequest,
+                        result: TotalCaptureResult
                 ) {
                     Log.d(TAG, "capture onCaptureCompleted: ")
                     super.onCaptureCompleted(session, request, result)
@@ -817,11 +855,11 @@ class CameraActivity : AppCompatActivity() {
                         jpgImageQueue.take().close()
                     }
                     imageReaderHandler?.post(
-                        ImageSaver(
-                            this@CameraActivity,
-                            image,
-                            imageReaderHandler
-                        )
+                            ImageSaver(
+                                    this@CameraActivity,
+                                    image,
+                                    imageReaderHandler
+                            )
                     )
                 }
             }
@@ -843,14 +881,14 @@ class CameraActivity : AppCompatActivity() {
         try {
             // This is how to tell the camera to lock focus.
             previewRequestBuilder.set(
-                CaptureRequest.CONTROL_AF_TRIGGER,
-                CameraMetadata.CONTROL_AF_TRIGGER_START
+                    CaptureRequest.CONTROL_AF_TRIGGER,
+                    CameraMetadata.CONTROL_AF_TRIGGER_START
             )
             // Tell #captureCallback to wait for the lock.
             cameraState = STATE_WAITING_LOCK
             currentCaptureSession?.capture(
-                previewRequestBuilder.build(), captureCallback,
-                cameraHandler
+                    previewRequestBuilder.build(), captureCallback,
+                    cameraHandler
             )
         } catch (e: CameraAccessException) {
             Log.e(TAG, e.toString())
@@ -858,7 +896,7 @@ class CameraActivity : AppCompatActivity() {
 
     }
 
-     // Unlock the focus. This method should be called when still image capture sequence is finished.
+    // Unlock the focus. This method should be called when still image capture sequence is finished.
     private fun unlockFocus() {
         try {
             // Reset the auto-focus trigger
@@ -869,14 +907,14 @@ class CameraActivity : AppCompatActivity() {
                 }
             }
             currentCaptureSession?.capture(
-                previewRequestBuilder.build(), captureCallback,
-                cameraHandler
+                    previewRequestBuilder.build(), captureCallback,
+                    cameraHandler
             )
             // After this, the camera will go back to the normal state of preview.
             cameraState = STATE_PREVIEW
             currentCaptureSession?.setRepeatingRequest(
-                previewRequest, captureCallback,
-                cameraHandler
+                    previewRequest, captureCallback,
+                    cameraHandler
             )
         } catch (e: CameraAccessException) {
             Log.e(TAG, e.toString())
@@ -900,17 +938,17 @@ class CameraActivity : AppCompatActivity() {
     private fun updateThumbnail(capturedImageUri: Uri) {
         // scale animation from 1 - 1.2 - 1
         ivThumbnail.animate()
-            .setDuration(80)
-            .scaleX(1.2f)
-            .scaleY(1.2f)
-            .withEndAction {
-                ivThumbnail.animate()
-                    .setDuration(80)
-                    .scaleX(1f)
-                    .scaleY(1f)
-                    .start()
-            }
-            .start()
+                .setDuration(80)
+                .scaleX(1.2f)
+                .scaleY(1.2f)
+                .withEndAction {
+                    ivThumbnail.animate()
+                            .setDuration(80)
+                            .scaleX(1f)
+                            .scaleY(1f)
+                            .start()
+                }
+                .start()
         val thumbnail = if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
             val temp = MediaStore.Images.Media.getBitmap(contentResolver, capturedImageUri)
             ThumbnailUtils.extractThumbnail(temp, 100, 100)
@@ -943,29 +981,29 @@ class CameraActivity : AppCompatActivity() {
             }
 
             previewRequestBuilder =
-                cameraDevice!!.createCaptureRequest(CameraDevice.TEMPLATE_RECORD)
-                    .apply {
-                        addTarget(previewSurface)
-                        addTarget(recorderSurface)
-                    }
+                    cameraDevice!!.createCaptureRequest(CameraDevice.TEMPLATE_RECORD)
+                            .apply {
+                                addTarget(previewSurface)
+                                addTarget(recorderSurface)
+                            }
 
             cameraDevice?.createCaptureSession(
-                surfaces,
-                object : CameraCaptureSession.StateCallback() {
-                    override fun onConfigured(p0: CameraCaptureSession) {
-                        currentCaptureSession = p0
-                        updatePreview()
-                        runOnUiThread {
-                            ivRecord.setImageResource(R.drawable.btn_record_stop)
-                            isRecordingVideo = true
-                            mediaRecorder?.start()
+                    surfaces,
+                    object : CameraCaptureSession.StateCallback() {
+                        override fun onConfigured(p0: CameraCaptureSession) {
+                            currentCaptureSession = p0
+                            updatePreview()
+                            runOnUiThread {
+                                ivRecord.setImageResource(R.drawable.btn_record_stop)
+                                isRecordingVideo = true
+                                mediaRecorder?.start()
+                            }
                         }
-                    }
 
-                    override fun onConfigureFailed(p0: CameraCaptureSession) {
-                        toast("Failed")
-                    }
-                }, cameraHandler
+                        override fun onConfigureFailed(p0: CameraCaptureSession) {
+                            toast("Failed")
+                        }
+                    }, cameraHandler
             )
         } catch (e: CameraAccessException) {
             Log.e(TAG, e.toString())
@@ -1033,18 +1071,102 @@ class CameraActivity : AppCompatActivity() {
         thumbnailOrientation = (-rotateAngle + thumbnailOrientation +
                 (if (rotateAngle > 180) 360 else 0)) % 360
         ivThumbnail.animate()
-            .setDuration(800)
-            .rotation(thumbnailOrientation.toFloat())
-            .start()
+                .setDuration(800)
+                .rotation(thumbnailOrientation.toFloat())
+                .start()
         btnSwitchCamera.animate()
-            .setDuration(800)
-            .rotation(thumbnailOrientation.toFloat())
-            .start()
+                .setDuration(800)
+                .rotation(thumbnailOrientation.toFloat())
+                .start()
     }
 
-    private fun changePreviewRatio() {
-        _binding.clGroupControlBar.visibility = View.INVISIBLE
+    private fun changePreviewAspectRatio() {
+        lateinit var selectedImageButton: ImageButton
+        lateinit var ivRatioImageButtonList: Array<ImageButton>
         vsControlBarRatio.inflate()
+        val ivRatio1x1 = findViewById<AppCompatImageButton>(R.id.iv_ratio_1x1).apply {
+            setOnClickListener {
+                isSelected = true
+                selectedImageButton.isSelected = false
+                selectedImageButton = this
+                previewAspectRatio = SettingsManager.PreviewAspectRatio.RATIO_1x1
+                ivRatioImageButtonList.forEach { it.visibility = View.GONE }
+                postChangePreviewAspectRatio()
+            }
+        }
+        val ivRatio4x3 = findViewById<AppCompatImageButton>(R.id.iv_ratio_4x3).apply {
+            setOnClickListener {
+                isSelected = true
+                selectedImageButton.isSelected = false
+                selectedImageButton = this
+                previewAspectRatio = SettingsManager.PreviewAspectRatio.RATIO_4x3
+                ivRatioImageButtonList.forEach { it.visibility = View.GONE }
+                postChangePreviewAspectRatio()
+            }
+        }
+        val ivRatio16x9 = findViewById<AppCompatImageButton>(R.id.iv_ratio_16x9).apply {
+            setOnClickListener {
+                isSelected = true
+                selectedImageButton.isSelected = false
+                selectedImageButton = this
+                previewAspectRatio = SettingsManager.PreviewAspectRatio.RATIO_16x9
+                ivRatioImageButtonList.forEach { it.visibility = View.GONE }
+                postChangePreviewAspectRatio()
+            }
+        }
+        val ivRatioFull = findViewById<AppCompatImageButton>(R.id.iv_ratio_full).apply {
+            setOnClickListener {
+                isSelected = true
+                selectedImageButton.isSelected = false
+                selectedImageButton = this
+                previewAspectRatio = SettingsManager.PreviewAspectRatio.RATIO_FULL
+                ivRatioImageButtonList.forEach { it.visibility = View.GONE }
+                postChangePreviewAspectRatio()
+            }
+        }
+        ivRatioImageButtonList = arrayOf(ivRatio1x1, ivRatio4x3, ivRatio16x9, ivRatioFull)
+        AnimatorInflater.loadAnimator(this@CameraActivity, R.animator.roate_x).apply {
+            setTarget(ivRatio1x1)
+            start()
+        }
+        AnimatorInflater.loadAnimator(this@CameraActivity, R.animator.roate_x).apply {
+            setTarget(ivRatio4x3)
+            start()
+        }
+        AnimatorInflater.loadAnimator(this@CameraActivity, R.animator.roate_x).apply {
+            setTarget(ivRatio16x9)
+            start()
+        }
+        AnimatorInflater.loadAnimator(this@CameraActivity, R.animator.roate_x).apply {
+            setTarget(ivRatioFull)
+            start()
+        }
+        when (previewAspectRatio) {
+            SettingsManager.PreviewAspectRatio.RATIO_1x1 -> {
+                ivRatio1x1.isSelected = true
+                selectedImageButton = ivRatio1x1
+            }
+
+            SettingsManager.PreviewAspectRatio.RATIO_4x3 -> {
+                ivRatio4x3.isSelected = true
+                selectedImageButton = ivRatio4x3
+            }
+
+            SettingsManager.PreviewAspectRatio.RATIO_16x9 -> {
+                ivRatio16x9.isSelected = true
+                selectedImageButton = ivRatio16x9
+            }
+
+            SettingsManager.PreviewAspectRatio.RATIO_FULL -> {
+                ivRatioFull.isSelected = true
+                selectedImageButton = ivRatioFull
+            }
+        }
+    }
+
+    private fun postChangePreviewAspectRatio() {
+        SettingsManager.getInstance()!!.setPreviewRatio(previewAspectRatio)
+        _binding.clGroupControlBar.visibility = View.VISIBLE
     }
 
     companion object {
@@ -1061,7 +1183,7 @@ class CameraActivity : AppCompatActivity() {
         private const val CaptureMode = 1
         private const val BroadcastModel = 2
         private val cameraModes = arrayOf(
-            "视频", "拍照", "主播"
+                "视频", "拍照", "主播"
         )
 
         init {

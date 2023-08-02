@@ -5,43 +5,39 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content">
 
-    <androidx.appcompat.widget.AppCompatImageView
+    <androidx.appcompat.widget.AppCompatImageButton
         android:id="@+id/iv_ratio_1x1"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="50dp"
+        style="@style/ControlBarItem"
+        android:layout_marginStart="@dimen/control_bar_horizontal_margin"
         android:src="@drawable/ic_ratio_1x1"
-        app:layout_constraintEnd_toStartOf="@id/iv_ratio_3x4"
+        app:layout_constraintEnd_toStartOf="@id/iv_ratio_4x3"
         app:layout_constraintHorizontal_chainStyle="spread_inside"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <androidx.appcompat.widget.AppCompatImageView
-        android:id="@+id/iv_ratio_3x4"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:src="@drawable/ic_ratio_3x4"
-        app:layout_constraintEnd_toStartOf="@id/iv_ratio_9x16"
+    <androidx.appcompat.widget.AppCompatImageButton
+        android:id="@+id/iv_ratio_4x3"
+        style="@style/ControlBarItem"
+        android:src="@drawable/ic_ratio_4x3"
+        app:layout_constraintEnd_toStartOf="@id/iv_ratio_16x9"
         app:layout_constraintStart_toEndOf="@id/iv_ratio_1x1"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <androidx.appcompat.widget.AppCompatImageView
-        android:id="@+id/iv_ratio_9x16"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:src="@drawable/ic_ratio_9x16"
+    <androidx.appcompat.widget.AppCompatImageButton
+        android:id="@+id/iv_ratio_16x9"
+        style="@style/ControlBarItem"
+        android:src="@drawable/ic_ratio_16x9"
         app:layout_constraintEnd_toStartOf="@id/iv_ratio_full"
-        app:layout_constraintStart_toEndOf="@id/iv_ratio_3x4"
+        app:layout_constraintStart_toEndOf="@id/iv_ratio_4x3"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <androidx.appcompat.widget.AppCompatImageView
+    <androidx.appcompat.widget.AppCompatImageButton
         android:id="@+id/iv_ratio_full"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginEnd="50dp"
+        style="@style/ControlBarItem"
+        android:layout_marginEnd="@dimen/control_bar_horizontal_margin"
         android:src="@drawable/ic_ratio_full"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toEndOf="@id/iv_ratio_9x16"
+        app:layout_constraintStart_toEndOf="@id/iv_ratio_16x9"
         app:layout_constraintTop_toTopOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

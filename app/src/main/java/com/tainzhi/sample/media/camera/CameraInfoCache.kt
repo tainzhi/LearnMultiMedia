@@ -130,10 +130,10 @@ class CameraInfoCache(cameraManager: CameraManager, useFrontCamera: Boolean = fa
          */
         @JvmStatic
         fun chooseOptimalSize(
-            choices: Array<Size>,
-            viewSize: Size,
-            aspectRatio: Float,
-            isPreview: Boolean = false
+                choices: Array<Size>,
+                viewSize: Size,
+                ratioValue: Float,
+                isPreview: Boolean = false
         ): Pair<Size, Float> {
             val filterChoices = choices.filter {
                 if (isPreview)
@@ -144,7 +144,7 @@ class CameraInfoCache(cameraManager: CameraManager, useFrontCamera: Boolean = fa
             val chosenSizes = ArrayList<Size>()
             for (option in filterChoices) {
                 val tempRatio = option.width/option.height.toFloat()
-                if (abs(aspectRatio - tempRatio) < DIFF_FLOAT_EPS) {
+                if (abs(ratioValue - tempRatio) < DIFF_FLOAT_EPS) {
                     chosenSizes.add(option)
                 }
             }
@@ -152,7 +152,7 @@ class CameraInfoCache(cameraManager: CameraManager, useFrontCamera: Boolean = fa
             if (chosenSizes.size > 0) {
                 Log.d(TAG, "optimal size by same w/h aspect ratio")
                 val result = Collections.min(chosenSizes, CompareSizesByArea())
-                return Pair(result, aspectRatio)
+                return Pair(result, ratioValue)
             }
 
             var suboptimalSize = Size(0, 0)
@@ -161,8 +161,8 @@ class CameraInfoCache(cameraManager: CameraManager, useFrontCamera: Boolean = fa
             var minRatioDiff = Float.MAX_VALUE
             filterChoices.forEach { option ->
                 val tempRatio = option.width/option.height.toFloat()
-                if (abs(tempRatio - aspectRatio) < minRatioDiff) {
-                    minRatioDiff = abs(tempRatio - aspectRatio)
+                if (abs(tempRatio - ratioValue) < minRatioDiff) {
+                    minRatioDiff = abs(tempRatio - ratioValue)
                     suboptimalAspectRatio = tempRatio
                     suboptimalSize = option
                 }
@@ -174,7 +174,7 @@ class CameraInfoCache(cameraManager: CameraManager, useFrontCamera: Boolean = fa
 
             // 选择面积与预览窗口最接近的输出尺寸
             var minAreaDiff = Long.MAX_VALUE
-            val previewArea = viewSize.height * aspectRatio * viewSize.height
+            val previewArea = viewSize.height * ratioValue * viewSize.height
             filterChoices.forEach { option ->
                 val tempArea = option.width * option.height
                 if (abs(previewArea - tempArea) < minAreaDiff) {
