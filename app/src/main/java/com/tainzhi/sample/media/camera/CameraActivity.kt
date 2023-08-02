@@ -84,8 +84,8 @@ class CameraActivity : AppCompatActivity() {
     private lateinit var ivThumbnail: CircleImageView
     private lateinit var ivTakePicture: ImageView
     private lateinit var ivRecord: ImageView
-    private lateinit var ivSettings: ImageButton
-    private lateinit var ivRatio: ImageButton
+    private lateinit var btnSettings: ImageButton
+    private lateinit var btnRatio: ImageButton
     private lateinit var btnSwitchCamera: ImageButton
     private lateinit var clGroupControlBar: Group
     private lateinit var vsControlBarRatio: ViewStub
@@ -303,10 +303,18 @@ class CameraActivity : AppCompatActivity() {
         }
         clGroupControlBar = _binding.clGroupControlBar
         vsControlBarRatio = _binding.vsControlBarRatio
-        ivRatio = _binding.ivRatio.apply {
+        btnRatio = _binding.btnRatio.apply {
             setOnClickListener {
                 AnimatorInflater.loadAnimator(this@CameraActivity, R.animator.roate_x).apply {
-                    setTarget(ivRatio)
+                    setTarget(_binding.btnHdr)
+                    start()
+                }
+                AnimatorInflater.loadAnimator(this@CameraActivity, R.animator.roate_x).apply {
+                    setTarget(btnSettings)
+                    start()
+                }
+                AnimatorInflater.loadAnimator(this@CameraActivity, R.animator.roate_x).apply {
+                    setTarget(btnRatio)
                     addPauseListener { }
                     doOnEnd {
                         _binding.clGroupControlBar.visibility = View.INVISIBLE
@@ -314,17 +322,9 @@ class CameraActivity : AppCompatActivity() {
                     }
                     start()
                 }
-                AnimatorInflater.loadAnimator(this@CameraActivity, R.animator.roate_x).apply {
-                    setTarget(ivSettings)
-                    start()
-                }
-                AnimatorInflater.loadAnimator(this@CameraActivity, R.animator.roate_x).apply {
-                    setTarget(_binding.ivHdr)
-                    start()
-                }
             }
         }
-        ivSettings = findViewById<ImageButton?>(R.id.iv_setting).apply {
+        btnSettings = findViewById<ImageButton?>(R.id.btn_settings).apply {
             setOnClickListener {
                 startActivity(Intent(this@CameraActivity, SettingsActivity::class.java))
             }
@@ -1084,7 +1084,7 @@ class CameraActivity : AppCompatActivity() {
         lateinit var selectedImageButton: ImageButton
         lateinit var ivRatioImageButtonList: Array<ImageButton>
         vsControlBarRatio.inflate()
-        val ivRatio1x1 = findViewById<AppCompatImageButton>(R.id.iv_ratio_1x1).apply {
+        val ivRatio1x1 = findViewById<AppCompatImageButton>(R.id.btn_ratio_1x1).apply {
             setOnClickListener {
                 isSelected = true
                 selectedImageButton.isSelected = false
@@ -1094,7 +1094,7 @@ class CameraActivity : AppCompatActivity() {
                 postChangePreviewAspectRatio()
             }
         }
-        val ivRatio4x3 = findViewById<AppCompatImageButton>(R.id.iv_ratio_4x3).apply {
+        val ivRatio4x3 = findViewById<AppCompatImageButton>(R.id.btn_ratio_4x3).apply {
             setOnClickListener {
                 isSelected = true
                 selectedImageButton.isSelected = false
@@ -1104,7 +1104,7 @@ class CameraActivity : AppCompatActivity() {
                 postChangePreviewAspectRatio()
             }
         }
-        val ivRatio16x9 = findViewById<AppCompatImageButton>(R.id.iv_ratio_16x9).apply {
+        val ivRatio16x9 = findViewById<AppCompatImageButton>(R.id.btn_ratio_16x9).apply {
             setOnClickListener {
                 isSelected = true
                 selectedImageButton.isSelected = false
@@ -1114,7 +1114,7 @@ class CameraActivity : AppCompatActivity() {
                 postChangePreviewAspectRatio()
             }
         }
-        val ivRatioFull = findViewById<AppCompatImageButton>(R.id.iv_ratio_full).apply {
+        val ivRatioFull = findViewById<AppCompatImageButton>(R.id.btn_ratio_full).apply {
             setOnClickListener {
                 isSelected = true
                 selectedImageButton.isSelected = false

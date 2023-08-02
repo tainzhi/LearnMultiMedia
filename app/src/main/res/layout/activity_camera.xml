@@ -31,42 +31,39 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="@dimen/control_bar_top_margin"
-        app:constraint_referenced_ids="iv_hdr,iv_ratio,iv_setting"
+        app:constraint_referenced_ids="btn_hdr,btn_ratio,btn_settings"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <androidx.appcompat.widget.AppCompatImageView
-        android:id="@+id/iv_hdr"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="50dp"
+    <androidx.appcompat.widget.AppCompatImageButton
+        android:id="@+id/btn_hdr"
+        style="@style/ControlBarItem"
+        android:layout_marginStart="@dimen/control_bar_horizontal_margin"
         android:layout_marginTop="@dimen/control_bar_top_margin"
         android:src="@drawable/ic_hdr_off"
-        app:layout_constraintEnd_toStartOf="@id/iv_ratio"
+        app:layout_constraintEnd_toStartOf="@id/btn_ratio"
         app:layout_constraintHorizontal_chainStyle="spread_inside"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <androidx.appcompat.widget.AppCompatImageView
-        android:id="@+id/iv_ratio"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+    <androidx.appcompat.widget.AppCompatImageButton
+        android:id="@+id/btn_ratio"
+        style="@style/ControlBarItem"
         android:layout_marginTop="@dimen/control_bar_top_margin"
         android:src="@drawable/ic_ratio_full"
-        app:layout_constraintEnd_toStartOf="@id/iv_setting"
-        app:layout_constraintStart_toEndOf="@id/iv_hdr"
+        app:layout_constraintEnd_toStartOf="@id/btn_settings"
+        app:layout_constraintStart_toEndOf="@id/btn_hdr"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <androidx.appcompat.widget.AppCompatImageView
-        android:id="@+id/iv_setting"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+    <androidx.appcompat.widget.AppCompatImageButton
+        android:id="@+id/btn_settings"
+        style="@style/ControlBarItem"
         android:layout_marginTop="@dimen/control_bar_top_margin"
-        android:layout_marginEnd="50dp"
+        android:layout_marginEnd="@dimen/control_bar_horizontal_margin"
         android:src="@drawable/ic_settings"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toEndOf="@id/iv_ratio"
+        app:layout_constraintStart_toEndOf="@id/btn_ratio"
         app:layout_constraintTop_toTopOf="parent" />
 
     <ViewStub
