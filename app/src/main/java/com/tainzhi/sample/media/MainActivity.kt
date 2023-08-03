@@ -20,9 +20,15 @@ import com.tainzhi.sample.media.opengl2.PaintPointActivity
 import com.tainzhi.sample.media.opengl2.RotateTriangleActivity
 import com.tainzhi.sample.media.opengl2.SquareActivity
 import com.tainzhi.sample.media.opengl2.TriangleActivity
-import com.tainzhi.sample.media.opengl2.camera.TakePictureActivity
 import com.tainzhi.sample.media.player.PlayActivity
 
+/*
+三种绘图方法
+- 从asset目录导入图片流到bitmap绘制到ImageView，SurfaceView， 自定义View。
+- canvas.drawBitmap使用Rect和scale matrix铺满
+- `SurfaceHolder.Callback`的`onSurfaceCreated`之后会调用`onSurfaceChanged`
+- [参考:Android 音视频开发(一) : 通过三种方式绘制图片](https://www.cnblogs.com/renhui/p/7456956.html)
+ */
 class MainActivity : AppCompatActivity() {
     
     private val datas = arrayListOf(
@@ -42,7 +48,6 @@ class MainActivity : AppCompatActivity() {
             ActivityItem("OpenGLES 绘制画笔点", "响应触摸事件，并在触摸出绘制点", PaintPointActivity::class.java),
             ActivityItem("OpenGLES 旋转三角形", "响应触摸事件，旋转三角形", RotateTriangleActivity::class.java),
             ActivityItem("OpenGLES 渲染图片", "渲染效果: 黑白, 冷色, 暖色, 模糊, 放大", ImageGLRendererActivity::class.java),
-            ActivityItem("OpenGLES 相机拍照", "相机拍照", TakePictureActivity::class.java),
             ActivityItem("OpenGLES && Native MediaCodec", "cpp层MediaCodec和GLSurfaceView", NativeCodecActivity::class.java))
     
     override fun onCreate(savedInstanceState: Bundle?) {

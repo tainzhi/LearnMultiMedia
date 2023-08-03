@@ -1,4 +1,4 @@
-package com.tainzhi.sample.media.opengl2.camera.filter
+package com.tainzhi.sample.media.camera.gl.filter
 
 open class NoFilter : BaseFilter() {
     var vertexCode = "attribute vec4 vPosition;\n" +

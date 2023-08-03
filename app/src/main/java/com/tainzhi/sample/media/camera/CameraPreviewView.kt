@@ -22,7 +22,7 @@ class CameraPreviewView : GLSurfaceView {
         // setEGLWindowSurfaceFactory(WindowSurfaceFactory())
         setEGLConfigChooser(8, 8, 8, 8, 16, 8)
         setZOrderMediaOverlay(true)
-        setEGLContextClientVersion(2)
+        setEGLContextClientVersion(3)
     }
 
     lateinit var cameraDrawer: CameraPreviewRender

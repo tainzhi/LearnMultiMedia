@@ -2,7 +2,7 @@ package com.tainzhi.sample.media.opengl2.glsv
 
 import android.content.Context
 import android.view.MotionEvent
-import com.tainzhi.sample.media.opengl2.base.BaseGLSurfaceView
+import com.tainzhi.sample.media.camera.gl.BaseGLSurfaceView
 import com.tainzhi.sample.media.opengl2.paint.PaintPoint
 import com.tainzhi.sample.media.opengl2.paint.PaintPointRenderer
 

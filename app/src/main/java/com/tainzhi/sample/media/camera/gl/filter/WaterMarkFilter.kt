@@ -1,9 +1,8 @@
-package com.tainzhi.sample.media.opengl2.camera.filter
+package com.tainzhi.sample.media.camera.gl.filter
 
 import android.graphics.Bitmap
 import android.opengl.GLES20
 import android.opengl.GLUtils
-import com.tainzhi.sample.media.opengl2.camera.takepic.utils.MatrixUtils
 
 /**
  * 水印 Filter
@@ -66,7 +65,7 @@ class WaterMarkFilter : NoFilter() {
             //设置环绕方向T，截取纹理坐标到[1/2n,1-1/2n]。将导致永远不会与border融合
             GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_CLAMP_TO_EDGE.toFloat())
             GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, mBitmap, 0)
-            MatrixUtils.flip(mFilter.matrix, false, true)
+//            MatrixUtils.flip(mFilter.matrix, false, true)
             mFilter.textureId = textures[0]
         }
     }

@@ -1,8 +1,8 @@
-package com.tainzhi.sample.media.opengl2.camera.filter
+package com.tainzhi.sample.media.camera.gl.filter
 
 import android.opengl.GLES20
 import android.util.SparseArray
-import com.tainzhi.sample.media.opengl2.base.BaseGLSL
+import com.tainzhi.sample.media.camera.gl.BaseGLSL
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.FloatBuffer

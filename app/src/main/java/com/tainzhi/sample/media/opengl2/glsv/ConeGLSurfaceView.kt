@@ -3,7 +3,7 @@ package com.tainzhi.sample.media.opengl2.glsv
 import android.content.Context
 import android.opengl.GLSurfaceView
 import com.renhui.opengles20study.shape.oval.Cone
-import com.tainzhi.sample.media.opengl2.base.BaseGLSurfaceView
+import com.tainzhi.sample.media.camera.gl.BaseGLSurfaceView
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
 

@@ -1,8 +1,7 @@
-package com.tainzhi.sample.media.opengl2.camera.filter
+package com.tainzhi.sample.media.camera.gl.filter
 
 import android.opengl.GLES20
-import com.tainzhi.sample.media.opengl2.camera.takepic.utils.MatrixUtils
-import java.util.*
+import java.util.Queue
 import java.util.concurrent.ConcurrentLinkedQueue
 
 class GroupFilter : BaseFilter() {
@@ -14,7 +13,7 @@ class GroupFilter : BaseFilter() {
     override fun initBuffer() {}
     fun addFilter(filter: BaseFilter) { //绘制到frameBuffer上和绘制到屏幕上的纹理坐标是不一样的
 //Android屏幕相对GL世界的纹理Y轴翻转
-        MatrixUtils.flip(filter.matrix, false, true)
+//        MatrixUtils.flip(filter.matrix, false, true)
         mFilterQueue.add(filter)
     }
 

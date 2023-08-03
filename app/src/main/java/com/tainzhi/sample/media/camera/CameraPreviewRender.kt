@@ -6,8 +6,8 @@ import android.opengl.GLES20
 import android.opengl.GLSurfaceView
 import android.opengl.Matrix
 import android.util.Log
-import com.tainzhi.sample.media.opengl2.camera.filter.BaseFilter
-import com.tainzhi.sample.media.opengl2.camera.filter.OesFilter
+import com.tainzhi.sample.media.camera.gl.filter.BaseFilter
+import com.tainzhi.sample.media.camera.gl.filter.OesFilter
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
 

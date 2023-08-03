@@ -38,7 +38,6 @@
 		<!--	android:theme="@style/AppTheme.FullScreen" >-->
 		<!--</activity>-->
 		<activity android:name=".native_codec.NativeCodecActivity" />
-		<activity android:name=".opengl2.camera.TakePictureActivity" />
 		<activity
 			android:name=".opengl2.ImageGLRendererActivity"
 			android:exported="true">

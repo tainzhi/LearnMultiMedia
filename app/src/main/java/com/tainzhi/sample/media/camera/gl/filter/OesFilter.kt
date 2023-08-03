@@ -1,8 +1,8 @@
-package com.tainzhi.sample.media.opengl2.camera.filter
+package com.tainzhi.sample.media.camera.gl.filter
 
 import android.opengl.GLES11Ext
 import android.opengl.GLES20
-import java.util.*
+import java.util.Arrays
 
 open class OesFilter : BaseFilter() {
     var vertexShaderCode = "attribute vec4 vPosition;\n" +
@@ -22,7 +22,7 @@ open class OesFilter : BaseFilter() {
             "    gl_FragColor = texture2D( vTexture, textureCoordinate );\n" +
             "}"
     private var mHCoordMatrix = 0
-    private var mCoordMatrix: FloatArray = Arrays.copyOf(BaseFilter.Companion.OM, 16)
+    private var mCoordMatrix: FloatArray = Arrays.copyOf(OM, 16)
     override fun onCreate() {
         createProgram(vertexShaderCode, fragmentShaderCode)
         mHCoordMatrix = GLES20.glGetUniformLocation(mProgram, "vCoordMatrix")

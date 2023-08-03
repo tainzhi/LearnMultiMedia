@@ -1,7 +1,7 @@
 package com.tainzhi.sample.media.opengl2.glsv
 
 import android.content.Context
-import com.tainzhi.sample.media.opengl2.base.BaseGLSurfaceView
+import com.tainzhi.sample.media.camera.gl.BaseGLSurfaceView
 import com.tainzhi.sample.media.opengl2.shape.square.Cube
 import com.tainzhi.sample.media.opengl2.shape.square.Square
 import com.tainzhi.sample.media.opengl2.shape.square.VaryMatrixCube
