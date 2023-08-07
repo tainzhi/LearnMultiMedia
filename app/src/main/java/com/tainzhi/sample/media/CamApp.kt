@@ -13,6 +13,7 @@ class CamApp: Application(), ActivityLifecycleCallbacks {
     private lateinit var settingsManager: SettingsManager
     override fun onCreate() {
         super.onCreate()
+        INSTANCE = this
         registerActivityLifecycleCallbacks(this)
         SettingsManager.build(this)
         settingsManager = SettingsManager.getInstance()!!
@@ -38,6 +39,10 @@ class CamApp: Application(), ActivityLifecycleCallbacks {
     }
 
     override fun onActivityDestroyed(activity: Activity) {
+    }
+
+    companion object {
+        lateinit var INSTANCE: CamApp
     }
 
 }

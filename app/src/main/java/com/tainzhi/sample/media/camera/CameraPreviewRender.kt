@@ -6,14 +6,20 @@ import android.opengl.GLES20
 import android.opengl.GLSurfaceView
 import android.opengl.Matrix
 import android.util.Log
+import com.tainzhi.sample.media.camera.gl.BaseGLSL
 import com.tainzhi.sample.media.camera.gl.filter.BaseFilter
 import com.tainzhi.sample.media.camera.gl.filter.OesFilter
+import com.tainzhi.sample.media.camera.gl.textures.LineTexture
+import com.tainzhi.sample.media.camera.gl.textures.Vertex3F
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
 
 class CameraPreviewRender : GLSurfaceView.Renderer {
     private lateinit var surfaceTexture: SurfaceTexture
     private val mOesFilter: BaseFilter = OesFilter()
+    private val line0 = LineTexture()
+    private val line1 = LineTexture()
+    private val line2 = LineTexture()
     private var width = 0
     private var height = 0
     private var dataWidth = 0
@@ -22,6 +28,10 @@ class CameraPreviewRender : GLSurfaceView.Renderer {
     var surfaceTextureListener: CameraPreviewView.SurfaceTextureListener? = null
 
     override fun onSurfaceCreated(gl: GL10, config: EGLConfig) {
+        // set up alpha bleanding and an android background color
+        GLES20.glEnable(GLES20.GL_BLEND)
+        GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA)
+        BaseGLSL.checkGlError("glBlendFunc")
         Log.d(TAG, "onSurfaceCreated: ${width}x${height}")
         // texture 不能在UI thread创建，只能在其他线程创建，比如 GLThread
         // 在 onSurfaceCreated回调就在 GLThread 被执行
@@ -32,6 +42,9 @@ class CameraPreviewRender : GLSurfaceView.Renderer {
             surfaceTextureListener?.onSurfaceTextureAvailable(surfaceTexture, width, height)
         }
         mOesFilter.create()
+        line0.create()
+        line1.create()
+        line2.create()
         mOesFilter.textureId = texture
         surfaceTextureListener?.onSurfaceTextureCreated(surfaceTexture, width, height)
     }
@@ -41,12 +54,24 @@ class CameraPreviewRender : GLSurfaceView.Renderer {
         // 在全屏模式下，onSurfaceCreated和onSurfaceChanged的宽高不一样，需要重新设置输出预览大小
         surfaceTexture.setDefaultBufferSize(height, width)
         setViewSize(width, height)
+        line0.setVertices(Vertex3F(-width/2f, 0f, 0f), Vertex3F(width/2f, 0f, 0f))
+        line1.setVertices(Vertex3F(0f, -height/2f, 0f), Vertex3F(0f, height/2f, 0f))
+        line2.setVertices(Vertex3F(-width/2f, -height/2f, 0f), Vertex3F(width/2f, height/2f, 0f))
     }
 
     override fun onDrawFrame(gl: GL10) {
         surfaceTextureListener?.onSurfaceTextureUpdated(surfaceTexture)
+        // set black background
+        GLES20.glClearColor(0.0f, 0.0f, 0.0f, 1.0f)
+        GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT or GLES20.GL_DEPTH_BUFFER_BIT)
+//        GLES20.glViewport(0, 0, width, height)
+        // reset blend
+        GLES20.glBlendFunc(GLES20.GL_ONE, GLES20.GL_ONE_MINUS_CONSTANT_ALPHA)
         surfaceTexture.updateTexImage()
         mOesFilter.draw()
+        line0.draw()
+        line1.draw()
+        line2.draw()
     }
 
     fun setViewSize(width: Int, height: Int) {
@@ -65,6 +90,9 @@ class CameraPreviewRender : GLSurfaceView.Renderer {
         getShowMatrix(matrix, dataWidth, dataHeight, width, height)
         // flip(matrix, true, false)
         mOesFilter.matrix = matrix
+        line0.mvpMatrix = matrix
+        line1.mvpMatrix = matrix
+        line2.mvpMatrix = matrix
     }
 
     private fun createTextureID(): Int {

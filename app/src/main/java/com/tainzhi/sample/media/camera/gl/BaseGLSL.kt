@@ -2,6 +2,10 @@ package com.tainzhi.sample.media.camera.gl
 
 import android.opengl.GLES20
 import android.util.Log
+import com.tainzhi.sample.media.CamApp
+import java.io.BufferedReader
+import java.io.IOException
+import java.io.InputStreamReader
 
 /**
  * @author:       tainzhi
@@ -16,6 +20,23 @@ open class BaseGLSL {
         private val TAG: String = BaseGLSL::class.java.simpleName
         const val COORDS_PER_VERTEX: Int = 3
         const val vertexStride: Int = COORDS_PER_VERTEX * 4
+
+        fun getShaderSource(sourceId: Int): String {
+            val sb = StringBuilder()
+            val inputStream = CamApp.INSTANCE.resources.openRawResource(sourceId)
+            val bufferReader = BufferedReader(InputStreamReader(inputStream))
+            try {
+                var read = bufferReader.readLine()
+                while (read != null) {
+                    sb.append(read).append("\n")
+                    read = bufferReader.readLine()
+                }
+                sb.deleteCharAt(sb.length - 1)
+            } catch (ioe: IOException) {
+                Log.e(TAG, "error reading sharer: ${ioe}")
+            }
+            return sb.toString()
+        }
 
         private fun loadShader(type: Int, shaderCode: String): Int {
             val shader: Int = GLES20.glCreateShader(type)
@@ -50,6 +71,42 @@ open class BaseGLSL {
                 }
             }
             return program
+        }
+
+        private fun getGlErrorName(error: Int): String {
+            when (error) {
+                GLES20.GL_NO_ERROR -> return "GL_NO_ERROR"
+                GLES20.GL_INVALID_ENUM -> return "GL_INVALID_ENUM"
+                GLES20.GL_INVALID_VALUE -> return "GL_INVALID_VALUE"
+                GLES20.GL_INVALID_OPERATION -> return "GL_INVALID_OPERATION";
+                GLES20.GL_INVALID_FRAMEBUFFER_OPERATION -> return "GL_INVALID_FRAMEBUFFER_OPERATION";
+                GLES20.GL_OUT_OF_MEMORY -> return "GL_OUT_OF_MEMORY";
+                else ->
+                    return String.format("glGetError(%x)", error);
+            }
+        }
+
+        fun checkGlError(op: String) {
+            val error = GLES20.glGetError();
+            if (GLES20.GL_NO_ERROR != error) {
+                val message = op + ": " + getGlErrorName(error);
+                when (error) {
+                    GLES20.GL_OUT_OF_MEMORY ->
+                        // The state of the GL is undefined after this error occurs.
+                        throw OutOfMemoryError(message);
+                    GLES20.GL_INVALID_ENUM, GLES20.GL_INVALID_VALUE,
+                    GLES20.GL_INVALID_OPERATION, GLES20.GL_INVALID_FRAMEBUFFER_OPERATION -> {
+                        // The offending command is ignored and should have no side effects.
+                        Log.e(TAG, message, Throwable());
+                        throw RuntimeException(message);
+                    }
+
+                    else -> {
+                        // This should never happen.
+                        throw RuntimeException(message)
+                    }
+                }
+            }
         }
     }
 }

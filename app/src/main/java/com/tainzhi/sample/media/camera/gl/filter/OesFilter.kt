@@ -2,25 +2,12 @@ package com.tainzhi.sample.media.camera.gl.filter
 
 import android.opengl.GLES11Ext
 import android.opengl.GLES20
+import com.tainzhi.sample.media.R
 import java.util.Arrays
 
 open class OesFilter : BaseFilter() {
-    var vertexShaderCode = "attribute vec4 vPosition;\n" +
-            "attribute vec2 vCoord;\n" +
-            "uniform mat4 vMatrix;\n" +
-            "uniform mat4 vCoordMatrix;\n" +
-            "varying vec2 textureCoordinate;\n" +
-            "void main(){\n" +
-            "    gl_Position = vMatrix*vPosition;\n" +
-            "    textureCoordinate = (vCoordMatrix*vec4(vCoord,0,1)).xy;\n" +
-            "}"
-    var fragmentShaderCode = "#extension GL_OES_EGL_image_external : require\n" +
-            "precision mediump float;\n" +
-            "varying vec2 textureCoordinate;\n" +
-            "uniform samplerExternalOES vTexture;\n" +
-            "void main() {\n" +
-            "    gl_FragColor = texture2D( vTexture, textureCoordinate );\n" +
-            "}"
+    var vertexShaderCode = getShaderSource(R.raw.preview_glvs)
+    var fragmentShaderCode = getShaderSource(R.raw.preview_glfs)
     private var mHCoordMatrix = 0
     private var mCoordMatrix: FloatArray = Arrays.copyOf(OM, 16)
     override fun onCreate() {

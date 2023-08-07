@@ -130,9 +130,6 @@ abstract class BaseFilter : BaseGLSL() {
      * 清除画布
      */
     protected open fun onClear() {
-        // set black background
-        GLES20.glClearColor(0.0f, 0.0f, 0.0f, 1.0f)
-        GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT or GLES20.GL_DEPTH_BUFFER_BIT)
     }
 
     /**
