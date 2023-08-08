@@ -1,12 +1,10 @@
 package com.tainzhi.sample.media.camera.ui
 
-import android.animation.AnimatorInflater
 import android.content.Context
 import android.content.Intent
 import android.view.View
 import android.widget.ImageButton
 import androidx.appcompat.widget.AppCompatImageButton
-import androidx.core.animation.doOnEnd
 import com.tainzhi.sample.media.R
 import com.tainzhi.sample.media.camera.SettingsActivity
 import com.tainzhi.sample.media.camera.util.SettingsManager
@@ -15,25 +13,29 @@ import com.tainzhi.sample.media.databinding.ActivityCameraBinding
 class ControlBar(val context: Context, val binding: ActivityCameraBinding, val onRatioUpdate: () -> Unit) {
     private lateinit var inflatedView: View
     private var previewAspectRatio = SettingsManager.getInstance()!!.getPreviewAspectRatio()
-    private val vsControlBarRatio = binding.vsControlBarRatio
     private val btnRatio = binding.btnRatio.apply {
+        updateControlBarRatioIcon(previewAspectRatio)
         setOnClickListener {
-            AnimatorInflater.loadAnimator(context, R.animator.roate_x).apply {
-                setTarget(binding.btnHdr)
-                start()
-            }
-            AnimatorInflater.loadAnimator(context, R.animator.roate_x).apply {
-                setTarget(binding.btnRatio)
-                doOnEnd {
-//                    binding.clGroupControlBar.visibility = View.INVISIBLE
+//            AnimatorInflater.loadAnimator(context, R.animator.roate_x).apply {
+//                setTarget(binding.clControlBarLevel1Menu)
+//                doOnEnd {
+//                    binding.clControlBarLevel1Menu.visibility = View.INVISIBLE
+//                    changePreviewAspectRatio()
+//                }
+//                start()
+//            }
+            binding.clControlBarLevel1Menu.animate().alpha(0.5f)
+                .withEndAction {
+                    binding.clControlBarLevel1Menu.visibility = View.INVISIBLE
                     changePreviewAspectRatio()
+                    inflatedView.animate()
+                        .alpha(1f)
+                        .withEndAction {
+                             inflatedView.visibility = View.VISIBLE
+                        }
+                        .start()
                 }
-                start()
-            }
-            AnimatorInflater.loadAnimator(context, R.animator.roate_x).apply {
-                setTarget(binding.btnSettings)
-                start()
-            }
+                .start()
         }
     }
     private val tnSettings = binding.btnSettings.apply {
@@ -44,9 +46,8 @@ class ControlBar(val context: Context, val binding: ActivityCameraBinding, val o
 
     private fun changePreviewAspectRatio() {
         lateinit var selectedImageButton: ImageButton
-        lateinit var ivRatioImageButtonList: Array<ImageButton>
         if (!this::inflatedView.isInitialized) {
-            inflatedView = vsControlBarRatio.inflate()
+            inflatedView = binding.vsControlBarRatio.inflate()
         }
         val ivRatio1x1 = inflatedView.findViewById<AppCompatImageButton>(R.id.btn_ratio_1x1).apply {
             setOnClickListener {
@@ -54,7 +55,6 @@ class ControlBar(val context: Context, val binding: ActivityCameraBinding, val o
                 selectedImageButton.isSelected = false
                 selectedImageButton = this
                 previewAspectRatio = SettingsManager.PreviewAspectRatio.RATIO_1x1
-                ivRatioImageButtonList.forEach { it.visibility = View.GONE }
                 postChangePreviewAspectRatio()
             }
         }
@@ -64,7 +64,6 @@ class ControlBar(val context: Context, val binding: ActivityCameraBinding, val o
                 selectedImageButton.isSelected = false
                 selectedImageButton = this
                 previewAspectRatio = SettingsManager.PreviewAspectRatio.RATIO_4x3
-                ivRatioImageButtonList.forEach { it.visibility = View.GONE }
                 postChangePreviewAspectRatio()
             }
         }
@@ -74,7 +73,6 @@ class ControlBar(val context: Context, val binding: ActivityCameraBinding, val o
                 selectedImageButton.isSelected = false
                 selectedImageButton = this
                 previewAspectRatio = SettingsManager.PreviewAspectRatio.RATIO_16x9
-                ivRatioImageButtonList.forEach { it.visibility = View.GONE }
                 postChangePreviewAspectRatio()
             }
         }
@@ -84,31 +82,8 @@ class ControlBar(val context: Context, val binding: ActivityCameraBinding, val o
                 selectedImageButton.isSelected = false
                 selectedImageButton = this
                 previewAspectRatio = SettingsManager.PreviewAspectRatio.RATIO_FULL
-                ivRatioImageButtonList.forEach { it.visibility = View.GONE }
                 postChangePreviewAspectRatio()
             }
-        }
-        ivRatioImageButtonList = arrayOf(ivRatio1x1, ivRatio4x3, ivRatio16x9, ivRatioFull)
-        AnimatorInflater.loadAnimator(context, R.animator.revert_roate_x).apply {
-            setTarget(ivRatio1x1)
-            start()
-        }
-        AnimatorInflater.loadAnimator(context, R.animator.revert_roate_x).apply {
-            setTarget(ivRatio4x3)
-            start()
-        }
-        AnimatorInflater.loadAnimator(context, R.animator.revert_roate_x).apply {
-            setTarget(ivRatio16x9)
-            start()
-        }
-        AnimatorInflater.loadAnimator(context, R.animator.revert_roate_x).apply {
-            setTarget(ivRatioFull)
-            doOnEnd {
-                for (imageButton in ivRatioImageButtonList) {
-                    imageButton.visibility = View.VISIBLE
-                }
-            }
-            start()
         }
         when (previewAspectRatio) {
             SettingsManager.PreviewAspectRatio.RATIO_1x1 -> {
@@ -135,22 +110,29 @@ class ControlBar(val context: Context, val binding: ActivityCameraBinding, val o
 
     private fun postChangePreviewAspectRatio() {
         SettingsManager.getInstance()!!.setPreviewRatio(previewAspectRatio)
-//        binding.clGroupControlBar.visibility = View.VISIBLE
-        AnimatorInflater.loadAnimator(context, R.animator.revert_roate_x).apply {
-            setTarget(binding.btnHdr)
-            start()
-        }
-        AnimatorInflater.loadAnimator(context, R.animator.revert_roate_x).apply {
-            setTarget(binding.btnRatio)
-            doOnEnd {
-//                binding.clGroupControlBar.visibility = View.INVISIBLE
+        updateControlBarRatioIcon(previewAspectRatio)
+        inflatedView.animate().alpha(0.5f)
+            .withEndAction {
+                inflatedView.visibility = View.INVISIBLE
+                changePreviewAspectRatio()
+                binding.clControlBarLevel1Menu.animate()
+                    .alpha(1f)
+                    .withEndAction {
+                         binding.clControlBarLevel1Menu.visibility = View.VISIBLE
+                    }
+                    .start()
             }
-            start()
-        }
-        AnimatorInflater.loadAnimator(context, R.animator.revert_roate_x).apply {
-            setTarget(binding.btnSettings)
-            start()
-        }
+            .start()
         onRatioUpdate.invoke()
+    }
+
+    private fun updateControlBarRatioIcon(previewAspectRatio: SettingsManager.PreviewAspectRatio) {
+        binding.btnRatio.setImageDrawable(context.resources.getDrawable(
+            when (previewAspectRatio) {
+                SettingsManager.PreviewAspectRatio.RATIO_1x1 -> R.drawable.ic_ratio_1x1
+                SettingsManager.PreviewAspectRatio.RATIO_4x3 -> R.drawable.ic_ratio_4x3
+                SettingsManager.PreviewAspectRatio.RATIO_16x9 -> R.drawable.ic_ratio_16x9
+                else -> R.drawable.ic_ratio_full
+            }))
     }
 }
