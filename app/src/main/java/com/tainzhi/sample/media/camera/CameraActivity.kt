@@ -1,7 +1,6 @@
 package com.tainzhi.sample.media.camera
 
 import android.Manifest
-import android.animation.AnimatorInflater
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -28,10 +27,6 @@ import android.view.*
 import android.widget.ImageButton
 import android.widget.ImageView
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.widget.AppCompatImageButton
-import androidx.constraintlayout.widget.Group
-import androidx.core.animation.addPauseListener
-import androidx.core.animation.doOnEnd
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.os.ExecutorCompat
@@ -41,6 +36,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
 import com.tainzhi.sample.media.R
 import com.tainzhi.sample.media.camera.CameraInfoCache.Companion.chooseOptimalSize
+import com.tainzhi.sample.media.camera.ui.ControlBar
 import com.tainzhi.sample.media.camera.util.RotationChangeListener
 import com.tainzhi.sample.media.camera.util.RotationChangeMonitor
 import com.tainzhi.sample.media.camera.util.SettingsManager
@@ -84,11 +80,7 @@ class CameraActivity : AppCompatActivity() {
     private lateinit var ivThumbnail: CircleImageView
     private lateinit var ivTakePicture: ImageView
     private lateinit var ivRecord: ImageView
-    private lateinit var btnSettings: ImageButton
-    private lateinit var btnRatio: ImageButton
     private lateinit var btnSwitchCamera: ImageButton
-    private lateinit var clGroupControlBar: Group
-    private lateinit var vsControlBarRatio: ViewStub
 
     private lateinit var capturedImageUri: Uri
     private lateinit var cameraInfo: CameraInfoCache
@@ -108,7 +100,7 @@ class CameraActivity : AppCompatActivity() {
             GLES20.glViewport(0, 0, width, height)
             viewSize = Size(width, height)
 //            previewAspectRatio = viewSize.height/viewSize.width.toFloat()
-            previewAspectRatio = SettingsManager.getInstance()!!.getPreviewAspectRatio()
+            val previewAspectRatio = SettingsManager.getInstance()!!.getPreviewAspectRatio()
             cameraPreviewRenderer.setViewSize(width, height)
             val ratioValue: Float = when (previewAspectRatio) {
                 SettingsManager.PreviewAspectRatio.RATIO_1x1 -> 1.toFloat()
@@ -174,7 +166,6 @@ class CameraActivity : AppCompatActivity() {
     // camera output surface size, maybe smaller than viewSize
     // e.g. set camera preview 1:1 for a device 1080:2040, then previewSize 1080:1080, viewSize 1080:2040
     private lateinit var previewSize: Size
-    private lateinit var previewAspectRatio: SettingsManager.PreviewAspectRatio
 
     private var flashSupported = false
 
@@ -290,44 +281,17 @@ class CameraActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         _binding = ActivityCameraBinding.inflate(layoutInflater)
         setContentView(_binding.root)
         rootView = _binding.root
-
         setFullScreen()
+        ControlBar(this, _binding) {
+            Log.d(TAG, "onPreviewAspectyRationChange")
+        }
 
         previewView = findViewById<CameraPreviewView>(R.id.previewView).apply {
             cameraPreviewRenderer = CameraPreviewRender()
             setRender(cameraPreviewRenderer)
-        }
-        clGroupControlBar = _binding.clGroupControlBar
-        vsControlBarRatio = _binding.vsControlBarRatio
-        btnRatio = _binding.btnRatio.apply {
-            setOnClickListener {
-                AnimatorInflater.loadAnimator(this@CameraActivity, R.animator.roate_x).apply {
-                    setTarget(_binding.btnHdr)
-                    start()
-                }
-                AnimatorInflater.loadAnimator(this@CameraActivity, R.animator.roate_x).apply {
-                    setTarget(btnSettings)
-                    start()
-                }
-                AnimatorInflater.loadAnimator(this@CameraActivity, R.animator.roate_x).apply {
-                    setTarget(btnRatio)
-                    addPauseListener { }
-                    doOnEnd {
-                        _binding.clGroupControlBar.visibility = View.INVISIBLE
-                        changePreviewAspectRatio()
-                    }
-                    start()
-                }
-            }
-        }
-        btnSettings = findViewById<ImageButton?>(R.id.btn_settings).apply {
-            setOnClickListener {
-                startActivity(Intent(this@CameraActivity, SettingsActivity::class.java))
-            }
         }
         ivThumbnail = findViewById<CircleImageView>(R.id.iv_thumbnail).apply {
             setOnClickListener {
@@ -628,6 +592,7 @@ class CameraActivity : AppCompatActivity() {
                 ratioValue,
                 true
         )
+        val previewAspectRatio = SettingsManager.getInstance()?.getPreviewAspectRatio()
         Log.d(TAG, "viewSize: ${viewSize}, previewSize:${chosenSize}," +
                 "previewAspectRatio=${previewAspectRatio}-${ratioValue}, chosen previewSizeAspectRatio:${chosenSizeAspectRatio}"
         )
@@ -1078,95 +1043,6 @@ class CameraActivity : AppCompatActivity() {
                 .setDuration(800)
                 .rotation(thumbnailOrientation.toFloat())
                 .start()
-    }
-
-    private fun changePreviewAspectRatio() {
-        lateinit var selectedImageButton: ImageButton
-        lateinit var ivRatioImageButtonList: Array<ImageButton>
-        vsControlBarRatio.inflate()
-        val ivRatio1x1 = findViewById<AppCompatImageButton>(R.id.btn_ratio_1x1).apply {
-            setOnClickListener {
-                isSelected = true
-                selectedImageButton.isSelected = false
-                selectedImageButton = this
-                previewAspectRatio = SettingsManager.PreviewAspectRatio.RATIO_1x1
-                ivRatioImageButtonList.forEach { it.visibility = View.GONE }
-                postChangePreviewAspectRatio()
-            }
-        }
-        val ivRatio4x3 = findViewById<AppCompatImageButton>(R.id.btn_ratio_4x3).apply {
-            setOnClickListener {
-                isSelected = true
-                selectedImageButton.isSelected = false
-                selectedImageButton = this
-                previewAspectRatio = SettingsManager.PreviewAspectRatio.RATIO_4x3
-                ivRatioImageButtonList.forEach { it.visibility = View.GONE }
-                postChangePreviewAspectRatio()
-            }
-        }
-        val ivRatio16x9 = findViewById<AppCompatImageButton>(R.id.btn_ratio_16x9).apply {
-            setOnClickListener {
-                isSelected = true
-                selectedImageButton.isSelected = false
-                selectedImageButton = this
-                previewAspectRatio = SettingsManager.PreviewAspectRatio.RATIO_16x9
-                ivRatioImageButtonList.forEach { it.visibility = View.GONE }
-                postChangePreviewAspectRatio()
-            }
-        }
-        val ivRatioFull = findViewById<AppCompatImageButton>(R.id.btn_ratio_full).apply {
-            setOnClickListener {
-                isSelected = true
-                selectedImageButton.isSelected = false
-                selectedImageButton = this
-                previewAspectRatio = SettingsManager.PreviewAspectRatio.RATIO_FULL
-                ivRatioImageButtonList.forEach { it.visibility = View.GONE }
-                postChangePreviewAspectRatio()
-            }
-        }
-        ivRatioImageButtonList = arrayOf(ivRatio1x1, ivRatio4x3, ivRatio16x9, ivRatioFull)
-        AnimatorInflater.loadAnimator(this@CameraActivity, R.animator.roate_x).apply {
-            setTarget(ivRatio1x1)
-            start()
-        }
-        AnimatorInflater.loadAnimator(this@CameraActivity, R.animator.roate_x).apply {
-            setTarget(ivRatio4x3)
-            start()
-        }
-        AnimatorInflater.loadAnimator(this@CameraActivity, R.animator.roate_x).apply {
-            setTarget(ivRatio16x9)
-            start()
-        }
-        AnimatorInflater.loadAnimator(this@CameraActivity, R.animator.roate_x).apply {
-            setTarget(ivRatioFull)
-            start()
-        }
-        when (previewAspectRatio) {
-            SettingsManager.PreviewAspectRatio.RATIO_1x1 -> {
-                ivRatio1x1.isSelected = true
-                selectedImageButton = ivRatio1x1
-            }
-
-            SettingsManager.PreviewAspectRatio.RATIO_4x3 -> {
-                ivRatio4x3.isSelected = true
-                selectedImageButton = ivRatio4x3
-            }
-
-            SettingsManager.PreviewAspectRatio.RATIO_16x9 -> {
-                ivRatio16x9.isSelected = true
-                selectedImageButton = ivRatio16x9
-            }
-
-            SettingsManager.PreviewAspectRatio.RATIO_FULL -> {
-                ivRatioFull.isSelected = true
-                selectedImageButton = ivRatioFull
-            }
-        }
-    }
-
-    private fun postChangePreviewAspectRatio() {
-        SettingsManager.getInstance()!!.setPreviewRatio(previewAspectRatio)
-        _binding.clGroupControlBar.visibility = View.VISIBLE
     }
 
     companion object {

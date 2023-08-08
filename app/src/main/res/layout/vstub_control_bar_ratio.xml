@@ -10,18 +10,22 @@
         style="@style/ControlBarItem"
         android:layout_marginStart="@dimen/control_bar_horizontal_margin"
         android:src="@drawable/ic_ratio_1x1"
+        android:visibility="invisible"
         app:layout_constraintEnd_toStartOf="@id/btn_ratio_4x3"
         app:layout_constraintHorizontal_chainStyle="spread_inside"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent"
+        tools:visibility="visible" />
 
     <androidx.appcompat.widget.AppCompatImageButton
         android:id="@+id/btn_ratio_4x3"
         style="@style/ControlBarItem"
         android:src="@drawable/ic_ratio_4x3"
+        android:visibility="invisible"
         app:layout_constraintEnd_toStartOf="@id/btn_ratio_16x9"
         app:layout_constraintStart_toEndOf="@id/btn_ratio_1x1"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent"
+        tools:visibility="visible" />
 
     <androidx.appcompat.widget.AppCompatImageButton
         android:id="@+id/btn_ratio_16x9"
@@ -29,7 +33,8 @@
         android:src="@drawable/ic_ratio_16x9"
         app:layout_constraintEnd_toStartOf="@id/btn_ratio_full"
         app:layout_constraintStart_toEndOf="@id/btn_ratio_4x3"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent"
+        tools:visibility="visible" />
 
     <androidx.appcompat.widget.AppCompatImageButton
         android:id="@+id/btn_ratio_full"
@@ -38,6 +43,7 @@
         android:src="@drawable/ic_ratio_full"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toEndOf="@id/btn_ratio_16x9"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent"
+        tools:visibility="visible" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
