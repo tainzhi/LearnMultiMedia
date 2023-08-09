@@ -98,18 +98,8 @@ class CameraActivity : AppCompatActivity() {
         override fun onSurfaceTextureSizeChanged(surfaceTexture: SurfaceTexture, width: Int, height: Int) {
             Log.d(TAG, "onSurfaceTextureSizeChanged: ${width}x${height}")
             GLES20.glViewport(0, 0, width, height)
-            viewSize = Size(width, height)
-//            previewAspectRatio = viewSize.height/viewSize.width.toFloat()
-            val previewAspectRatio = SettingsManager.getInstance()!!.getPreviewAspectRatio()
             cameraPreviewRenderer.setViewSize(width, height)
-            val ratioValue: Float = when (previewAspectRatio) {
-                SettingsManager.PreviewAspectRatio.RATIO_1x1 -> 1.toFloat()
-                SettingsManager.PreviewAspectRatio.RATIO_4x3 -> 4 / 3.toFloat()
-                SettingsManager.PreviewAspectRatio.RATIO_16x9 -> 16 / 9.toFloat()
-                SettingsManager.PreviewAspectRatio.RATIO_FULL -> height / width.toFloat()
-                else -> height / width.toFloat()
-            }
-            setUpCameraPreview(ratioValue)
+//            setUpCameraPreview()
         }
 
         override fun onSurfaceTextureUpdated(surfaceTexture: SurfaceTexture) {
@@ -124,10 +114,10 @@ class CameraActivity : AppCompatActivity() {
             previewView.requestRender()
         }
 
-        override fun onSurfaceTextureCreated(surface: SurfaceTexture, width: Int, height: Int) {
+        override fun onSurfaceTextureCreated(surfaceTexture: SurfaceTexture, width: Int, height: Int) {
             Log.d(TAG, "onSurfaceTextureCreated: ${width}x${height}")
-            previewSurface = Surface(surface)
-            openCamera(width, height)
+            previewSurface = Surface(surfaceTexture)
+            openCamera()
         }
     }
 
@@ -158,14 +148,18 @@ class CameraActivity : AppCompatActivity() {
 
     // for camera preview
     private var currentCaptureSession: CameraCaptureSession? = null
+    private lateinit var cameraManager: CameraManager
+    private var isNeedRecreateCaptureSession = false
     private var cameraDevice: CameraDevice? = null
 
     // default set to full screen size
+    // if set the activity full screen, then it will be full screen and never change
     private lateinit var viewSize: Size
-
+    private lateinit var viewRect: Rect
     // camera output surface size, maybe smaller than viewSize
     // e.g. set camera preview 1:1 for a device 1080:2040, then previewSize 1080:1080, viewSize 1080:2040
     private lateinit var previewSize: Size
+    private lateinit var previewRect: Rect
 
     private var flashSupported = false
 
@@ -194,7 +188,7 @@ class CameraActivity : AppCompatActivity() {
             cameraOpenCloseLock.release()
             this@CameraActivity.cameraDevice = p0
             Log.i(TAG, "camera onOpened: ")
-            startCaptureSession()
+            openCaptureSession()
         }
 
         override fun onDisconnected(p0: CameraDevice) {
@@ -286,7 +280,9 @@ class CameraActivity : AppCompatActivity() {
         rootView = _binding.root
         setFullScreen()
         ControlBar(this, _binding) {
-            Log.d(TAG, "onPreviewAspectyRationChange")
+            Log.d(TAG, "onPreviewAspectRationChange")
+            closeCaptureSession()
+            isNeedRecreateCaptureSession = true
         }
 
         previewView = findViewById<CameraPreviewView>(R.id.previewView).apply {
@@ -313,7 +309,7 @@ class CameraActivity : AppCompatActivity() {
             setOnClickListener {
                 useCameraFront = !useCameraFront
                 closeCamera()
-                openCamera(previewView.width, previewView.height)
+                openCamera()
             }
         }
 
@@ -353,10 +349,12 @@ class CameraActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         Log.i(TAG, "onResume: ")
+        viewRect = windowManager.currentWindowMetrics.bounds
+        viewSize = Size(viewRect.width(), viewRect.height())
         previewView.onResume()
         rotationChangeMonitor.enable()
         if (false) {
-            openCamera(previewView.width, previewView.height)
+            openCamera()
         } else {
             previewView.surfaceTextureListener = surfaceTextureListener
         }
@@ -403,10 +401,11 @@ class CameraActivity : AppCompatActivity() {
         Log.d(TAG, "onConfigurationChanged")
     }
 
-    private fun openCamera(width: Int, height: Int) {
+    private fun openCamera() {
         Log.i(TAG, "openCamera: ")
-        val manager = getSystemService(Context.CAMERA_SERVICE) as CameraManager
-        setUpCameraOutputs(manager, width, height)
+        cameraManager = getSystemService(Context.CAMERA_SERVICE) as CameraManager
+        cameraInfo = CameraInfoCache(cameraManager, useCameraFront)
+        cameraId = cameraInfo.cameraId
         try {
             // Wait for camera to open - 2.5 seconds is sufficient
             if (!cameraOpenCloseLock.tryAcquire(2500, TimeUnit.MILLISECONDS)) {
@@ -427,7 +426,7 @@ class CameraActivity : AppCompatActivity() {
                 Log.e(TAG, "openCamera: not grand permission")
                 return
             }
-            manager.openCamera(cameraId, cameraDeviceCallback, cameraHandler)
+            cameraManager.openCamera(cameraId, cameraDeviceCallback, cameraHandler)
         } catch (e: CameraAccessException) {
             Log.e(TAG, e.toString())
         } catch (e: InterruptedException) {
@@ -439,15 +438,9 @@ class CameraActivity : AppCompatActivity() {
         Log.i(TAG, "closeCamera: ")
         try {
             cameraOpenCloseLock.acquire()
-            currentCaptureSession?.close()
-            currentCaptureSession = null
+            closeCaptureSession()
             cameraDevice?.close()
             cameraDevice = null
-            jpgImageReader.close()
-            if (isEnableZsl) {
-                yuvImageReader.close()
-                zslImageWriter.close()
-            }
         } catch (e: InterruptedException) {
             throw RuntimeException("Interrupted while trying to lock camera closing.", e)
         } finally {
@@ -514,19 +507,11 @@ class CameraActivity : AppCompatActivity() {
 
     }
 
-    /**
-     * Sets up member variables related to camera.
-     *
-     * @param width  The width of available size for camera preview
-     * @param height The height of available size for camera preview
-     */
-    private fun setUpCameraOutputs(cameraManager: CameraManager, width: Int, height: Int) {
+    private fun setUpCameraOutputs(cameraManager: CameraManager, ratioValue: Float) {
         try {
-            cameraInfo = CameraInfoCache(cameraManager, useCameraFront)
             isEnableZsl = cameraInfo.isSupportReproc() &&
                     SettingsManager.getInstance()!!
                             .getBoolean(SettingsManager.KEY_PHOTO_ZSL, SettingsManager.PHOTO_ZSL_DEFAULT_VALUE)
-            cameraId = cameraInfo.cameraId
             videoSize = cameraInfo.videoSize
             jpgImageReader = ImageReader.newInstance(
                     cameraInfo.largestJpgSize.width, cameraInfo.largestJpgSize.height,
@@ -563,84 +548,104 @@ class CameraActivity : AppCompatActivity() {
         }
     }
 
-    private fun setUpCameraPreview(ratioValue: Float) {
-        // device display rotation
-        // 0 [Surface.ROTATION_0]{android.view.Surface.ROTATION_0 = 0}  -> portrait, 把手机垂直放置且屏幕朝向我们的时候，即设备自然方向
-        // 90  -> landscape, 手机向右横放(前置镜头在右边)且屏幕朝向我们的时候，
-        // 180 -> portrait, 手机竖着倒放且屏幕朝我我们
-        // 270 -> 手机向左横放且屏幕朝向我们
-        val displayRotation = windowManager?.defaultDisplay?.rotation
-        // reference: https://developer.android.com/training/camera2/camera-preview#device_rotation
-        // 对于大多数设备，portrait且屏幕面向用户
-        // 前置镜头 sensorOrientation = 270, 所以要相对于设备方向逆时针旋转 270
-        // 后置镜头 sensorOrientation = 90, 所以要相对于设备方向逆时针旋转 90
-        // 最终的 rotation = (sensorOrientationDegrees - deviceOrientationDegrees * sign + 360) % 360
-        // sign = 1, 前置镜头，-1 后置镜头
-        sensorOrientation = cameraInfo.sensorOrientation
-        Log.d(TAG, "setUpCameraOutputs: displayRotation=$displayRotation, sensorOrientation=$sensorOrientation")
-        // device portrait orientation ,then deviceHeight > deviceWidth
-        // device landscape orientation, then deviceHeight < deviceWidth
-        // whether device orientation, sensorWidth > deviceHeight is always true
-        val swappedDimensions = areDimensionsSwapped(displayRotation)
-        if (swappedDimensions) {
-            Log.d(TAG, "setUpCameraOutputs: rotate switch width/height")
-            viewSize = Size(viewSize.height, viewSize.width)
-        }
-        val (chosenSize, chosenSizeAspectRatio) = chooseOptimalSize(
+    private fun setUpCameraPreview(previewAspectRatioValue: Float) {
+//        make activity portrait, so not handle sensor rotation
+//        // device display rotation
+//        // 0 [Surface.ROTATION_0]{android.view.Surface.ROTATION_0 = 0}  -> portrait, 把手机垂直放置且屏幕朝向我们的时候，即设备自然方向
+//        // 90  -> landscape, 手机向右横放(前置镜头在右边)且屏幕朝向我们的时候，
+//        // 180 -> portrait, 手机竖着倒放且屏幕朝我我们
+//        // 270 -> 手机向左横放且屏幕朝向我们
+//        val displayRotation = windowManager?.defaultDisplay?.rotation
+//        // reference: https://developer.android.com/training/camera2/camera-preview#device_rotation
+//        // 对于大多数设备，portrait且屏幕面向用户
+//        // 前置镜头 sensorOrientation = 270, 所以要相对于设备方向逆时针旋转 270
+//        // 后置镜头 sensorOrientation = 90, 所以要相对于设备方向逆时针旋转 90
+//        // 最终的 rotation = (sensorOrientationDegrees - deviceOrientationDegrees * sign + 360) % 360
+//        // sign = 1, 前置镜头，-1 后置镜头
+//        sensorOrientation = cameraInfo.sensorOrientation
+//        Log.d(TAG, "setUpCameraPreview: displayRotation=$displayRotation, sensorOrientation=$sensorOrientation")
+//        // device portrait orientation ,then deviceHeight > deviceWidth
+//        // device landscape orientation, then deviceHeight < deviceWidth
+//        // whether device orientation, sensorWidth > deviceHeight is always true
+//        val swappedDimensions = areDimensionsSwapped(displayRotation)
+//        if (swappedDimensions) {
+//            Log.d(TAG, "setUpCameraPreview: rotate switch width/height")
+//            viewSize = Size(viewSize.height, viewSize.width)
+//        }
+        val (chosenSize, chosenSizeAspectRatioValue) = chooseOptimalSize(
                 cameraInfo.getOutputPreviewSurfaceSize(),
                 viewSize,
-                ratioValue,
+                previewAspectRatioValue,
                 true
         )
-        val previewAspectRatio = SettingsManager.getInstance()?.getPreviewAspectRatio()
-        Log.d(TAG, "viewSize: ${viewSize}, previewSize:${chosenSize}," +
-                "previewAspectRatio=${previewAspectRatio}-${ratioValue}, chosen previewSizeAspectRatio:${chosenSizeAspectRatio}"
-        )
+        Log.d(TAG, "viewSize: ${viewSize}, chose previewSize:${chosenSize}:${chosenSizeAspectRatioValue}")
         previewSize = chosenSize
         cameraPreviewRenderer.setDataSize(previewSize.width, previewSize.height)
     }
 
 
-    // device portrait orientation ,then deviceHeight > deviceWidth
-    // device landscape orientation, then deviceHeight < deviceWidth
-    // whether device orientation, sensorWidth > deviceHeight is always true
-    private fun areDimensionsSwapped(displayRotation: Int?): Boolean {
-        var swappedDimensions = false
-        when (displayRotation) {
-            Surface.ROTATION_0, Surface.ROTATION_180 -> {
-                if (sensorOrientation == 90 || sensorOrientation == 270) {
-                    swappedDimensions = false
-                }
-            }
+//        make activity portrait, so not handle sensor rotation
+//    // device portrait orientation ,then deviceHeight > deviceWidth
+//    // device landscape orientation, then deviceHeight < deviceWidth
+//    // whether device orientation, sensorWidth > deviceHeight is always true
+//    private fun areDimensionsSwapped(displayRotation: Int?): Boolean {
+//        var swappedDimensions = false
+//        when (displayRotation) {
+//            Surface.ROTATION_0, Surface.ROTATION_180 -> {
+//                if (sensorOrientation == 90 || sensorOrientation == 270) {
+//                    swappedDimensions = false
+//                }
+//            }
+//
+//            Surface.ROTATION_90, Surface.ROTATION_270 -> {
+//                if (sensorOrientation == 0 || sensorOrientation == 180) {
+//                    swappedDimensions = true
+//                }
+//            }
+//
+//            else -> {
+//                Log.e(TAG, "Display rotation is invalid: $displayRotation")
+//            }
+//        }
+//        return swappedDimensions
+//    }
 
-            Surface.ROTATION_90, Surface.ROTATION_270 -> {
-                if (sensorOrientation == 0 || sensorOrientation == 180) {
-                    swappedDimensions = true
-                }
-            }
-
-            else -> {
-                Log.e(TAG, "Display rotation is invalid: $displayRotation")
-            }
+    private fun openCaptureSession() {
+        Log.i(TAG, "openCaptureSession: ")
+        val previewAspectRatio = SettingsManager.getInstance()!!.getPreviewAspectRatio()
+        val ratioValue: Float = when (previewAspectRatio) {
+            SettingsManager.PreviewAspectRatio.RATIO_1x1 -> 1f
+            SettingsManager.PreviewAspectRatio.RATIO_4x3 -> 4 / 3f
+            SettingsManager.PreviewAspectRatio.RATIO_16x9 -> 16 / 9f
+            // activity is portrait, so height < width
+            // and sensor is also height < width
+            SettingsManager.PreviewAspectRatio.RATIO_FULL -> viewSize.height / viewSize.width.toFloat()
         }
-        return swappedDimensions
-    }
-
-    private fun startCaptureSession() {
-        Log.i(TAG, "startCaptureSession: ")
+        Log.i(TAG, "PreviewAspectRatio:${previewAspectRatio}:${ratioValue}")
+        setUpCameraOutputs(cameraManager,ratioValue)
+        setUpCameraPreview(ratioValue)
         try {
             val captureSessionStateCallback = object : CameraCaptureSession.StateCallback() {
+                override fun onClosed(session: CameraCaptureSession) {
+                    super.onClosed(session)
+                    Log.d(TAG, "CaptureSession onClosed: ")
+                    if (isNeedRecreateCaptureSession) {
+                        Log.d(TAG, "need to recreate CaptureSession")
+                        isNeedRecreateCaptureSession = false
+                        openCaptureSession()
+                    }
+                }
+
+                override fun onSurfacePrepared(session: CameraCaptureSession, surface: Surface) {
+                    super.onSurfacePrepared(session, surface)
+                    Log.d(TAG, "CaptureSession onSurfacePrepared: ")
+                }
                 override fun onConfigureFailed(p0: CameraCaptureSession) {
                     toast("Failed")
                 }
 
-                override fun onConfigured(cameraCaptureSession: CameraCaptureSession) {
-                }
-
-                override fun onReady(session: CameraCaptureSession) {
-                    // When the session is ready, we start displaying the preview.
-                    super.onReady(session)
-                    Log.d(TAG, "capture session onReady()")
+                override fun onConfigured(session: CameraCaptureSession) {
+                    Log.d(TAG, "onConfigured: ")
                     currentCaptureSession = session
                     updatePreview()
                     Log.d(TAG, "startCaptureSession onReady isReprocessable=${session.isReprocessable} ")
@@ -653,6 +658,12 @@ class CameraActivity : AppCompatActivity() {
                         }, cameraHandler)
                         Log.d(TAG, "create ImageWriter")
                     }
+                }
+
+                override fun onReady(session: CameraCaptureSession) {
+                    // When the session is ready, we start displaying the preview.
+                    super.onReady(session)
+                    Log.d(TAG, "capture session onReady()")
                 }
             }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -692,6 +703,18 @@ class CameraActivity : AppCompatActivity() {
         } catch (e: CameraAccessException) {
             Log.e(TAG, e.toString())
         }
+    }
+
+    private fun closeCaptureSession() {
+        Log.i(TAG, "closeCaptureSession: ")
+        currentCaptureSession?.close()
+        currentCaptureSession = null
+        jpgImageReader.close()
+        if (isEnableZsl) {
+            yuvImageReader.close()
+            zslImageWriter.close()
+        }
+        previewSurface.release()
     }
 
     private fun updatePreview() {
@@ -1016,7 +1039,7 @@ class CameraActivity : AppCompatActivity() {
         }
         toast("Video saved: $videoPath")
         videoPath = null
-        startCaptureSession()
+        openCaptureSession()
     }
 
     private fun getVideoFilePath(): String {

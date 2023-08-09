@@ -25,17 +25,17 @@ class CameraPreviewView : GLSurfaceView {
         setEGLContextClientVersion(3)
     }
 
-    lateinit var cameraDrawer: CameraPreviewRender
+    lateinit var render: CameraPreviewRender
 
     var surfaceTextureListener: SurfaceTextureListener? = null
         set(value) {
-            cameraDrawer.surfaceTextureListener = value
+            render.surfaceTextureListener = value
         }
 
     fun setRender(render: GLSurfaceView.Renderer) {
         Log.d(TAG, "setRender: ")
         setRenderer(render)
-        cameraDrawer = render as CameraPreviewRender
+        this.render = render as CameraPreviewRender
         renderMode = RENDERMODE_WHEN_DIRTY
 
         val display = if (Build.VERSION.SDK_INT > Build.VERSION_CODES.R) context.display else {
@@ -43,7 +43,7 @@ class CameraPreviewView : GLSurfaceView {
         }
         val displaySize = Point()
         display?.getSize(displaySize)
-        cameraDrawer.setViewSize(displaySize.x, displaySize.y)
+        render.setViewSize(displaySize.x, displaySize.y)
     }
 
     override fun onResume() {

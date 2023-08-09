@@ -10,7 +10,7 @@ import com.tainzhi.sample.media.camera.SettingsActivity
 import com.tainzhi.sample.media.camera.util.SettingsManager
 import com.tainzhi.sample.media.databinding.ActivityCameraBinding
 
-class ControlBar(val context: Context, val binding: ActivityCameraBinding, val onRatioUpdate: () -> Unit) {
+class ControlBar(val context: Context, val binding: ActivityCameraBinding, private val onRatioUpdate: () -> Unit) {
     private lateinit var inflatedView: View
     private var previewAspectRatio = SettingsManager.getInstance()!!.getPreviewAspectRatio()
     private val btnRatio = binding.btnRatio.apply {
