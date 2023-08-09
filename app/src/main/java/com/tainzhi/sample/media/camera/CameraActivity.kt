@@ -74,7 +74,6 @@ class CameraActivity : AppCompatActivity() {
     private val mediaActionSound = MediaActionSound()
 
     private lateinit var previewView: CameraPreviewView
-    private lateinit var cameraPreviewRenderer: CameraPreviewRender
 
     // 预览拍照的图片，用于相册打开
     private lateinit var ivThumbnail: CircleImageView
@@ -98,8 +97,7 @@ class CameraActivity : AppCompatActivity() {
         override fun onSurfaceTextureSizeChanged(surfaceTexture: SurfaceTexture, width: Int, height: Int) {
             Log.d(TAG, "onSurfaceTextureSizeChanged: ${width}x${height}")
             GLES20.glViewport(0, 0, width, height)
-            cameraPreviewRenderer.setViewSize(width, height)
-//            setUpCameraPreview()
+            previewView.setViewSize(width, height)
         }
 
         override fun onSurfaceTextureUpdated(surfaceTexture: SurfaceTexture) {
@@ -286,8 +284,7 @@ class CameraActivity : AppCompatActivity() {
         }
 
         previewView = findViewById<CameraPreviewView>(R.id.previewView).apply {
-            cameraPreviewRenderer = CameraPreviewRender()
-            setRender(cameraPreviewRenderer)
+            setRender(CameraPreviewRender())
         }
         ivThumbnail = findViewById<CircleImageView>(R.id.iv_thumbnail).apply {
             setOnClickListener {
@@ -580,7 +577,7 @@ class CameraActivity : AppCompatActivity() {
         )
         Log.d(TAG, "viewSize: ${viewSize}, chose previewSize:${chosenSize}:${chosenSizeAspectRatioValue}")
         previewSize = chosenSize
-        cameraPreviewRenderer.setDataSize(previewSize.width, previewSize.height)
+        previewView.setDataSize(previewSize.width, previewSize.height)
     }
 
 
@@ -715,6 +712,7 @@ class CameraActivity : AppCompatActivity() {
             zslImageWriter.close()
         }
         previewSurface.release()
+        previewView.releaseSurface()
     }
 
     private fun updatePreview() {

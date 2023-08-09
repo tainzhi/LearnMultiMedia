@@ -9,17 +9,15 @@ import android.util.Log
 import com.tainzhi.sample.media.camera.gl.BaseGLSL
 import com.tainzhi.sample.media.camera.gl.filter.BaseFilter
 import com.tainzhi.sample.media.camera.gl.filter.OesFilter
-import com.tainzhi.sample.media.camera.gl.textures.LineTexture
-import com.tainzhi.sample.media.camera.gl.textures.Vertex3F
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
 
 class CameraPreviewRender : GLSurfaceView.Renderer {
     private lateinit var surfaceTexture: SurfaceTexture
     private val mOesFilter: BaseFilter = OesFilter()
-    private val line0 = LineTexture()
-    private val line1 = LineTexture()
-    private val line2 = LineTexture()
+//    private val line0 = LineTexture()
+//    private val line1 = LineTexture()
+//    private val line2 = LineTexture()
     private var width = 0
     private var height = 0
     private var dataWidth = 0
@@ -33,30 +31,17 @@ class CameraPreviewRender : GLSurfaceView.Renderer {
         GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA)
         BaseGLSL.checkGlError("glBlendFunc")
         Log.d(TAG, "onSurfaceCreated: ${width}x${height}")
-        // texture 不能在UI thread创建，只能在其他线程创建，比如 GLThread
-        // 在 onSurfaceCreated回调就在 GLThread 被执行
-        val texture = createTextureID()
-        surfaceTexture = SurfaceTexture(texture)
-        surfaceTexture.setDefaultBufferSize(2400, 1080)
-        surfaceTexture.setOnFrameAvailableListener{
-            surfaceTextureListener?.onSurfaceTextureAvailable(surfaceTexture, width, height)
-        }
-        mOesFilter.create()
-        line0.create()
-        line1.create()
-        line2.create()
-        mOesFilter.textureId = texture
-        surfaceTextureListener?.onSurfaceTextureCreated(surfaceTexture, width, height)
+        createSurfaceTexture(width, height)
     }
 
     override fun onSurfaceChanged(gl: GL10, width: Int, height: Int) {
+        Log.d(TAG, "onSurfaceChanged: ${width}x${height}")
         surfaceTextureListener?.onSurfaceTextureSizeChanged(surfaceTexture, width, height)
         // 在全屏模式下，onSurfaceCreated和onSurfaceChanged的宽高不一样，需要重新设置输出预览大小
-        surfaceTexture.setDefaultBufferSize(height, width)
-        setViewSize(width, height)
-        line0.setVertices(Vertex3F(-width/2f, 0f, 0f), Vertex3F(width/2f, 0f, 0f))
-        line1.setVertices(Vertex3F(0f, -height/2f, 0f), Vertex3F(0f, height/2f, 0f))
-        line2.setVertices(Vertex3F(-width/2f, -height/2f, 0f), Vertex3F(width/2f, height/2f, 0f))
+//        surfaceTexture.setDefaultBufferSize(height, width)
+//        line0.setVertices(Vertex3F(-width/2f, 0f, 0f), Vertex3F(width/2f, 0f, 0f))
+//        line1.setVertices(Vertex3F(0f, -height/2f, 0f), Vertex3F(0f, height/2f, 0f))
+//        line2.setVertices(Vertex3F(-width/2f, -height/2f, 0f), Vertex3F(width/2f, height/2f, 0f))
     }
 
     override fun onDrawFrame(gl: GL10) {
@@ -64,35 +49,57 @@ class CameraPreviewRender : GLSurfaceView.Renderer {
         // set black background
         GLES20.glClearColor(0.0f, 0.0f, 0.0f, 1.0f)
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT or GLES20.GL_DEPTH_BUFFER_BIT)
-//        GLES20.glViewport(0, 0, width, height)
         // reset blend
         GLES20.glBlendFunc(GLES20.GL_ONE, GLES20.GL_ONE_MINUS_CONSTANT_ALPHA)
         surfaceTexture.updateTexImage()
         mOesFilter.draw()
-        line0.draw()
-        line1.draw()
-        line2.draw()
+//        line0.draw()
+//        line1.draw()
+//        line2.draw()
     }
 
     fun setViewSize(width: Int, height: Int) {
+        Log.d(TAG, "setViewSize: ")
         this.width = width
         this.height = height
         calculateMatrix()
     }
 
     fun setDataSize(dataWidth: Int, dataHeight: Int) {
+        Log.d(TAG, "setDataSize: ")
         this.dataWidth = dataWidth
         this.dataHeight = dataHeight
         calculateMatrix()
+    }
+
+    fun releaseSurfaceTexture() {
+        surfaceTexture.release()
+    }
+
+    fun createSurfaceTexture(width: Int, height: Int) {
+        // texture 不能在UI thread创建，只能在其他线程创建，比如 GLThread
+        // 在 onSurfaceCreated回调就在 GLThread 被执行
+        val texture = createTextureID()
+        surfaceTexture = SurfaceTexture(texture)
+//        surfaceTexture.setDefaultBufferSize(2400, 1080)
+        surfaceTexture.setOnFrameAvailableListener{
+            surfaceTextureListener?.onSurfaceTextureAvailable(surfaceTexture, width, height)
+        }
+        mOesFilter.create()
+//        line0.create()
+//        line1.create()
+//        line2.create()
+        mOesFilter.textureId = texture
+        surfaceTextureListener?.onSurfaceTextureCreated(surfaceTexture, width, height)
     }
 
     private fun calculateMatrix() {
         getShowMatrix(matrix, dataWidth, dataHeight, width, height)
         // flip(matrix, true, false)
         mOesFilter.matrix = matrix
-        line0.mvpMatrix = matrix
-        line1.mvpMatrix = matrix
-        line2.mvpMatrix = matrix
+//        line0.mvpMatrix = matrix
+//        line1.mvpMatrix = matrix
+//        line2.mvpMatrix = matrix
     }
 
     private fun createTextureID(): Int {

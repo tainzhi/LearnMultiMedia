@@ -6,8 +6,8 @@ import com.tainzhi.sample.media.R
 import java.util.Arrays
 
 open class OesFilter : BaseFilter() {
-    var vertexShaderCode = getShaderSource(R.raw.preview_glvs)
-    var fragmentShaderCode = getShaderSource(R.raw.preview_glfs)
+    var vertexShaderCode = getShaderSource(R.raw.preview_vs)
+    var fragmentShaderCode = getShaderSource(R.raw.preview_fs)
     private var mHCoordMatrix = 0
     private var mCoordMatrix: FloatArray = Arrays.copyOf(OM, 16)
     override fun onCreate() {

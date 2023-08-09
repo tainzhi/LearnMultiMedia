@@ -1,11 +1,8 @@
 package com.tainzhi.sample.media.camera
 
-import android.app.Activity
 import android.content.Context
-import android.graphics.Point
 import android.graphics.SurfaceTexture
 import android.opengl.GLSurfaceView
-import android.os.Build
 import android.util.AttributeSet
 import android.util.Log
 import javax.microedition.khronos.egl.EGL10
@@ -37,13 +34,15 @@ class CameraPreviewView : GLSurfaceView {
         setRenderer(render)
         this.render = render as CameraPreviewRender
         renderMode = RENDERMODE_WHEN_DIRTY
+    }
 
-        val display = if (Build.VERSION.SDK_INT > Build.VERSION_CODES.R) context.display else {
-            (context as Activity).windowManager.defaultDisplay
-        }
-        val displaySize = Point()
-        display?.getSize(displaySize)
-        render.setViewSize(displaySize.x, displaySize.y)
+    fun setDataSize(width: Int, height: Int) {
+        render.setDataSize(width, height)
+//        createSurface(width, height)
+    }
+
+    fun setViewSize(width: Int, height: Int) {
+        render.setViewSize(width, height)
     }
 
     override fun onResume() {
@@ -52,6 +51,17 @@ class CameraPreviewView : GLSurfaceView {
 
     override fun onPause() {
         super.onPause()
+    }
+
+    fun createSurface(width: Int, height: Int) {
+        Log.d(TAG, "createSurfaceTexture: ")
+        queueEvent {
+            render.createSurfaceTexture(width, height)
+        }
+    }
+
+    fun releaseSurface() {
+        render.releaseSurfaceTexture()
     }
 
     inner class WindowSurfaceFactory: EGLWindowSurfaceFactory {
