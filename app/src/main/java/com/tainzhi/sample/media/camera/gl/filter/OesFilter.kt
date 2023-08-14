@@ -8,20 +8,20 @@ import java.util.Arrays
 open class OesFilter : BaseFilter() {
     var vertexShaderCode = getShaderSource(R.raw.preview_vs)
     var fragmentShaderCode = getShaderSource(R.raw.preview_fs)
-    private var mHCoordMatrix = 0
-    private var mCoordMatrix: FloatArray = Arrays.copyOf(OM, 16)
+    private var mHTextureMatrix = 0
+    private var mTextureMatrix: FloatArray = Arrays.copyOf(OM, 16)
     override fun onCreate() {
         createProgram(vertexShaderCode, fragmentShaderCode)
-        mHCoordMatrix = GLES20.glGetUniformLocation(mProgram, "vCoordMatrix")
+        mHTextureMatrix = GLES20.glGetUniformLocation(mProgram, "u_TextureMatrix")
     }
 
     fun setCoordMatrix(matrix: FloatArray) {
-        mCoordMatrix = matrix
+        mTextureMatrix = matrix
     }
 
     override fun onSetExpandData() {
         super.onSetExpandData()
-        GLES20.glUniformMatrix4fv(mHCoordMatrix, 1, false, mCoordMatrix, 0)
+        GLES20.glUniformMatrix4fv(mHTextureMatrix, 1, false, mTextureMatrix, 0)
     }
 
     override fun onBindTexture() {

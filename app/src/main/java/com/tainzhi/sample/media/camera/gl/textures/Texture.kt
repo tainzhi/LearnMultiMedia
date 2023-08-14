@@ -25,7 +25,7 @@ abstract class Texture: BaseGLSL() {
     protected abstract fun onCreate()
     protected fun createProgram(vertex: String, fragment: String) {
         mProgram = createOpenGLProgram(vertex, fragment)
-        mHMatrix = GLES20.glGetUniformLocation(mProgram, "u_MVPMatrix")
+        mHMatrix = GLES20.glGetUniformLocation(mProgram, "u_Matrix")
         mHPosition = GLES20.glGetAttribLocation(mProgram, "a_Position")
         mHColor = GLES20.glGetUniformLocation(mProgram, "u_Color")
         mHOpacity = GLES20.glGetUniformLocation(mProgram, "u_Opacity")

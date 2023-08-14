@@ -9,15 +9,17 @@ import android.util.Log
 import com.tainzhi.sample.media.camera.gl.BaseGLSL
 import com.tainzhi.sample.media.camera.gl.filter.BaseFilter
 import com.tainzhi.sample.media.camera.gl.filter.OesFilter
+import com.tainzhi.sample.media.camera.gl.textures.LineTexture
+import com.tainzhi.sample.media.camera.gl.textures.Vertex3F
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
 
 class CameraPreviewRender : GLSurfaceView.Renderer {
     private lateinit var surfaceTexture: SurfaceTexture
     private val mOesFilter: BaseFilter = OesFilter()
-//    private val line0 = LineTexture()
-//    private val line1 = LineTexture()
-//    private val line2 = LineTexture()
+    private val line0 = LineTexture()
+    private val line1 = LineTexture()
+    private val line2 = LineTexture()
     private var width = 0
     private var height = 0
     private var dataWidth = 0
@@ -38,10 +40,10 @@ class CameraPreviewRender : GLSurfaceView.Renderer {
         Log.d(TAG, "onSurfaceChanged: ${width}x${height}")
         surfaceTextureListener?.onSurfaceTextureSizeChanged(surfaceTexture, width, height)
         // 在全屏模式下，onSurfaceCreated和onSurfaceChanged的宽高不一样，需要重新设置输出预览大小
-//        surfaceTexture.setDefaultBufferSize(height, width)
-//        line0.setVertices(Vertex3F(-width/2f, 0f, 0f), Vertex3F(width/2f, 0f, 0f))
-//        line1.setVertices(Vertex3F(0f, -height/2f, 0f), Vertex3F(0f, height/2f, 0f))
-//        line2.setVertices(Vertex3F(-width/2f, -height/2f, 0f), Vertex3F(width/2f, height/2f, 0f))
+        surfaceTexture.setDefaultBufferSize(height, width)
+        line0.setVertices(Vertex3F(-width/2f, 0f, 0f), Vertex3F(width/2f, 0f, 0f))
+        line1.setVertices(Vertex3F(0f, -height/2f, 0f), Vertex3F(0f, height/2f, 0f))
+        line2.setVertices(Vertex3F(-width/2f, -height/2f, 0f), Vertex3F(width/2f, height/2f, 0f))
     }
 
     override fun onDrawFrame(gl: GL10) {
@@ -53,9 +55,9 @@ class CameraPreviewRender : GLSurfaceView.Renderer {
         GLES20.glBlendFunc(GLES20.GL_ONE, GLES20.GL_ONE_MINUS_CONSTANT_ALPHA)
         surfaceTexture.updateTexImage()
         mOesFilter.draw()
-//        line0.draw()
-//        line1.draw()
-//        line2.draw()
+        line0.draw()
+        line1.draw()
+        line2.draw()
     }
 
     fun setViewSize(width: Int, height: Int) {
@@ -81,14 +83,14 @@ class CameraPreviewRender : GLSurfaceView.Renderer {
         // 在 onSurfaceCreated回调就在 GLThread 被执行
         val texture = createTextureID()
         surfaceTexture = SurfaceTexture(texture)
-//        surfaceTexture.setDefaultBufferSize(2400, 1080)
+        surfaceTexture.setDefaultBufferSize(2400, 1080)
         surfaceTexture.setOnFrameAvailableListener{
             surfaceTextureListener?.onSurfaceTextureAvailable(surfaceTexture, width, height)
         }
         mOesFilter.create()
-//        line0.create()
-//        line1.create()
-//        line2.create()
+        line0.create()
+        line1.create()
+        line2.create()
         mOesFilter.textureId = texture
         surfaceTextureListener?.onSurfaceTextureCreated(surfaceTexture, width, height)
     }
@@ -97,9 +99,9 @@ class CameraPreviewRender : GLSurfaceView.Renderer {
         getShowMatrix(matrix, dataWidth, dataHeight, width, height)
         // flip(matrix, true, false)
         mOesFilter.matrix = matrix
-//        line0.mvpMatrix = matrix
-//        line1.mvpMatrix = matrix
-//        line2.mvpMatrix = matrix
+        line0.mvpMatrix = matrix
+        line1.mvpMatrix = matrix
+        line2.mvpMatrix = matrix
     }
 
     private fun createTextureID(): Int {
@@ -138,13 +140,13 @@ class CameraPreviewRender : GLSurfaceView.Renderer {
 
                 val modelMatrix = FloatArray(16)
                 Matrix.setIdentityM(modelMatrix, 0)
-                Matrix.rotateM(modelMatrix, 0, 270f, 0f, 0f, 1f)
-                val scale: Float =  viewWidth/2f
-                Matrix.scaleM(modelMatrix, 0, scale * (imgWidth / imgHeight.toFloat()), scale, 1f)
+//                Matrix.rotateM(modelMatrix, 0, 270f, 0f, 0f, 1f)
+                val scale: Float =  viewWidth.toFloat()
+//                Matrix.scaleM(modelMatrix, 0, scale * (imgWidth / imgHeight.toFloat()), scale, 1f)
                 val viewMatrix = FloatArray(16)
-                Matrix.setLookAtM(viewMatrix, 0, 0f, 0f, 1f, 0f, 0f, 0f, 0f, 1f, 0f)
+                Matrix.setLookAtM(viewMatrix, 0, 0f, 0f, 3f, 0f, 0f, 0f, 0f, 1f, 0f)
                 val projectionMatrix = FloatArray(16)
-                Matrix.orthoM(projectionMatrix, 0, -viewWidth/2f, viewWidth/2f, -viewHeight/2f, viewHeight/2f, 1f, 3f)
+                Matrix.orthoM(projectionMatrix, 0, 0f, viewWidth.toFloat(), viewHeight.toFloat(), 0f, 1f, 3f)
                 Matrix.multiplyMM(mvpMatrix, 0, viewMatrix, 0, modelMatrix, 0)
                 Matrix.multiplyMM(mvpMatrix, 0, projectionMatrix, 0, mvpMatrix, 0)
             }

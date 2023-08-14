@@ -64,8 +64,8 @@ class SquareGLSurfaceView(context: Context) : BaseGLSurfaceView(context) {
     }
 
     init {
-        // setRenderer(SquareRenderer()) // 绘制正方形
-        setRenderer(CubeRenderer())  // 绘制立方体
-        // setRenderer(VaryMatrixCubeRenderer())
+         setRenderer(SquareRenderer()) // 绘制正方形
+//        setRenderer(CubeRenderer())  // 绘制立方体
+//         setRenderer(VaryMatrixCubeRenderer())
     }
 }
