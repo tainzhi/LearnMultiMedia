@@ -24,6 +24,7 @@ class SettingsManager(context: Context) {
 
     fun setPreviewRatio(ratio: PreviewAspectRatio) {
         spEditor.putInt(KEY_PREVIEW_RATIO, ratio.ordinal)
+        commit()
     }
 
     companion object {

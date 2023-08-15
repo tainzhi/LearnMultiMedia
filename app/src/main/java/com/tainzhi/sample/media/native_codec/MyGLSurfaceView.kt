@@ -19,7 +19,7 @@ class MyGLSurfaceView @JvmOverloads constructor(context: Context, attributeSet: 
     var mRenderer: MyRenderer? = null
     
     init {
-        setEGLContextClientVersion(2)
+        setEGLContextClientVersion(3)
         mRenderer = MyRenderer()
         setRenderer(mRenderer)
         Log.i("@@@", "setrenderer")

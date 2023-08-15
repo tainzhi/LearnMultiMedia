@@ -14,6 +14,6 @@ import android.util.AttributeSet
 open class BaseGLSurfaceView(context: Context, attributes: AttributeSet? = null) : GLSurfaceView(context, attributes) {
     
     init {
-        setEGLContextClientVersion(2)
+        setEGLContextClientVersion(3)
     }
 }

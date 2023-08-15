@@ -17,7 +17,6 @@ import android.media.MediaActionSound
 import android.media.MediaRecorder
 import android.media.ThumbnailUtils
 import android.net.Uri
-import android.opengl.GLES20
 import android.os.*
 import android.provider.MediaStore
 import android.util.Log
@@ -73,7 +72,7 @@ class CameraActivity : AppCompatActivity() {
     // to play click sound when take picture
     private val mediaActionSound = MediaActionSound()
 
-    private lateinit var previewView: CameraPreviewView
+    private lateinit var cameraPreviewView: CameraPreviewView
 
     // 预览拍照的图片，用于相册打开
     private lateinit var ivThumbnail: CircleImageView
@@ -94,11 +93,6 @@ class CameraActivity : AppCompatActivity() {
             .getBoolean(SettingsManager.KEY_PHOTO_ZSL, SettingsManager.PHOTO_ZSL_DEFAULT_VALUE)
 
     private var surfaceTextureListener = object : CameraPreviewView.SurfaceTextureListener {
-        override fun onSurfaceTextureSizeChanged(surfaceTexture: SurfaceTexture, width: Int, height: Int) {
-            Log.d(TAG, "onSurfaceTextureSizeChanged: ${width}x${height}")
-            GLES20.glViewport(0, 0, width, height)
-            previewView.setViewSize(width, height)
-        }
 
         override fun onSurfaceTextureUpdated(surfaceTexture: SurfaceTexture) {
         }
@@ -109,13 +103,17 @@ class CameraActivity : AppCompatActivity() {
         }
 
         override fun onSurfaceTextureAvailable(surfaceTexture: SurfaceTexture, width: Int, height: Int) {
-            previewView.requestRender()
+            cameraPreviewView.requestRender()
         }
 
         override fun onSurfaceTextureCreated(surfaceTexture: SurfaceTexture, width: Int, height: Int) {
             Log.d(TAG, "onSurfaceTextureCreated: ${width}x${height}")
             previewSurface = Surface(surfaceTexture)
-            openCamera()
+            if (isNeedRecreateCaptureSession) {
+                openCaptureSession()
+            } else {
+                openCamera()
+            }
         }
     }
 
@@ -152,12 +150,7 @@ class CameraActivity : AppCompatActivity() {
 
     // default set to full screen size
     // if set the activity full screen, then it will be full screen and never change
-    private lateinit var viewSize: Size
-    private lateinit var viewRect: Rect
-    // camera output surface size, maybe smaller than viewSize
-    // e.g. set camera preview 1:1 for a device 1080:2040, then previewSize 1080:1080, viewSize 1080:2040
-    private lateinit var previewSize: Size
-    private lateinit var previewRect: Rect
+    private lateinit var windowSize: Size
 
     private var flashSupported = false
 
@@ -283,7 +276,7 @@ class CameraActivity : AppCompatActivity() {
             isNeedRecreateCaptureSession = true
         }
 
-        previewView = findViewById<CameraPreviewView>(R.id.previewView).apply {
+        cameraPreviewView = findViewById<CameraPreviewView>(R.id.previewView).apply {
             setRender(CameraPreviewRender())
         }
         ivThumbnail = findViewById<CircleImageView>(R.id.iv_thumbnail).apply {
@@ -346,21 +339,18 @@ class CameraActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         Log.i(TAG, "onResume: ")
-        viewRect = windowManager.currentWindowMetrics.bounds
-        viewSize = Size(viewRect.width(), viewRect.height())
-        previewView.onResume()
+        val rect = windowManager.currentWindowMetrics.bounds
+        windowSize = Size(rect.width(), rect.height())
+        cameraPreviewView.onResume()
         rotationChangeMonitor.enable()
-        if (false) {
-            openCamera()
-        } else {
-            previewView.surfaceTextureListener = surfaceTextureListener
-        }
+        setUpCameraOutputs()
+        cameraPreviewView.surfaceTextureListener = surfaceTextureListener
     }
 
     override fun onPause() {
         Log.i(TAG, "onPause: ")
         rotationChangeMonitor.disable()
-        previewView.onPause()
+        cameraPreviewView.onPause()
         closeCamera()
         super.onPause()
     }
@@ -400,8 +390,6 @@ class CameraActivity : AppCompatActivity() {
 
     private fun openCamera() {
         Log.i(TAG, "openCamera: ")
-        cameraManager = getSystemService(Context.CAMERA_SERVICE) as CameraManager
-        cameraInfo = CameraInfoCache(cameraManager, useCameraFront)
         cameraId = cameraInfo.cameraId
         try {
             // Wait for camera to open - 2.5 seconds is sufficient
@@ -504,14 +492,45 @@ class CameraActivity : AppCompatActivity() {
 
     }
 
-    private fun setUpCameraOutputs(cameraManager: CameraManager, ratioValue: Float) {
+    private fun setUpCameraOutputs() {
+        cameraManager = getSystemService(Context.CAMERA_SERVICE) as CameraManager
+        cameraInfo = CameraInfoCache(cameraManager, useCameraFront)
+        val previewAspectRatio = SettingsManager.getInstance()!!.getPreviewAspectRatio()
+        val ratioValue: Float = when (previewAspectRatio) {
+            SettingsManager.PreviewAspectRatio.RATIO_1x1 -> 1f
+            SettingsManager.PreviewAspectRatio.RATIO_4x3 -> 4 / 3f
+            SettingsManager.PreviewAspectRatio.RATIO_16x9 -> 16 / 9f
+            // activity is portrait, so height < width
+            // and sensor is also height < width
+            SettingsManager.PreviewAspectRatio.RATIO_FULL -> windowSize.height / windowSize.width.toFloat()
+        }
         try {
             isEnableZsl = cameraInfo.isSupportReproc() &&
                     SettingsManager.getInstance()!!
                             .getBoolean(SettingsManager.KEY_PHOTO_ZSL, SettingsManager.PHOTO_ZSL_DEFAULT_VALUE)
+            // todo feature: for recording video
             videoSize = cameraInfo.videoSize
+            val (chosenJpgSize, isTrueAspectRatioJpgSize) = chooseOptimalSize(
+                cameraInfo.getOutputJpgSizes(),
+                windowSize,
+                ratioValue,
+                false
+            )
+            Log.d(TAG, "choose camera output jpg size:${chosenJpgSize}, match ${previewAspectRatio}:${isTrueAspectRatioJpgSize}")
+            if (isEnableZsl) {
+                yuvImageReader = ImageReader.newInstance(
+                    cameraInfo.largestYuvSize.width, cameraInfo.largestYuvSize.height,
+                    ImageFormat.YUV_420_888,
+                    YUV_IMAGE_READER_SIZE
+                )
+                yuvImageReader.setOnImageAvailableListener({ reader ->
+                    val image = reader.acquireLatestImage()
+                    yuvLatestReceivedImage?.close()
+                    yuvLatestReceivedImage = image
+                }, cameraHandler)
+            }
             jpgImageReader = ImageReader.newInstance(
-                    cameraInfo.largestJpgSize.width, cameraInfo.largestJpgSize.height,
+                    chosenJpgSize.width, chosenJpgSize.height,
                     ImageFormat.JPEG, IMAGE_BUFFER_SIZE
             )
             jpgImageReader.setOnImageAvailableListener({ reader ->
@@ -522,30 +541,6 @@ class CameraActivity : AppCompatActivity() {
                 // val myMediaRecorder =  MyMediaRecorder()
                 // myMediaRecorder.addVideoData(data)
             }, imageReaderHandler)
-            if (isEnableZsl) {
-                yuvImageReader = ImageReader.newInstance(
-                        cameraInfo.largestYuvSize.width, cameraInfo.largestYuvSize.height,
-                        ImageFormat.YUV_420_888,
-                        YUV_IMAGE_READER_SIZE
-                )
-                yuvImageReader.setOnImageAvailableListener({ reader ->
-                    val image = reader.acquireLatestImage()
-                    yuvLatestReceivedImage?.close()
-                    yuvLatestReceivedImage = image
-                }, cameraHandler)
-            }
-            flashSupported = cameraInfo.isflashSupported
-
-        } catch (e: CameraAccessException) {
-            Log.e(TAG, e.toString())
-        } catch (e: Exception) {
-            Log.e(TAG, Log.getStackTraceString(e))
-            ErrorDialog.newInstance(getString(R.string.camera_error))
-                    .show(supportFragmentManager, "fragment_dialog")
-        }
-    }
-
-    private fun setUpCameraPreview(previewAspectRatioValue: Float) {
 //        make activity portrait, so not handle sensor rotation
 //        // device display rotation
 //        // 0 [Surface.ROTATION_0]{android.view.Surface.ROTATION_0 = 0}  -> portrait, 把手机垂直放置且屏幕朝向我们的时候，即设备自然方向
@@ -569,58 +564,37 @@ class CameraActivity : AppCompatActivity() {
 //            Log.d(TAG, "setUpCameraPreview: rotate switch width/height")
 //            viewSize = Size(viewSize.height, viewSize.width)
 //        }
-        val (chosenSize, chosenSizeAspectRatioValue) = chooseOptimalSize(
-                cameraInfo.getOutputPreviewSurfaceSize(),
-                viewSize,
-                previewAspectRatioValue,
+
+            // camera output surface size, maybe smaller than viewSize
+            // e.g. set camera preview 1:1 for a device 1080:2040, then previewSize 1080:1080, viewSize 1080:2040
+            val (cameraOutputPreviewTextureSize, isTrueAspectRatio) = chooseOptimalSize(
+                cameraInfo.getOutputPreviewSurfaceSizes(),
+                windowSize,
+                ratioValue,
                 true
-        )
-        Log.d(TAG, "viewSize: ${viewSize}, chose previewSize:${chosenSize}:${chosenSizeAspectRatioValue}")
-        previewSize = chosenSize
-        previewView.setDataSize(previewSize.width, previewSize.height)
+            )
+            Log.d(TAG, "choose camera output preview size:${cameraOutputPreviewTextureSize}, match ${previewAspectRatio}:${isTrueAspectRatio}")
+            val previewRect = when(previewAspectRatio) {
+                SettingsManager.PreviewAspectRatio.RATIO_1x1 -> RectF(0f, 500f, windowSize.width.toFloat(), 500 + windowSize.width.toFloat())
+                SettingsManager.PreviewAspectRatio.RATIO_4x3 -> RectF(0f, 400f, windowSize.width.toFloat(), 400 + windowSize.width * 4/3f)
+                SettingsManager.PreviewAspectRatio.RATIO_16x9 -> RectF(0f, 400f, windowSize.width.toFloat(), 400 + windowSize.width * 16/9f)
+                else -> RectF(0f, 0f, windowSize.width.toFloat(), windowSize.height.toFloat())
+            }
+            cameraPreviewView.setWindowSize(windowSize, previewRect)
+            cameraPreviewView.setTextureSize(cameraOutputPreviewTextureSize, isTrueAspectRatio)
+            flashSupported = cameraInfo.isflashSupported
+
+        } catch (e: CameraAccessException) {
+            Log.e(TAG, e.toString())
+        } catch (e: Exception) {
+            Log.e(TAG, Log.getStackTraceString(e))
+            ErrorDialog.newInstance(getString(R.string.camera_error))
+                    .show(supportFragmentManager, "fragment_dialog")
+        }
     }
-
-
-//        make activity portrait, so not handle sensor rotation
-//    // device portrait orientation ,then deviceHeight > deviceWidth
-//    // device landscape orientation, then deviceHeight < deviceWidth
-//    // whether device orientation, sensorWidth > deviceHeight is always true
-//    private fun areDimensionsSwapped(displayRotation: Int?): Boolean {
-//        var swappedDimensions = false
-//        when (displayRotation) {
-//            Surface.ROTATION_0, Surface.ROTATION_180 -> {
-//                if (sensorOrientation == 90 || sensorOrientation == 270) {
-//                    swappedDimensions = false
-//                }
-//            }
-//
-//            Surface.ROTATION_90, Surface.ROTATION_270 -> {
-//                if (sensorOrientation == 0 || sensorOrientation == 180) {
-//                    swappedDimensions = true
-//                }
-//            }
-//
-//            else -> {
-//                Log.e(TAG, "Display rotation is invalid: $displayRotation")
-//            }
-//        }
-//        return swappedDimensions
-//    }
 
     private fun openCaptureSession() {
         Log.i(TAG, "openCaptureSession: ")
-        val previewAspectRatio = SettingsManager.getInstance()!!.getPreviewAspectRatio()
-        val ratioValue: Float = when (previewAspectRatio) {
-            SettingsManager.PreviewAspectRatio.RATIO_1x1 -> 1f
-            SettingsManager.PreviewAspectRatio.RATIO_4x3 -> 4 / 3f
-            SettingsManager.PreviewAspectRatio.RATIO_16x9 -> 16 / 9f
-            // activity is portrait, so height < width
-            // and sensor is also height < width
-            SettingsManager.PreviewAspectRatio.RATIO_FULL -> viewSize.height / viewSize.width.toFloat()
-        }
-        Log.i(TAG, "PreviewAspectRatio:${previewAspectRatio}:${ratioValue}")
-        setUpCameraOutputs(cameraManager,ratioValue)
-        setUpCameraPreview(ratioValue)
         try {
             val captureSessionStateCallback = object : CameraCaptureSession.StateCallback() {
                 override fun onClosed(session: CameraCaptureSession) {
@@ -628,8 +602,7 @@ class CameraActivity : AppCompatActivity() {
                     Log.d(TAG, "CaptureSession onClosed: ")
                     if (isNeedRecreateCaptureSession) {
                         Log.d(TAG, "need to recreate CaptureSession")
-                        isNeedRecreateCaptureSession = false
-                        openCaptureSession()
+                        setUpCameraOutputs()
                     }
                 }
 
@@ -712,7 +685,7 @@ class CameraActivity : AppCompatActivity() {
             zslImageWriter.close()
         }
         previewSurface.release()
-        previewView.releaseSurface()
+        cameraPreviewView.releaseSurface()
     }
 
     private fun updatePreview() {

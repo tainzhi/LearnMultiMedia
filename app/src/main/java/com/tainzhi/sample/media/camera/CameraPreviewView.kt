@@ -1,10 +1,12 @@
 package com.tainzhi.sample.media.camera
 
 import android.content.Context
+import android.graphics.RectF
 import android.graphics.SurfaceTexture
 import android.opengl.GLSurfaceView
 import android.util.AttributeSet
 import android.util.Log
+import android.util.Size
 import javax.microedition.khronos.egl.EGL10
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.egl.EGLContext
@@ -36,13 +38,13 @@ class CameraPreviewView : GLSurfaceView {
         renderMode = RENDERMODE_WHEN_DIRTY
     }
 
-    fun setDataSize(width: Int, height: Int) {
-        render.setDataSize(width, height)
-//        createSurface(width, height)
+    fun setTextureSize(previewTextureSize: Size, isTrueAspectRatio: Boolean) {
+        render.setTextureSize(previewTextureSize, isTrueAspectRatio)
+        createSurface(previewTextureSize.width, previewTextureSize.height)
     }
 
-    fun setViewSize(width: Int, height: Int) {
-        render.setViewSize(width, height)
+    fun setWindowSize(windowSize: Size, rectF: RectF) {
+        render.setWindowSize(windowSize, rectF)
     }
 
     override fun onResume() {
@@ -54,14 +56,15 @@ class CameraPreviewView : GLSurfaceView {
     }
 
     fun createSurface(width: Int, height: Int) {
-        Log.d(TAG, "createSurfaceTexture: ")
         queueEvent {
             render.createSurfaceTexture(width, height)
         }
     }
 
     fun releaseSurface() {
-        render.releaseSurfaceTexture()
+        queueEvent {
+            render.releaseSurfaceTexture()
+        }
     }
 
     inner class WindowSurfaceFactory: EGLWindowSurfaceFactory {
@@ -94,7 +97,6 @@ class CameraPreviewView : GLSurfaceView {
     interface SurfaceTextureListener {
         fun onSurfaceTextureAvailable(surface: SurfaceTexture, width: Int, height: Int)
         fun onSurfaceTextureCreated(surface: SurfaceTexture, width: Int, height: Int)
-        fun onSurfaceTextureSizeChanged(surface: SurfaceTexture, width: Int, height: Int)
         fun onSurfaceTextureDestroyed(surface: SurfaceTexture): Boolean
         fun onSurfaceTextureUpdated(surface: SurfaceTexture)
     }

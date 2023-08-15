@@ -3,6 +3,7 @@ package com.tainzhi.sample.media.camera.gl.filter
 import android.opengl.GLES20
 import android.util.SparseArray
 import com.tainzhi.sample.media.camera.gl.BaseGLSL
+import com.tainzhi.sample.media.camera.gl.textures.Vertex2F
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.FloatBuffer
@@ -46,12 +47,18 @@ abstract class BaseFilter : BaseGLSL() {
         textureVertexBuffer.put(textureVertices).position(0)
     }
 
-    fun setVertices(width: Float, height: Float) {
+    fun setVertices(topLeft: Vertex2F, bottomLeft: Vertex2F, topRight: Vertex2F, bottomRight:Vertex2F) {
+//        vertices = floatArrayOf(
+//            0f, 0f,
+//            0f, height,
+//            width, 0f,
+//            width, height
+//        )
         vertices = floatArrayOf(
-            0f, 0f,
-            0f, height,
-            width, 0f,
-            width, height
+            topLeft.x, topLeft.y,
+            bottomLeft.x, bottomLeft.y,
+            topRight.x, topRight.y,
+            bottomRight.x, bottomRight.y
         )
         vertexBuffer.put(vertices).position(0)
     }
@@ -92,7 +99,7 @@ abstract class BaseFilter : BaseGLSL() {
         mHPosition = GLES20.glGetAttribLocation(mProgram, "a_Position")
         mHTexturePosition = GLES20.glGetAttribLocation(mProgram, "a_TexturePosition")
         mHMatrix = GLES20.glGetUniformLocation(mProgram, "u_Matrix")
-        mHTexture = GLES20.glGetUniformLocation(mProgram, "u_Texture")
+        mHTexture = GLES20.glGetUniformLocation(mProgram, "textureSampler")
     }
 
     protected fun onUseProgram() {

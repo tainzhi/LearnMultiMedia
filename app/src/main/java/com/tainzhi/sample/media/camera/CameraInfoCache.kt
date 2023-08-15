@@ -17,7 +17,7 @@ import kotlin.math.min
 class CameraInfoCache(cameraManager: CameraManager, useFrontCamera: Boolean = false) {
     private lateinit var cameraCharacteristics: CameraCharacteristics
     var cameraId: String = ""
-    var largestJpgSize =  Size(0, 0)
+    private var largestJpgSize =  Size(0, 0)
     var largestYuvSize = Size(0, 0)
     // to fixme
     var videoSize = Size(0, 0)
@@ -79,8 +79,16 @@ class CameraInfoCache(cameraManager: CameraManager, useFrontCamera: Boolean = fa
         return false
     }
 
-    fun getOutputPreviewSurfaceSize(): Array<Size> {
+    fun getOutputPreviewSurfaceSizes(): Array<Size> {
         return streamConfigurationMap!!.getOutputSizes(SurfaceTexture::class.java)
+    }
+
+    fun getOutputJpgSizes(): Array<Size> {
+        return streamConfigurationMap!!.getOutputSizes(ImageFormat.JPEG)
+    }
+
+    fun getOutputYuvSizes(): Array<Size> {
+        return streamConfigurationMap!!.getOutputSizes(ImageFormat.YUV_420_888)
     }
 
     fun isCamera2FullModeAvailable() = isHardwareLevelAtLeast(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_FULL)
@@ -122,11 +130,14 @@ class CameraInfoCache(cameraManager: CameraManager, useFrontCamera: Boolean = fa
         }
 
         /**
-         * @param viewSize 预览区域所在的窗口的大小，默认为整个屏幕大小，且不会改变。Portrait方向时，width < height转换下，
-         *                  landscape方向时，width > height 无需转换
-         *                  确保 viewSize.width > view.height
-         * @param aspectRatio 预览区域的宽高比 w:h，确保 w > h 恒成立，所以该值恒大于等于1
+         * @param choices       camera sensor能输出的所有比例，每个比例都是w>h
+         * @param viewSize      预览区域所在的窗口的大小，默认为整个屏幕大小，且不会改变。只用来限定 isPreview == true
+         * 时返回的结果size大小
+         * Portrait方向时，width < height转换下， landscape方向时，width > height 无需转换
+         *                      确保 viewSize.width > view.height
+         * @param aspectRatio   需要选的sensor输出的image的w:h比例
          *      比如 1:1, 4:3, 16:9, full=device最长的边: device的短边
+         * @return size和是否size的w:h == aspectRatio
          */
         @JvmStatic
         fun chooseOptimalSize(
@@ -134,7 +145,7 @@ class CameraInfoCache(cameraManager: CameraManager, useFrontCamera: Boolean = fa
                 viewSize: Size,
                 ratioValue: Float,
                 isPreview: Boolean = false
-        ): Pair<Size, Float> {
+        ): Pair<Size, Boolean> {
             val filterChoices = choices.filter {
                 if (isPreview)
                     it.width <= max(viewSize.width, viewSize.height) && it.height >= min(viewSize.width, viewSize.height)
@@ -152,7 +163,7 @@ class CameraInfoCache(cameraManager: CameraManager, useFrontCamera: Boolean = fa
             if (chosenSizes.size > 0) {
                 Log.d(TAG, "optimal size by same w/h aspect ratio")
                 val result = Collections.min(chosenSizes, CompareSizesByArea())
-                return Pair(result, ratioValue)
+                return Pair(result, true)
             }
 
             var suboptimalSize = Size(0, 0)
@@ -169,7 +180,7 @@ class CameraInfoCache(cameraManager: CameraManager, useFrontCamera: Boolean = fa
             }
             if (suboptimalSize != Size(0, 0)) {
                 Log.d(TAG, "optimal size by closet w/h aspect ratio")
-                return Pair(suboptimalSize, suboptimalAspectRatio)
+                return Pair(suboptimalSize, false)
             }
 
             // 选择面积与预览窗口最接近的输出尺寸
@@ -183,7 +194,7 @@ class CameraInfoCache(cameraManager: CameraManager, useFrontCamera: Boolean = fa
                 }
             }
             Log.d(TAG, "optimal size by choset area")
-            return Pair(suboptimalSize, suboptimalAspectRatio)
+            return Pair(suboptimalSize, false)
         }
 
         private val TAG = CameraInfoCache::class.java.simpleName
