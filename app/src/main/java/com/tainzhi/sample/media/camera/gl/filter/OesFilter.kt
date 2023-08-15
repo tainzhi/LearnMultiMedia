@@ -15,7 +15,7 @@ open class OesFilter : BaseFilter() {
         mHTextureMatrix = GLES20.glGetUniformLocation(mProgram, "u_TextureMatrix")
     }
 
-    fun setCoordMatrix(matrix: FloatArray) {
+    fun setTextureMatrix(matrix: FloatArray) {
         mTextureMatrix = matrix
     }
 

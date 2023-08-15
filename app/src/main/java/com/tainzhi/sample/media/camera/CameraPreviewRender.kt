@@ -25,6 +25,7 @@ class CameraPreviewRender : GLSurfaceView.Renderer {
     private var dataWidth = 0
     private var dataHeight = 0
     private val matrix = FloatArray(16)
+    private val textureMatrix = FloatArray(16)
     var surfaceTextureListener: CameraPreviewView.SurfaceTextureListener? = null
 
     override fun onSurfaceCreated(gl: GL10, config: EGLConfig) {
@@ -41,6 +42,8 @@ class CameraPreviewRender : GLSurfaceView.Renderer {
         surfaceTextureListener?.onSurfaceTextureSizeChanged(surfaceTexture, width, height)
         // 在全屏模式下，onSurfaceCreated和onSurfaceChanged的宽高不一样，需要重新设置输出预览大小
         surfaceTexture.setDefaultBufferSize(height, width)
+        mOesFilter.setVertices(width.toFloat(), height.toFloat())
+//        mOesFilter.setTextureVertices(width.toFloat(), height.toFloat(),  )
         line0.setVertices(Vertex3F(-width/2f, 0f, 0f), Vertex3F(width/2f, 0f, 0f))
         line1.setVertices(Vertex3F(0f, -height/2f, 0f), Vertex3F(0f, height/2f, 0f))
         line2.setVertices(Vertex3F(-width/2f, -height/2f, 0f), Vertex3F(width/2f, height/2f, 0f))
@@ -97,8 +100,10 @@ class CameraPreviewRender : GLSurfaceView.Renderer {
 
     private fun calculateMatrix() {
         getShowMatrix(matrix, dataWidth, dataHeight, width, height)
+        getShowTextureMatrix(textureMatrix, dataWidth, dataHeight, width, height)
         // flip(matrix, true, false)
         mOesFilter.matrix = matrix
+        (mOesFilter as OesFilter).setTextureMatrix(textureMatrix)
         line0.mvpMatrix = matrix
         line1.mvpMatrix = matrix
         line2.mvpMatrix = matrix
@@ -146,7 +151,34 @@ class CameraPreviewRender : GLSurfaceView.Renderer {
                 val viewMatrix = FloatArray(16)
                 Matrix.setLookAtM(viewMatrix, 0, 0f, 0f, 3f, 0f, 0f, 0f, 0f, 1f, 0f)
                 val projectionMatrix = FloatArray(16)
-                Matrix.orthoM(projectionMatrix, 0, 0f, viewWidth.toFloat(), viewHeight.toFloat(), 0f, 1f, 3f)
+                Matrix.orthoM(projectionMatrix, 0, 0f, viewWidth.toFloat(), 0f, viewHeight.toFloat(), 1f, 3f)
+                Matrix.multiplyMM(mvpMatrix, 0, viewMatrix, 0, modelMatrix, 0)
+                Matrix.multiplyMM(mvpMatrix, 0, projectionMatrix, 0, mvpMatrix, 0)
+            }
+        }
+
+        fun getShowTextureMatrix(mvpMatrix: FloatArray?, imgWidth: Int, imgHeight: Int, viewWidth: Int, viewHeight: Int) {
+            Log.d(TAG, "getShowTextureMatrix: img:w${imgWidth}*h${imgHeight}, view:w${viewWidth}*h${viewHeight}")
+            if (imgHeight > 0 && imgWidth > 0 && viewWidth > 0 && viewHeight > 0) {
+
+                val modelMatrix = FloatArray(16)
+                Matrix.setIdentityM(modelMatrix, 0)
+                // 4. move center back to original
+                Matrix.translateM(modelMatrix,0, 0.5f, 0.5f, 0f);
+                // 3. rotate
+                Matrix.rotateM(modelMatrix, 0, 90f, 0f, 0f, 1f)
+                // 2. flip
+                Matrix.scaleM(modelMatrix, 0, -1.0f, 1.0f, 1.0f)
+                // 1. move to center (0, 0)
+                Matrix.translateM(modelMatrix,0, -0.5f, -0.5f, 0f);
+//                val scale: Float =  viewWidth.toFloat()
+//                Matrix.scaleM(modelMatrix, 0, scale * (imgWidth / imgHeight.toFloat()), scale, 1f)
+                val viewMatrix = FloatArray(16)
+                Matrix.setIdentityM(viewMatrix, 0)
+//                Matrix.setLookAtM(viewMatrix, 0, 0f, 0f, 3f, 0f, 0f, 0f, 0f, 1f, 0f)
+                val projectionMatrix = FloatArray(16)
+                Matrix.setIdentityM(projectionMatrix, 0)
+//                Matrix.orthoM(projectionMatrix, 0, 0f, viewWidth.toFloat(), 0f, viewHeight.toFloat(),  1f, 3f)
                 Matrix.multiplyMM(mvpMatrix, 0, viewMatrix, 0, modelMatrix, 0)
                 Matrix.multiplyMM(mvpMatrix, 0, projectionMatrix, 0, mvpMatrix, 0)
             }

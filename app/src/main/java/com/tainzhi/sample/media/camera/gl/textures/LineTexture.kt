@@ -11,7 +11,7 @@ class LineTexture: Texture() {
     private var vertexShaderCode = getShaderSource(R.raw.frame_glvs)
     private var fragmentShaderCode = getShaderSource(R.raw.frame_glfs)
 
-    private val vertexs = floatArrayOf(0f, 0f, 0f, 0f, 0f, 0f)
+    private val vertices = floatArrayOf(0f, 0f, 0f, 0f, 0f, 0f)
     private lateinit var vertexBuffer:  FloatBuffer
     private var color = floatArrayOf(1f, 1f, 1f, 1f)
     private var alpha = 1f
@@ -23,9 +23,9 @@ class LineTexture: Texture() {
 
     override fun onCreate() {
         createProgram(vertexShaderCode, fragmentShaderCode)
-        vertexBuffer = ByteBuffer.allocateDirect(vertexs.size * 4)
+        vertexBuffer = ByteBuffer.allocateDirect(vertices.size * 4)
                 .order(ByteOrder.nativeOrder()).asFloatBuffer()
-        vertexBuffer.put(vertexs).position(0)
+        vertexBuffer.put(vertices).position(0)
     }
 
     fun setColor() {
@@ -34,13 +34,13 @@ class LineTexture: Texture() {
 
     fun setVertices(start: Vertex3F, end: Vertex3F) {
         Log.d(TAG, "setVertices: ")
-        vertexs[0] = start.x
-        vertexs[1] = start.y
-        vertexs[2] = start.z
-        vertexs[3] = end.x
-        vertexs[4] = end.y
-        vertexs[5] = end.z
-        vertexBuffer.put(vertexs).position(0)
+        vertices[0] = start.x
+        vertices[1] = start.y
+        vertices[2] = start.z
+        vertices[3] = end.x
+        vertices[4] = end.y
+        vertices[5] = end.z
+        vertexBuffer.put(vertices).position(0)
     }
 
     override fun onDraw() {
@@ -60,7 +60,7 @@ class LineTexture: Texture() {
         GLES20.glLineWidth(lineWidth)
         checkGlError("LineTexture set LineWidth Handle")
         // 每个顶点3个值，xyz. 此处获取顶点数
-        GLES20.glDrawArrays(GLES20.GL_LINES, 0, vertexs.size / COORDS_PER_VERTEX)
+        GLES20.glDrawArrays(GLES20.GL_LINES, 0, vertices.size / COORDS_PER_VERTEX)
         checkGlError("LineTexture set DrawLine Handle")
         GLES20.glDisableVertexAttribArray(mHPosition)
         // reset blend

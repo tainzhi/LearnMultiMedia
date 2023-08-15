@@ -10,7 +10,6 @@ class GroupFilter : BaseFilter() {
     private var width = 0
     private var height = 0
     private var size = 0
-    override fun initBuffer() {}
     fun addFilter(filter: BaseFilter) { //绘制到frameBuffer上和绘制到屏幕上的纹理坐标是不一样的
 //Android屏幕相对GL世界的纹理Y轴翻转
 //        MatrixUtils.flip(filter.matrix, false, true)

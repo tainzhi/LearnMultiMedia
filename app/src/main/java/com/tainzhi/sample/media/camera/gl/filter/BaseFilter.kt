@@ -19,23 +19,15 @@ abstract class BaseFilter : BaseGLSL() {
     protected var mHTexture = 0
     //顶点坐标
     // 忽略z维度，只保留x,y维度
-    private var vertexs = floatArrayOf(0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f)
+    private var vertices = floatArrayOf(0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f)
     protected lateinit var vertexBuffer: FloatBuffer
-    protected var mTexBuffer: FloatBuffer? = null
+    protected lateinit var textureVertexBuffer: FloatBuffer
     open var flag = 0
     open var matrix = Arrays.copyOf(OM, 16)
     var textureType = 0 //默认使用Texture2D0
     var textureId = 0
-
-    //顶点坐标
-    private val pos = floatArrayOf(
-        0f, 2400f,
-        0f, 0f,
-        1080f, 2400f,
-        1080f, 0f
-    )
     //纹理坐标
-    private val coord = floatArrayOf(
+    private var textureVertices = floatArrayOf(
             0.0f, 0.0f,
             0.0f, 1.0f,
             1.0f, 0.0f,
@@ -45,19 +37,32 @@ abstract class BaseFilter : BaseGLSL() {
     private val mFloats: SparseArray<FloatArray>? = null
     fun create() {
         onCreate()
-//        vertexBuffer = ByteBuffer.allocateDirect(vertexs.size * 4)
-//            .order(ByteOrder.nativeOrder()).asFloatBuffer()
-//        vertexBuffer.put(vertexs).position(0)
+        vertexBuffer = ByteBuffer.allocateDirect(vertices.size * 4)
+            .order(ByteOrder.nativeOrder()).asFloatBuffer()
+        vertexBuffer.put(vertices).position(0)
+
+        textureVertexBuffer = ByteBuffer.allocateDirect(textureVertices.size * 4)
+            .order(ByteOrder.nativeOrder()).asFloatBuffer()
+        textureVertexBuffer.put(textureVertices).position(0)
     }
 
     fun setVertices(width: Float, height: Float) {
-        vertexs = floatArrayOf(
+        vertices = floatArrayOf(
             0f, 0f,
+            0f, height,
             width, 0f,
-            width, height,
-            0f, height
+            width, height
         )
-        vertexBuffer.put(vertexs).position(0)
+        vertexBuffer.put(vertices).position(0)
+    }
+
+    fun setTextureVertices(width: Float, height: Float) {
+        textureVertices = floatArrayOf(
+            0.0f, 0.0f,
+            0.0f, height,
+            width, 0.0f,
+            width, height)
+        textureVertexBuffer.put(textureVertices).position(0)
     }
 
     fun setSize(width: Int, height: Int) {
@@ -90,22 +95,6 @@ abstract class BaseFilter : BaseGLSL() {
         mHTexture = GLES20.glGetUniformLocation(mProgram, "u_Texture")
     }
 
-    /**
-     * Buffer初始化
-     */
-    protected open fun initBuffer() {
-        val a = ByteBuffer.allocateDirect(32)
-        a.order(ByteOrder.nativeOrder())
-        vertexBuffer = a.asFloatBuffer()
-        vertexBuffer?.put(pos)
-        vertexBuffer?.position(0)
-        val b = ByteBuffer.allocateDirect(32)
-        b.order(ByteOrder.nativeOrder())
-        mTexBuffer = b.asFloatBuffer()
-        mTexBuffer?.put(coord)
-        mTexBuffer?.position(0)
-    }
-
     protected fun onUseProgram() {
         GLES20.glUseProgram(mProgram)
     }
@@ -117,7 +106,7 @@ abstract class BaseFilter : BaseGLSL() {
         GLES20.glEnableVertexAttribArray(mHPosition)
         GLES20.glVertexAttribPointer(mHPosition, 2, GLES20.GL_FLOAT, false, 0, vertexBuffer)
         GLES20.glEnableVertexAttribArray(mHTexturePosition)
-        GLES20.glVertexAttribPointer(mHTexturePosition, 2, GLES20.GL_FLOAT, false, 0, mTexBuffer)
+        GLES20.glVertexAttribPointer(mHTexturePosition, 2, GLES20.GL_FLOAT, false, 0, textureVertexBuffer)
         GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4)
         GLES20.glDisableVertexAttribArray(mHPosition)
         GLES20.glDisableVertexAttribArray(mHTexturePosition)
@@ -150,9 +139,5 @@ abstract class BaseFilter : BaseGLSL() {
          * 单位矩阵
          */
         val OM = floatArrayOf(1f, 0f, 0f, 0f, 0f, 1f, 0f, 0f, 0f, 0f, 1f, 0f, 0f, 0f, 0f, 1f)
-    }
-
-    init {
-        initBuffer()
     }
 }
