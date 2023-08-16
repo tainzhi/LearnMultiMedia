@@ -60,31 +60,23 @@ class CameraActivity : AppCompatActivity() {
 
     private lateinit var rootView: View
     private lateinit var _binding: ActivityCameraBinding
+    private lateinit var cameraPreviewView: CameraPreviewView
+    private lateinit var ivThumbnail: CircleImageView
+    private lateinit var ivTakePicture: ImageView
+    private lateinit var ivRecord: ImageView
+    private lateinit var btnSwitchCamera: ImageButton
+    private lateinit var controlBar: ControlBar
+
 
     private val permissions_exclude_storage = arrayOf(
             Manifest.permission.RECORD_AUDIO,
             Manifest.permission.CAMERA,
     )
     private val permission_storage = Manifest.permission.WRITE_EXTERNAL_STORAGE
-
     private val unGrantedPermissionList: MutableList<String> = ArrayList()
 
     // to play click sound when take picture
     private val mediaActionSound = MediaActionSound()
-
-    private lateinit var cameraPreviewView: CameraPreviewView
-
-    // 预览拍照的图片，用于相册打开
-    private lateinit var ivThumbnail: CircleImageView
-    private lateinit var ivTakePicture: ImageView
-    private lateinit var ivRecord: ImageView
-    private lateinit var btnSwitchCamera: ImageButton
-
-    private lateinit var capturedImageUri: Uri
-    private lateinit var cameraInfo: CameraInfoCache
-
-    // default open front-facing cameras/lens
-    private var useCameraFront = false
 
     private lateinit var rotationChangeMonitor: RotationChangeMonitor
     private var thumbnailOrientation = 0
@@ -140,13 +132,15 @@ class CameraActivity : AppCompatActivity() {
     // a [Semaphore] to prevent the app from exiting before closing the camera
     private val cameraOpenCloseLock = Semaphore(1)
 
-    private lateinit var cameraId: String
-
-    // for camera preview
+    private lateinit var capturedImageUri: Uri
+    private lateinit var cameraInfo: CameraInfoCache
     private var currentCaptureSession: CameraCaptureSession? = null
     private lateinit var cameraManager: CameraManager
     private var isNeedRecreateCaptureSession = false
     private var cameraDevice: CameraDevice? = null
+    // default open front-facing cameras/lens
+    private var useCameraFront = false
+    private lateinit var cameraId: String
 
     // default set to full screen size
     // if set the activity full screen, then it will be full screen and never change
@@ -270,7 +264,7 @@ class CameraActivity : AppCompatActivity() {
         setContentView(_binding.root)
         rootView = _binding.root
         setFullScreen()
-        ControlBar(this, _binding) {
+        controlBar = ControlBar(this, _binding) {
             Log.d(TAG, "onPreviewAspectRationChange")
             closeCaptureSession()
             isNeedRecreateCaptureSession = true
@@ -574,10 +568,11 @@ class CameraActivity : AppCompatActivity() {
                 true
             )
             Log.d(TAG, "choose camera output preview size:${cameraOutputPreviewTextureSize}, match ${previewAspectRatio}:${isTrueAspectRatio}")
+            val previewTopMargin = resources.getDimensionPixelSize(R.dimen.preview_top_margin) * resources.displayMetrics.density
             val previewRect = when(previewAspectRatio) {
-                SettingsManager.PreviewAspectRatio.RATIO_1x1 -> RectF(0f, 500f, windowSize.width.toFloat(), 500 + windowSize.width.toFloat())
-                SettingsManager.PreviewAspectRatio.RATIO_4x3 -> RectF(0f, 400f, windowSize.width.toFloat(), 400 + windowSize.width * 4/3f)
-                SettingsManager.PreviewAspectRatio.RATIO_16x9 -> RectF(0f, 400f, windowSize.width.toFloat(), 400 + windowSize.width * 16/9f)
+                SettingsManager.PreviewAspectRatio.RATIO_1x1 -> RectF(0f, previewTopMargin, windowSize.width.toFloat(), previewTopMargin+ windowSize.width.toFloat())
+                SettingsManager.PreviewAspectRatio.RATIO_4x3 -> RectF(0f, previewTopMargin, windowSize.width.toFloat(), previewTopMargin+ windowSize.width * 4/3f)
+                SettingsManager.PreviewAspectRatio.RATIO_16x9 -> RectF(0f, previewTopMargin, windowSize.width.toFloat(), previewTopMargin+ windowSize.width * 16/9f)
                 else -> RectF(0f, 0f, windowSize.width.toFloat(), windowSize.height.toFloat())
             }
             cameraPreviewView.setWindowSize(windowSize, previewRect)

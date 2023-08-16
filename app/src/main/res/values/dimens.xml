@@ -2,4 +2,5 @@
     <dimen name="control_bar_top_margin">64dp</dimen>
     <dimen name="control_bar_width">48dp</dimen>
     <dimen name="control_bar_horizontal_margin">32dp</dimen>
+    <dimen name="preview_top_margin">48dp</dimen>
 </resources>
