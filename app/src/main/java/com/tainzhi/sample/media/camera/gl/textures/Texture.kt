@@ -9,11 +9,6 @@ abstract class Texture: BaseGLSL() {
     protected var mProgram = 0
     // 顶点坐标句柄
     protected var mHPosition = 0
-    protected open var mHMatrix = 0
-    // 颜色句柄
-    protected var mHColor = 0
-    // 透明度句柄
-    protected var mHOpacity = 0
 
     fun create() {
         onCreate()
@@ -25,10 +20,7 @@ abstract class Texture: BaseGLSL() {
     protected abstract fun onCreate()
     protected fun createProgram(vertex: String, fragment: String) {
         mProgram = createOpenGLProgram(vertex, fragment)
-        mHMatrix = GLES20.glGetUniformLocation(mProgram, "u_Matrix")
         mHPosition = GLES20.glGetAttribLocation(mProgram, "a_Position")
-        mHColor = GLES20.glGetUniformLocation(mProgram, "u_Color")
-        mHOpacity = GLES20.glGetUniformLocation(mProgram, "u_Opacity")
     }
 
     protected fun onUseProgram() {
@@ -37,5 +29,24 @@ abstract class Texture: BaseGLSL() {
 
     protected abstract fun onDraw()
 
+    protected fun setMat4(matName: String, mat: FloatArray) {
+        GLES20.glUniformMatrix4fv(GLES20.glGetUniformLocation(mProgram, matName),
+            mat.size    /16, false, mat, 0
+        )
+        checkGlError("set Matrix4 to ${matName}:")
+    }
+
+    protected fun setFloat(name: String, value: Float) {
+        GLES20.glUniform1f(GLES20.glGetUniformLocation(mProgram, name), value)
+    }
+
+    protected fun setInt(name: String, value: Int) {
+        GLES20.glUniform1i(GLES20.glGetUniformLocation(mProgram, name), value)
+    }
+
+    protected fun setVec4(name: String, value: FloatArray) {
+        GLES20.glUniform4fv(GLES20.glGetUniformLocation(mProgram, name),
+            value.size/4, value, 0)
+    }
 
 }

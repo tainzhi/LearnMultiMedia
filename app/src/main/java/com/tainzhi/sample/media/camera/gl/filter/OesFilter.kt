@@ -17,13 +17,19 @@ open class OesFilter : BaseFilter() {
     var isTrueAspectRatio = 0
     override fun onCreate() {
         createProgram(vertexShaderCode, fragmentShaderCode)
-        mHTextureSize = GLES20.glGetUniformLocation(mProgram, "textureSize")
+        mHTextureSize = GLES20.glGetUniformLocation(mProgram, "u_TextureSize")
         mHTextureMatrix = GLES20.glGetUniformLocation(mProgram, "u_TextureMatrix")
-        mHIsTrueAspectRatio = GLES20.glGetUniformLocation(mProgram, "isTrueAspectRatio")
+        mHIsTrueAspectRatio = GLES20.glGetUniformLocation(mProgram, "u_IsTrueAspectRatio")
     }
 
-    fun setTextureMatrix(matrix: FloatArray) {
-        mTextureMatrix = matrix
+    override fun onSizeChanged(width: Int, height: Int) {
+    }
+
+    fun setMatrix(model: FloatArray, view: FloatArray, projection:FloatArray, texMatrix: FloatArray) {
+        modelMatrix = model
+        viewMatrix = view
+        projectionMatrix = projection
+        mTextureMatrix = texMatrix
     }
 
     override fun onSetExpandData() {
@@ -39,6 +45,4 @@ open class OesFilter : BaseFilter() {
         GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, textureId)
         GLES20.glUniform1i(mHTexture, textureType)
     }
-
-    override fun onSizeChanged(width: Int, height: Int) {}
 }

@@ -15,7 +15,9 @@ import java.util.Arrays
 abstract class BaseFilter : BaseGLSL() {
     protected var mProgram = 0
     protected var mHPosition = 0
-    protected open var mHMatrix = 0
+    protected open var mHModelMatrix = 0
+    protected open var mHViewMatrix = 0
+    protected open var mHProjectionMatrix = 0
     protected var mHTexturePosition = 0
     protected var mHTexture = 0
     //顶点坐标
@@ -24,7 +26,9 @@ abstract class BaseFilter : BaseGLSL() {
     protected lateinit var vertexBuffer: FloatBuffer
     protected lateinit var textureVertexBuffer: FloatBuffer
     open var flag = 0
-    open var matrix = Arrays.copyOf(OM, 16)
+    protected var modelMatrix = Arrays.copyOf(OM, 16)
+    protected var viewMatrix = Arrays.copyOf(OM, 16)
+    protected var projectionMatrix = Arrays.copyOf(OM, 16)
     var textureType = 0 //默认使用Texture2D0
     var textureId = 0
     //纹理坐标
@@ -63,15 +67,6 @@ abstract class BaseFilter : BaseGLSL() {
         vertexBuffer.put(vertices).position(0)
     }
 
-    fun setTextureVertices(width: Float, height: Float) {
-        textureVertices = floatArrayOf(
-            0.0f, 0.0f,
-            0.0f, height,
-            width, 0.0f,
-            width, height)
-        textureVertexBuffer.put(textureVertices).position(0)
-    }
-
     fun setSize(width: Int, height: Int) {
         onSizeChanged(width, height)
     }
@@ -98,8 +93,10 @@ abstract class BaseFilter : BaseGLSL() {
         mProgram = createOpenGLProgram(vertex, fragment)
         mHPosition = GLES20.glGetAttribLocation(mProgram, "a_Position")
         mHTexturePosition = GLES20.glGetAttribLocation(mProgram, "a_TexturePosition")
-        mHMatrix = GLES20.glGetUniformLocation(mProgram, "u_Matrix")
-        mHTexture = GLES20.glGetUniformLocation(mProgram, "textureSampler")
+        mHModelMatrix = GLES20.glGetUniformLocation(mProgram, "u_ModelMatrix")
+        mHViewMatrix = GLES20.glGetUniformLocation(mProgram, "u_ViewMatrix")
+        mHProjectionMatrix = GLES20.glGetUniformLocation(mProgram, "u_ProjectionMatrix")
+        mHTexture = GLES20.glGetUniformLocation(mProgram, "u_TextureSampler")
     }
 
     protected fun onUseProgram() {
@@ -129,7 +126,9 @@ abstract class BaseFilter : BaseGLSL() {
      * 设置其他扩展数据
      */
     protected open fun onSetExpandData() {
-        GLES20.glUniformMatrix4fv(mHMatrix, 1, false, matrix, 0)
+        GLES20.glUniformMatrix4fv(mHModelMatrix, 1, false, modelMatrix, 0)
+        GLES20.glUniformMatrix4fv(mHViewMatrix, 1, false, viewMatrix, 0)
+        GLES20.glUniformMatrix4fv(mHProjectionMatrix, 1, false, projectionMatrix, 0)
     }
 
     /**
