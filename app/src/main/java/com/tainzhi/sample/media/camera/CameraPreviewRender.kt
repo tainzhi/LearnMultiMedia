@@ -10,17 +10,14 @@ import android.util.Log
 import android.util.Size
 import com.tainzhi.sample.media.camera.gl.BaseGLSL
 import com.tainzhi.sample.media.camera.gl.filter.OesFilter
-import com.tainzhi.sample.media.camera.gl.textures.LineTexture
+import com.tainzhi.sample.media.camera.gl.textures.GridLine
 import com.tainzhi.sample.media.camera.gl.textures.Vertex2F
-import com.tainzhi.sample.media.camera.gl.textures.Vertex3F
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
 
 class CameraPreviewRender : GLSurfaceView.Renderer {
     private val oesFilter = OesFilter()
-    private val line0 = LineTexture()
-    private val line1 = LineTexture()
-    private val line2 = LineTexture()
+    private val gridLine = GridLine()
     private var windowWidth = 0
     private var windowHeight = 0
     private var textureWidth = 0
@@ -40,19 +37,13 @@ class CameraPreviewRender : GLSurfaceView.Renderer {
         GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA)
         BaseGLSL.checkGlError("glBlendFunc")
         oesFilter.create()
-        line0.create()
-        line1.create()
-        line2.create()
-
         oesFilter.setVertices(
             Vertex2F(previewRectF.left, previewRectF.top),
             Vertex2F(previewRectF.left, previewRectF.bottom),
             Vertex2F(previewRectF.right, previewRectF.top),
             Vertex2F(previewRectF.right, previewRectF.bottom)
         )
-        line0.setVertices(Vertex3F(previewRectF.left, previewRectF.top, 0f), Vertex3F(previewRectF.right, previewRectF.bottom, 0f))
-        line1.setVertices(Vertex3F(previewRectF.left, previewRectF.bottom, 0f), Vertex3F(previewRectF.right, previewRectF.top, 0f))
-        line2.setVertices(Vertex3F(previewRectF.left, (previewRectF.bottom + previewRectF.top)/2f, 0f), Vertex3F(previewRectF.right, (previewRectF.bottom + previewRectF.top)/2f, 0f))
+        gridLine.create()
         Log.d(TAG, "onSurfaceCreated: ${windowWidth}x${windowHeight}")
     }
 
@@ -69,9 +60,7 @@ class CameraPreviewRender : GLSurfaceView.Renderer {
         GLES20.glBlendFunc(GLES20.GL_ONE, GLES20.GL_ONE_MINUS_CONSTANT_ALPHA)
         surfaceTexture.updateTexImage()
         oesFilter.draw()
-        line0.draw()
-        line1.draw()
-        line2.draw()
+        gridLine.draw()
         if (isSurfaceTextureValid) {
             surfaceTexture.updateTexImage()
         }
@@ -82,6 +71,7 @@ class CameraPreviewRender : GLSurfaceView.Renderer {
         this.windowWidth = windowSize.width
         this.windowHeight = windowSize.height
         previewRectF = rectF
+        gridLine.build(previewRectF)
     }
 
     // camera output texture size, width > height
@@ -138,7 +128,7 @@ class CameraPreviewRender : GLSurfaceView.Renderer {
 
     private fun setMatrixToShader() {
         oesFilter.setMatrix(modelMatrix, viewMatrix, projectionMatrix, textureMatrix)
-        line0.setMatrix(modelMatrix, viewMatrix, projectionMatrix)
+        gridLine.setMatrix(modelMatrix, viewMatrix, projectionMatrix)
     }
 
     private fun createTextureID(): Int {

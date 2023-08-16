@@ -1,24 +1,19 @@
 package com.tainzhi.sample.media.camera.gl.textures
 
 import android.opengl.GLES20
-import android.util.Log
 import com.tainzhi.sample.media.R
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.FloatBuffer
 
-class LineTexture: Texture() {
+class LineTexture(start: Vertex3F, end: Vertex3F): Texture() {
+    private val vertices = floatArrayOf(start.x, start.y, start.z, end.x, end.y, end.z)
     private var vertexShaderCode = getShaderSource(R.raw.frame_glvs)
     private var fragmentShaderCode = getShaderSource(R.raw.frame_glfs)
-
-    private val vertices = floatArrayOf(0f, 0f, 0f, 0f, 0f, 0f)
     private lateinit var vertexBuffer:  FloatBuffer
     private var color = floatArrayOf(1f, 1f, 1f, 1f)
     private var alpha = 1f
     private var lineWidth = 1f
-    private var modelMatrix = FloatArray(16)
-    private var viewMatrix = FloatArray(16)
-    private var projectionMatrix = FloatArray(16)
 
     override fun onCreate() {
         createProgram(vertexShaderCode, fragmentShaderCode)
@@ -28,23 +23,6 @@ class LineTexture: Texture() {
     }
 
     fun setColor(c: Float) {
-    }
-
-    fun setMatrix(model: FloatArray, view: FloatArray, projection:FloatArray) {
-        modelMatrix = model
-        viewMatrix = view
-        projectionMatrix = projection
-    }
-
-    fun setVertices(start: Vertex3F, end: Vertex3F) {
-        Log.d(TAG, "setVertices: ")
-        vertices[0] = start.x
-        vertices[1] = start.y
-        vertices[2] = start.z
-        vertices[3] = end.x
-        vertices[4] = end.y
-        vertices[5] = end.z
-        vertexBuffer.put(vertices).position(0)
     }
 
     override fun onDraw() {

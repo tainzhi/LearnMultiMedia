@@ -4,12 +4,16 @@ import android.opengl.GLES20
 import android.opengl.GLES30
 import com.tainzhi.sample.media.camera.gl.BaseGLSL
 
-abstract class Texture: BaseGLSL() {
+abstract class Texture : BaseGLSL() {
     // 程序句柄
     protected var mProgram = 0
+
     // 顶点坐标句柄
     protected var mHPosition = 0
 
+    protected var modelMatrix = FloatArray(16)
+    protected var viewMatrix = FloatArray(16)
+    protected var projectionMatrix = FloatArray(16)
     fun create() {
         onCreate()
     }
@@ -17,6 +21,14 @@ abstract class Texture: BaseGLSL() {
     fun draw() {
         onDraw()
     }
+
+    fun setMatrix(model: FloatArray, view: FloatArray, projection: FloatArray) {
+        modelMatrix = model
+        viewMatrix = view
+        projectionMatrix = projection
+
+    }
+
     protected abstract fun onCreate()
     protected fun createProgram(vertex: String, fragment: String) {
         mProgram = createOpenGLProgram(vertex, fragment)
@@ -30,8 +42,9 @@ abstract class Texture: BaseGLSL() {
     protected abstract fun onDraw()
 
     protected fun setMat4(matName: String, mat: FloatArray) {
-        GLES20.glUniformMatrix4fv(GLES20.glGetUniformLocation(mProgram, matName),
-            mat.size    /16, false, mat, 0
+        GLES20.glUniformMatrix4fv(
+            GLES20.glGetUniformLocation(mProgram, matName),
+            mat.size / 16, false, mat, 0
         )
         checkGlError("set Matrix4 to ${matName}:")
     }
@@ -45,8 +58,10 @@ abstract class Texture: BaseGLSL() {
     }
 
     protected fun setVec4(name: String, value: FloatArray) {
-        GLES20.glUniform4fv(GLES20.glGetUniformLocation(mProgram, name),
-            value.size/4, value, 0)
+        GLES20.glUniform4fv(
+            GLES20.glGetUniformLocation(mProgram, name),
+            value.size / 4, value, 0
+        )
     }
 
 }
