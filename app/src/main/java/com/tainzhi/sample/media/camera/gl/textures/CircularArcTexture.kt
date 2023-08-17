@@ -17,7 +17,7 @@ class CircularArcTexture(val center: Vertex3F, val radius: Float, val startAngle
     private lateinit var vertexBuffer:  FloatBuffer
     private var color = floatArrayOf(1f, 1f, 1f, 1f)
     private var alpha = 1f
-    private var lineWidth = 3f
+    private var lineWidth = 1f
 
     override fun onCreate() {
         generateVertices()
@@ -29,6 +29,14 @@ class CircularArcTexture(val center: Vertex3F, val radius: Float, val startAngle
     }
 
     fun setColor(c: Float) {
+    }
+
+    override fun setLineWidth(width: Float) {
+        lineWidth = width
+    }
+
+    override fun setAlpha(alpha: Float) {
+        this.alpha = alpha
     }
 
     override fun onDraw() {

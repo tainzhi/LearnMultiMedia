@@ -1,10 +1,10 @@
 <resources>
     <string-array name="grid_line_type_entries">
-        <item>Golden Spiral</item>
         <item>Diagonal</item>
         <item>Cross Hairs 2x2</item>
         <item>Contour 3x3</item>
         <item>Golden Mean 3x3</item>
+        <item>Golden Spiral</item>
     </string-array>
 
     <string-array name="grid_line_type_values">

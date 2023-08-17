@@ -22,6 +22,10 @@ abstract class Texture : BaseGLSL() {
         onDraw()
     }
 
+    open fun setAlpha(alpha: Float) {}
+
+    open fun setLineWidth(alpha: Float) {}
+
     fun setMatrix(model: FloatArray, view: FloatArray, projection: FloatArray) {
         modelMatrix = model
         viewMatrix = view

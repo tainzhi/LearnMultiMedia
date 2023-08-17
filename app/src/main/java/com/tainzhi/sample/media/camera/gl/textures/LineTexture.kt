@@ -25,6 +25,14 @@ class LineTexture(start: Vertex3F, end: Vertex3F): Texture() {
     fun setColor(c: Float) {
     }
 
+    override fun setAlpha(alpha: Float) {
+        this.alpha = alpha
+    }
+
+    override fun setLineWidth(width: Float) {
+        lineWidth = width
+    }
+
     override fun onDraw() {
         onUseProgram()
         GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA)

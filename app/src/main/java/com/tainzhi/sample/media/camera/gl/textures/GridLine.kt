@@ -7,24 +7,27 @@ import kotlin.math.sqrt
 
 class GridLine() : Texture() {
     private val components = mutableListOf<Texture>()
-    private val type = 4
+    private var lineWidth = 1f
+    private var linePadding = 20f
+    private var alpha = 0.9f
 
     fun build(previewRectF: RectF) {
-        val gridLineType = SettingsManager.getInstance().getGridLineType()
         val enableGridLine = SettingsManager.getInstance().getGridLineEnable()
+        if (!enableGridLine) return
+        val gridLineType = SettingsManager.getInstance().getGridLineType()
         when (gridLineType) {
             // 对角线
             SettingsManager.GridLineType.DIAGONAL.ordinal -> {
                 components.add(
                     LineTexture(
-                        Vertex3F(previewRectF.left, previewRectF.top, 0f),
-                        Vertex3F(previewRectF.right, previewRectF.bottom, 0f)
+                        Vertex3F(previewRectF.left + linePadding, previewRectF.top + linePadding, 0f),
+                        Vertex3F(previewRectF.right - linePadding, previewRectF.bottom - linePadding, 0f)
                     )
                 )
                 components.add(
                     LineTexture(
-                        Vertex3F(previewRectF.right, previewRectF.top, 0f),
-                        Vertex3F(previewRectF.left, previewRectF.bottom, 0f)
+                        Vertex3F(previewRectF.right - linePadding, previewRectF.top + linePadding, 0f),
+                        Vertex3F(previewRectF.left + linePadding, previewRectF.bottom - linePadding , 0f)
                     )
                 )
             }
@@ -32,14 +35,14 @@ class GridLine() : Texture() {
             SettingsManager.GridLineType.CROSSHAIR_2X2.ordinal -> {
                 components.add(
                     LineTexture(
-                        Vertex3F(previewRectF.centerX(), previewRectF.top, 0f),
-                        Vertex3F(previewRectF.centerX(), previewRectF.bottom, 0f)
+                        Vertex3F(previewRectF.centerX(), previewRectF.top + linePadding, 0f),
+                        Vertex3F(previewRectF.centerX(), previewRectF.bottom - linePadding, 0f)
                     )
                 )
                 components.add(
                     LineTexture(
-                        Vertex3F(previewRectF.left, previewRectF.centerY(), 0f),
-                        Vertex3F(previewRectF.right, previewRectF.centerY(), 0f),
+                        Vertex3F(previewRectF.left + linePadding, previewRectF.centerY(), 0f),
+                        Vertex3F(previewRectF.right - linePadding, previewRectF.centerY(), 0f),
                     )
                 )
             }
@@ -47,26 +50,26 @@ class GridLine() : Texture() {
             SettingsManager.GridLineType.CONTOUR_3x3.ordinal -> {
                 components.add(
                     LineTexture(
-                        Vertex3F(previewRectF.left, previewRectF.top + previewRectF.height() /3f, 0f),
-                        Vertex3F(previewRectF.right, previewRectF.top + previewRectF.height() /3f, 0f)
+                        Vertex3F(previewRectF.left + linePadding, previewRectF.top + previewRectF.height() /3f + linePadding, 0f),
+                        Vertex3F(previewRectF.right - linePadding, previewRectF.top + previewRectF.height() /3f + linePadding, 0f)
                     )
                 )
                 components.add(
                     LineTexture(
-                        Vertex3F(previewRectF.left, previewRectF.top + previewRectF.height() *2 /3f, 0f),
-                        Vertex3F(previewRectF.right, previewRectF.top + previewRectF.height() *2/3f, 0f)
+                        Vertex3F(previewRectF.left + linePadding, previewRectF.top + previewRectF.height() *2 /3f + linePadding, 0f),
+                        Vertex3F(previewRectF.right - linePadding, previewRectF.top + previewRectF.height() *2/3f + linePadding, 0f)
                     )
                 )
                 components.add(
                     LineTexture(
-                        Vertex3F(previewRectF.left + previewRectF.width()/3f, previewRectF.top , 0f),
-                        Vertex3F(previewRectF.left + previewRectF.width()/3f, previewRectF.bottom, 0f)
+                        Vertex3F(previewRectF.left + previewRectF.width()/3f + linePadding, previewRectF.top + linePadding , 0f),
+                        Vertex3F(previewRectF.left + previewRectF.width()/3f + linePadding, previewRectF.bottom - linePadding, 0f)
                     )
                 )
                 components.add(
                     LineTexture(
-                        Vertex3F(previewRectF.left + previewRectF.width() * 2/3f, previewRectF.top , 0f),
-                        Vertex3F(previewRectF.left + previewRectF.width() * 2/3f, previewRectF.bottom, 0f)
+                        Vertex3F(previewRectF.left + previewRectF.width() * 2/3f + linePadding, previewRectF.top + linePadding , 0f),
+                        Vertex3F(previewRectF.left + previewRectF.width() * 2/3f + linePadding, previewRectF.bottom - linePadding, 0f)
                     )
                 )
             }
@@ -76,26 +79,26 @@ class GridLine() : Texture() {
                 val heightGolden = previewRectF.height() / GOLDEN_SPLIT_RATIO.toFloat()
                 components.add(
                     LineTexture(
-                        Vertex3F(previewRectF.left + widthGolden, previewRectF.top , 0f),
-                        Vertex3F(previewRectF.left + widthGolden, previewRectF.bottom, 0f)
+                        Vertex3F(previewRectF.left + linePadding + widthGolden, previewRectF.top + linePadding , 0f),
+                        Vertex3F(previewRectF.left + linePadding + widthGolden, previewRectF.bottom - linePadding, 0f)
                     )
                 )
                 components.add(
                     LineTexture(
-                        Vertex3F(previewRectF.right - widthGolden, previewRectF.top , 0f),
-                        Vertex3F(previewRectF.right - widthGolden, previewRectF.bottom, 0f)
+                        Vertex3F(previewRectF.right - linePadding - widthGolden, previewRectF.top + linePadding , 0f),
+                        Vertex3F(previewRectF.right - linePadding - widthGolden, previewRectF.bottom - linePadding, 0f)
                     )
                 )
                 components.add(
                     LineTexture(
-                        Vertex3F(previewRectF.left, previewRectF.top + heightGolden , 0f),
-                        Vertex3F(previewRectF.right, previewRectF.top + heightGolden, 0f)
+                        Vertex3F(previewRectF.left + linePadding, previewRectF.top + linePadding + heightGolden , 0f),
+                        Vertex3F(previewRectF.right - linePadding, previewRectF.top + linePadding  + heightGolden, 0f)
                     )
                 )
                 components.add(
                     LineTexture(
-                        Vertex3F(previewRectF.left, previewRectF.bottom - heightGolden , 0f),
-                        Vertex3F(previewRectF.right,previewRectF.bottom - heightGolden, 0f)
+                        Vertex3F(previewRectF.left + linePadding, previewRectF.bottom - linePadding - heightGolden , 0f),
+                        Vertex3F(previewRectF.right - linePadding,previewRectF.bottom - linePadding - heightGolden, 0f)
                     )
                 )
             }
@@ -111,9 +114,9 @@ class GridLine() : Texture() {
                 var y1 = 0.0
                 if (isHeightGoldenDividen) {
                     // h'(1/ph^2 + 1/ph^3) = w
-                    val goldenWidth = previewRectF.height()*(1 / pow(
+                    val goldenWidth = previewRectF.height() *(1 / pow(
                         GOLDEN_SPLIT_RATIO, 2.0) + 1/pow(GOLDEN_SPLIT_RATIO, 3.0))
-                    r1 = previewRectF.height()/ GOLDEN_SPLIT_RATIO
+                    r1 = (previewRectF.height() )/ GOLDEN_SPLIT_RATIO
                     y1 = previewRectF.bottom - r1
                     x1 = (previewRectF.width() - goldenWidth)/2 + r1 + previewRectF.left
                     components.add(
@@ -202,6 +205,8 @@ class GridLine() : Texture() {
     override fun onCreate() {
         components.forEach {
             it.create()
+            it.setLineWidth(lineWidth)
+            it.setAlpha(alpha)
             it.setMatrix(modelMatrix, viewMatrix, projectionMatrix)
         }
     }
