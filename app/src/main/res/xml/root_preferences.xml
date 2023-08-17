@@ -14,40 +14,46 @@
     </PreferenceCategory>
 
     <PreferenceCategory
-            app:title="@string/messages_header">
+            app:title="@string/settings_key_preview">
 
-        <EditTextPreference
-                app:key="signature"
-                app:title="@string/signature_title"
-                app:useSimpleSummaryProvider="true"
+        <SwitchPreferenceCompat
+            app:defaultValue="true"
+                app:key="@string/settings_key_enable_grid_line"
+                app:title="Grid Line"
                 />
-
         <ListPreference
-                app:defaultValue="reply"
-                app:entries="@array/reply_entries"
-                app:entryValues="@array/reply_values"
-                app:key="reply"
-                app:title="@string/reply_title"
-                app:useSimpleSummaryProvider="true"
-                />
+            app:dependency="@string/settings_key_enable_grid_line"
+            app:defaultValue="4"
+            app:entries="@array/grid_line_type_entries"
+            app:entryValues="@array/grid_line_type_values"
+            app:key="@string/settings_key_grid_line_option"
+            app:useSimpleSummaryProvider="true"
+            app:summaryOff="@string/attachment_summary_off"
+            app:summaryOn="@string/attachment_summary_on"
+            app:title="Grid Line Options"
+            />
+
 
     </PreferenceCategory>
 
+
     <PreferenceCategory
-            app:title="@string/sync_header">
+        app:title="@string/messages_header">
 
-        <SwitchPreferenceCompat
-                app:key="sync"
-                app:title="@string/sync_title"
-                />
+        <EditTextPreference
+            app:key="signature"
+            app:title="@string/signature_title"
+            app:useSimpleSummaryProvider="true"
+            />
 
-        <SwitchPreferenceCompat
-                app:dependency="sync"
-                app:key="attachment"
-                app:summaryOff="@string/attachment_summary_off"
-                app:summaryOn="@string/attachment_summary_on"
-                app:title="@string/attachment_title"
-                />
+        <ListPreference
+            app:defaultValue="reply"
+            app:entries="@array/reply_entries"
+            app:entryValues="@array/reply_values"
+            app:key="reply"
+            app:title="@string/reply_title"
+            app:useSimpleSummaryProvider="true"
+            />
 
     </PreferenceCategory>
 

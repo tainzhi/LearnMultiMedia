@@ -39,7 +39,9 @@
 
     <!-- Preference Titles -->
     <string name="messages_header">Messages(to remove)</string>
-    <string name="sync_header">Sync(to remove)</string>
+    <string name="settings_key_preview">Preview</string>
+	<string name="settings_key_enable_grid_line">Grid Line</string>
+	<string name="settings_key_grid_line_option">Grid Line Option</string>
 
     <!-- Messages Preferences -->
     <string name="signature_title">Your signature</string>
