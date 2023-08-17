@@ -877,13 +877,16 @@ class CameraActivity : AppCompatActivity() {
 
     private fun viewPicture() {
         if (this::capturedImageUri.isInitialized) {
-            val intent = Intent().apply {
-                // action = Intent.ACTION_VIEW
-                action = "com.android.camera.action.REVIEW"
-                setDataAndType(capturedImageUri, "image/*")
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK
-            }
-            startActivity(intent)
+            // if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            //     val intent = Intent().apply {
+            //         action = Intent.ACTION_VIEW
+            //         addCategory(Intent.CATEGORY_APP_GALLERY)
+            //         setDataAndType(capturedImageUri, "image/*")
+            //         flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            //     }
+            //     startActivity(intent)
+            // }
+            startActivity(Intent(Intent.ACTION_VIEW, capturedImageUri))
         } else {
             toast("请先拍照")
         }
