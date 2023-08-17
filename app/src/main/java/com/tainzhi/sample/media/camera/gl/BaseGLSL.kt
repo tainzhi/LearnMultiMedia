@@ -23,7 +23,7 @@ open class BaseGLSL {
 
         fun getShaderSource(sourceId: Int): String {
             val sb = StringBuilder()
-            val inputStream = CamApp.INSTANCE.resources.openRawResource(sourceId)
+            val inputStream = CamApp.getInstance().resources.openRawResource(sourceId)
             val bufferReader = BufferedReader(InputStreamReader(inputStream))
             try {
                 var read = bufferReader.readLine()

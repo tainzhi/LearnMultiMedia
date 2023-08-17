@@ -3,13 +3,11 @@ package com.tainzhi.sample.media
 import android.app.Activity
 import android.app.Application
 import android.app.Application.ActivityLifecycleCallbacks
-import android.content.SharedPreferences
 import android.os.Bundle
 import com.tainzhi.sample.media.camera.util.SettingsManager
 
 class CamApp: Application(), ActivityLifecycleCallbacks {
 
-    private lateinit var sp : SharedPreferences
     private lateinit var settingsManager: SettingsManager
     override fun onCreate() {
         super.onCreate()
@@ -42,7 +40,8 @@ class CamApp: Application(), ActivityLifecycleCallbacks {
     }
 
     companion object {
-        lateinit var INSTANCE: CamApp
+        @Volatile private lateinit var INSTANCE: CamApp
+        fun getInstance() = INSTANCE
     }
 
 }
