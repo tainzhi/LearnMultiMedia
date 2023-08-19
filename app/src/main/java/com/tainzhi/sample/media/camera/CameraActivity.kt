@@ -402,6 +402,7 @@ class CameraActivity : AppCompatActivity() {
     private fun openCamera() {
         Log.i(TAG, "openCamera: ")
         cameraId = cameraInfo.cameraId
+        sensorOrientation = cameraInfo.sensorOrientation
         try {
             // Wait for camera to open - 2.5 seconds is sufficient
             if (!cameraOpenCloseLock.tryAcquire(2500, TimeUnit.MILLISECONDS)) {
