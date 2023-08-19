@@ -12,7 +12,6 @@ import java.lang.Long.signum
 import java.util.Collections
 import kotlin.math.abs
 import kotlin.math.max
-import kotlin.math.min
 
 class CameraInfoCache(cameraManager: CameraManager, useFrontCamera: Boolean = false) {
     private lateinit var cameraCharacteristics: CameraCharacteristics
@@ -148,7 +147,7 @@ class CameraInfoCache(cameraManager: CameraManager, useFrontCamera: Boolean = fa
         ): Pair<Size, Boolean> {
             val filterChoices = choices.filter {
                 if (isPreview)
-                    it.width <= max(viewSize.width, viewSize.height) && it.height >= min(viewSize.width, viewSize.height)
+                    it.width <= max(viewSize.width, viewSize.height)
                 else
                     true
             }
