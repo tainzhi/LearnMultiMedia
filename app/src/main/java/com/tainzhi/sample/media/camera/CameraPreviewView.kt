@@ -43,8 +43,8 @@ class CameraPreviewView : GLSurfaceView {
         createSurface(previewTextureSize.width, previewTextureSize.height)
     }
 
-    fun setWindowSize(windowSize: Size, rectF: RectF) {
-        render.setWindowSize(windowSize, rectF)
+    fun setWindowSize(windowSize: Size, rectF: RectF, isFrontCamera: Boolean) {
+        render.setWindowSize(windowSize, rectF, isFrontCamera)
     }
 
     override fun onResume() {

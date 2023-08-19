@@ -145,6 +145,7 @@ class CameraActivity : AppCompatActivity() {
     private var currentCaptureSession: CameraCaptureSession? = null
     private lateinit var cameraManager: CameraManager
     private var isNeedRecreateCaptureSession = false
+    private var isNeedReopenCamera = false
     private var cameraDevice: CameraDevice? = null
     // default open front-facing cameras/lens
     private var useCameraFront = false
@@ -300,9 +301,10 @@ class CameraActivity : AppCompatActivity() {
         }
         ivSwitchCamera = findViewById<ImageView>(R.id.iv_switch_camera).apply {
             setOnClickListener {
+                isNeedReopenCamera = true
                 useCameraFront = !useCameraFront
+                Log.d(TAG, "click switch camera icon")
                 closeCamera()
-                openCamera()
             }
         }
 
@@ -400,8 +402,8 @@ class CameraActivity : AppCompatActivity() {
     }
 
     private fun openCamera() {
-        Log.i(TAG, "openCamera: ")
         cameraId = cameraInfo.cameraId
+        Log.i(TAG, "openCamera: id=${cameraId}")
         sensorOrientation = cameraInfo.sensorOrientation
         try {
             // Wait for camera to open - 2.5 seconds is sufficient
@@ -444,6 +446,11 @@ class CameraActivity : AppCompatActivity() {
         } finally {
             cameraOpenCloseLock.release()
             Log.i(TAG, "closeCamera: released")
+        }
+        if (isNeedReopenCamera) {
+            Log.i(TAG, "closeCamera: need reopen camera")
+            isNeedReopenCamera = false
+            setUpCameraOutputs()
         }
     }
 
@@ -598,7 +605,7 @@ class CameraActivity : AppCompatActivity() {
                 SettingsManager.PreviewAspectRatio.RATIO_16x9 -> RectF(0f, previewTopMargin, windowSize.width.toFloat(), previewTopMargin+ windowSize.width * 16/9f)
                 else -> RectF(0f, 0f, windowSize.width.toFloat(), windowSize.height.toFloat())
             }
-            cameraPreviewView.setWindowSize(windowSize, previewRect)
+            cameraPreviewView.setWindowSize(windowSize, previewRect, useCameraFront)
             cameraPreviewView.setTextureSize(cameraOutputPreviewTextureSize, isTrueAspectRatio)
             flashSupported = cameraInfo.isflashSupported
 

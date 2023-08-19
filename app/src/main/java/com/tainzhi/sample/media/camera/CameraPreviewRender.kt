@@ -28,6 +28,7 @@ class CameraPreviewRender : GLSurfaceView.Renderer {
     private val textureMatrix = FloatArray(16)
     private var surfaceTexture: SurfaceTexture? = null
     var surfaceTextureListener: CameraPreviewView.SurfaceTextureListener? = null
+    private var isFrontCamera = false
 
     // invoked when EglContext created
     // not need to invoke surfaceTextureListener?.onSurfaceTextureCreated
@@ -56,11 +57,12 @@ class CameraPreviewRender : GLSurfaceView.Renderer {
         }
     }
 
-    fun setWindowSize(windowSize: Size, rectF: RectF) {
+    fun setWindowSize(windowSize: Size, rectF: RectF, isFrontCamera: Boolean) {
         Log.d(
             TAG,
-            "setWindowSize: w${windowSize.width}*h${windowSize.height}, previewViewSize:w${rectF.width()}*h${rectF.height()}"
+            "setWindowSize: w${windowSize.width}*h${windowSize.height}, previewViewSize:w${rectF.width()}*h${rectF.height()}, isFrontCamera: ${isFrontCamera}"
         )
+        this.isFrontCamera = isFrontCamera
         this.windowWidth = windowSize.width
         this.windowHeight = windowSize.height
         previewRectF = rectF
@@ -141,9 +143,9 @@ class CameraPreviewRender : GLSurfaceView.Renderer {
         // 4. move center back to original
         Matrix.translateM(textureMatrix, 0, 0.5f, 0.5f, 0f)
         // 3. rotate
-        Matrix.rotateM(textureMatrix, 0, 90f, 0f, 0f, 1f)
+        Matrix.rotateM(textureMatrix, 0, if (isFrontCamera) 270f else 90f, 0f, 0f, 1f)
         // 2. flip
-        Matrix.scaleM(textureMatrix, 0, -1.0f, -1.0f, 1.0f)
+        Matrix.scaleM(textureMatrix, 0,  if(isFrontCamera) 1.0f else -1.0f, -1.0f, 1.0f)
         // 1. move to center (0, 0)
         Matrix.translateM(textureMatrix, 0, -0.5f, -0.5f, 0f)
     }
