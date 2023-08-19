@@ -1060,6 +1060,8 @@ class CameraActivity : AppCompatActivity() {
                 .setDuration(800)
                 .rotation(thumbnailOrientation.toFloat())
                 .start()
+
+        controlBar.rotate(thumbnailOrientation)
     }
 
     companion object {

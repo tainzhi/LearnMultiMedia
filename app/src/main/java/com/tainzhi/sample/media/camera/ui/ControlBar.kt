@@ -38,9 +38,18 @@ class ControlBar(val context: Context, val binding: ActivityCameraBinding, priva
                 .start()
         }
     }
-    private val tnSettings = binding.btnSettings.apply {
+    private val btnSettings = binding.btnSettings.apply {
         setOnClickListener {
             context.startActivity(Intent(context, SettingsActivity::class.java))
+        }
+    }
+
+    fun rotate(angle: Int) {
+        for (view in arrayOf(btnSettings, btnRatio, binding.btnHdr)) {
+            view.animate()
+                .setDuration(800)
+                .rotation(angle.toFloat())
+                .start()
         }
     }
 
