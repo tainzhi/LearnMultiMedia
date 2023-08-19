@@ -23,7 +23,6 @@ import android.util.Log
 import android.util.Size
 import android.util.SparseIntArray
 import android.view.*
-import android.widget.ImageButton
 import android.widget.ImageView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -64,7 +63,7 @@ class CameraActivity : AppCompatActivity() {
     private lateinit var ivThumbnail: CircleImageView
     private lateinit var ivTakePicture: ImageView
     private lateinit var ivRecord: ImageView
-    private lateinit var btnSwitchCamera: ImageButton
+    private lateinit var ivSwitchCamera: ImageView
     private lateinit var controlBar: ControlBar
 
     private val unGrantedPermissionList: MutableList<String> = ArrayList()
@@ -299,7 +298,7 @@ class CameraActivity : AppCompatActivity() {
                 if (isRecordingVideo) stopRecordingVideo() else startRecordingVideo()
             }
         }
-        btnSwitchCamera = findViewById<ImageButton>(R.id.iv_switch_camera).apply {
+        ivSwitchCamera = findViewById<ImageView>(R.id.iv_switch_camera).apply {
             setOnClickListener {
                 useCameraFront = !useCameraFront
                 closeCamera()
@@ -1056,7 +1055,7 @@ class CameraActivity : AppCompatActivity() {
                 .setDuration(800)
                 .rotation(thumbnailOrientation.toFloat())
                 .start()
-        btnSwitchCamera.animate()
+        ivSwitchCamera.animate()
                 .setDuration(800)
                 .rotation(thumbnailOrientation.toFloat())
                 .start()
