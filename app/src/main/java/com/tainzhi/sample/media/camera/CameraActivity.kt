@@ -121,15 +121,11 @@ class CameraActivity : AppCompatActivity() {
 
     private var imageReaderThread = HandlerThread("ImageReaderThread").apply { start() }
     private val imageReaderHandler = Handler(imageReaderThread.looper) { msg ->
-        when (msg.what) {
-            CAMERA_UPDATE_PREVIEW_PICTURE -> {
-                val pictureUri: Uri = msg.obj as Uri
-                capturedImageUri = pictureUri
-                Kpi.start(Kpi.TYPE.IMAGE_TO_THUMBNAIL)
-                mainExecutor.execute {
-                    updateThumbnail(pictureUri)
-                }
-            }
+        val pictureUri: Uri = msg.obj as Uri
+        capturedImageUri = pictureUri
+        Kpi.start(Kpi.TYPE.IMAGE_TO_THUMBNAIL)
+        mainExecutor.execute {
+            updateThumbnail(pictureUri, true)
         }
         false
     }
@@ -287,6 +283,9 @@ class CameraActivity : AppCompatActivity() {
             setOnClickListener {
                 viewPicture()
             }
+        }
+        SettingsManager.getInstance().getLastCapturedMediaUri()?.let {
+            updateThumbnail(it)
         }
         ivTakePicture = findViewById<ImageView>(R.id.picture).apply {
             setOnClickListener {
@@ -643,7 +642,7 @@ class CameraActivity : AppCompatActivity() {
                     Log.d(TAG, "onConfigured: ")
                     currentCaptureSession = session
                     updatePreview()
-                    Log.d(TAG, "startCaptureSession onReady isReprocessable=${session.isReprocessable} ")
+                    Log.d(TAG, "openCaptureSession onReady isReprocessable=${session.isReprocessable} ")
                     if (session.isReprocessable) {
                         zslImageWriter = ImageWriter.newInstance(session.inputSurface!!, ZSL_IMAGE_WRITER_SIZE)
                         zslImageWriter.setOnImageReleasedListener({ _ ->
@@ -924,20 +923,7 @@ class CameraActivity : AppCompatActivity() {
         }
     }
 
-    private fun updateThumbnail(capturedImageUri: Uri) {
-        // scale animation from 1 - 1.2 - 1
-        ivThumbnail.animate()
-                .setDuration(80)
-                .scaleX(1.2f)
-                .scaleY(1.2f)
-                .withEndAction {
-                    ivThumbnail.animate()
-                            .setDuration(80)
-                            .scaleX(1f)
-                            .scaleY(1f)
-                            .start()
-                }
-                .start()
+    private fun updateThumbnail(capturedImageUri: Uri, isNew: Boolean = false) {
         val thumbnail = if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
             val temp = MediaStore.Images.Media.getBitmap(contentResolver, capturedImageUri)
             ThumbnailUtils.extractThumbnail(temp, 100, 100)
@@ -946,9 +932,25 @@ class CameraActivity : AppCompatActivity() {
         }
         ivThumbnail.apply {
             post {
-                Kpi.end(Kpi.TYPE.IMAGE_TO_THUMBNAIL)
                 setImageBitmap(thumbnail)
             }
+        }
+        if (isNew) {
+            Kpi.end(Kpi.TYPE.IMAGE_TO_THUMBNAIL)
+            // scale animation from 1 - 1.2 - 1
+            ivThumbnail.animate()
+                .setDuration(80)
+                .scaleX(1.2f)
+                .scaleY(1.2f)
+                .withEndAction {
+                    ivThumbnail.animate()
+                        .setDuration(80)
+                        .scaleX(1f)
+                        .scaleY(1f)
+                        .start()
+                }
+                .start()
+            SettingsManager.getInstance().saveLastCaptureMediaUri(capturedImageUri)
         }
     }
 

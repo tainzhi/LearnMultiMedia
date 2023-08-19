@@ -12,6 +12,3 @@ package com.tainzhi.sample.media.camera
 
 @JvmField
 val REQUEST_CAMERA_PERMISSION = 1
-
-@JvmField
-val CAMERA_UPDATE_PREVIEW_PICTURE = 1

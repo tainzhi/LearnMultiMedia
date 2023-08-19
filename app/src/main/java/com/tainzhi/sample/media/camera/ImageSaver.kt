@@ -53,7 +53,6 @@ class ImageSaver(
                     stream.write(bytes)
 
                     val message = Message().apply {
-                        what = CAMERA_UPDATE_PREVIEW_PICTURE
                         obj = uri
                     }
                     handler.removeCallbacksAndMessages(null)

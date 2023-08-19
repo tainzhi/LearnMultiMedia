@@ -1,6 +1,7 @@
 package com.tainzhi.sample.media.camera.util
 
 import android.content.Context
+import android.net.Uri
 import androidx.preference.PreferenceManager
 import com.tainzhi.sample.media.R
 
@@ -23,6 +24,11 @@ class SettingsManager(val context: Context) {
         return PreviewAspectRatio.values()[type]
     }
 
+    fun setPreviewRatio(ratio: PreviewAspectRatio) {
+        spEditor.putInt(KEY_PREVIEW_RATIO, ratio.ordinal)
+        commit()
+    }
+
     fun getGridLineEnable(): Boolean {
         return sp.getBoolean(context.getString(R.string.settings_key_enable_grid_line), true)
     }
@@ -32,9 +38,18 @@ class SettingsManager(val context: Context) {
             ?:GridLineType.GOLDEN_SPIRAL.ordinal
     }
 
-    fun setPreviewRatio(ratio: PreviewAspectRatio) {
-        spEditor.putInt(KEY_PREVIEW_RATIO, ratio.ordinal)
-        commit()
+    fun getLastCapturedMediaUri(): Uri? {
+        val uriString =  sp.getString(KEY_LAST_CAPTURED_MEDIA_URI, null)
+        if (uriString != null) {
+            return Uri.parse(uriString)
+        } else {
+            return null
+        }
+    }
+
+    fun saveLastCaptureMediaUri(uri: Uri) {
+        spEditor.putString(KEY_LAST_CAPTURED_MEDIA_URI, uri.toString())
+        spEditor.commit()
     }
 
     companion object {
@@ -52,6 +67,7 @@ class SettingsManager(val context: Context) {
         val KEY_PHOTO_ZSL = "photo_zsl"
         val PHOTO_ZSL_DEFAULT_VALUE = true
         val KEY_PREVIEW_RATIO = "preview_ratio"
+        val KEY_LAST_CAPTURED_MEDIA_URI = "key_last_captured_media_uri"
         val PREVIEW_RATIO_DEFAULT_VALUE = PreviewAspectRatio.RATIO_FULL
         val GRID_TYPE_DEFAULT_VALUE = GridLineType.GOLDEN_SPIRAL
     }
