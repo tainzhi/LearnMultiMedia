@@ -67,12 +67,6 @@ class CameraActivity : AppCompatActivity() {
     private lateinit var btnSwitchCamera: ImageButton
     private lateinit var controlBar: ControlBar
 
-
-    private val permissions_exclude_storage = arrayOf(
-            Manifest.permission.RECORD_AUDIO,
-            Manifest.permission.CAMERA,
-    )
-    private val permission_storage = Manifest.permission.WRITE_EXTERNAL_STORAGE
     private val unGrantedPermissionList: MutableList<String> = ArrayList()
 
     // to play click sound when take picture
@@ -86,27 +80,40 @@ class CameraActivity : AppCompatActivity() {
 
     private var surfaceTextureListener = object : CameraPreviewView.SurfaceTextureListener {
 
-        override fun onSurfaceTextureUpdated(surfaceTexture: SurfaceTexture) {
+        override fun onSurfaceTextureUpdated(surfaceTexture: SurfaceTexture?) {
         }
 
-        override fun onSurfaceTextureDestroyed(surfaceTexture: SurfaceTexture): Boolean {
+        override fun onSurfaceTextureDestroyed(surfaceTexture: SurfaceTexture?): Boolean {
             Log.d(TAG, "onSurfaceTextureDestroyed: ")
             return true
         }
 
-        override fun onSurfaceTextureAvailable(surfaceTexture: SurfaceTexture, width: Int, height: Int) {
+        override fun onSurfaceTextureAvailable(surfaceTexture: SurfaceTexture?, width: Int, height: Int) {
             cameraPreviewView.requestRender()
         }
 
-        override fun onSurfaceTextureCreated(surfaceTexture: SurfaceTexture, width: Int, height: Int) {
-            Log.d(TAG, "onSurfaceTextureCreated: ${width}x${height}")
-            previewSurface = Surface(surfaceTexture)
-            if (isNeedRecreateCaptureSession) {
-                openCaptureSession()
-            } else {
-                openCamera()
+        override fun onSurfaceTextureCreated(surfaceTexture: SurfaceTexture?, width: Int, height: Int) {
+            Log.d(TAG, "onSurfaceTextureCreated: ${width}x${height}, ${surfaceTexture}")
+            if (surfaceTexture != null) {
+                previewSurface = Surface(surfaceTexture)
+                if (isNeedRecreateCaptureSession) {
+                    openCaptureSession()
+                } else {
+                    openCamera()
+                }
             }
         }
+
+        override fun onSurfaceTextureChanged(
+            surfaceTexture: SurfaceTexture?,
+            width: Int,
+            height: Int
+        ) {
+            Log.d(TAG, "onSurfaceTextureChanged: w${width}*h${height}")
+            windowSize = Size(width, height)
+            setUpCameraOutputs()
+        }
+
     }
 
     private val cameraThread = HandlerThread("CameraThread").apply { start() }
@@ -120,7 +127,9 @@ class CameraActivity : AppCompatActivity() {
                 val pictureUri: Uri = msg.obj as Uri
                 capturedImageUri = pictureUri
                 Kpi.start(Kpi.TYPE.IMAGE_TO_THUMBNAIL)
-                updateThumbnail(pictureUri)
+                mainExecutor.execute {
+                    updateThumbnail(pictureUri)
+                }
             }
         }
         false
@@ -140,6 +149,7 @@ class CameraActivity : AppCompatActivity() {
     private var cameraDevice: CameraDevice? = null
     // default open front-facing cameras/lens
     private var useCameraFront = false
+    private var isCameraOpen = false
     private lateinit var cameraId: String
 
     // default set to full screen size
@@ -319,7 +329,6 @@ class CameraActivity : AppCompatActivity() {
         }
 
         mediaActionSound.load(MediaActionSound.SHUTTER_CLICK)
-        checkPermissions()
         rotationChangeMonitor = RotationChangeMonitor(this).apply {
             rotationChangeListener = object : RotationChangeListener {
                 override fun onRotateChange(oldOrientation: Int, newOrientation: Int) {
@@ -332,20 +341,23 @@ class CameraActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        Log.i(TAG, "onResume: ")
-        val rect = windowManager.currentWindowMetrics.bounds
-        windowSize = Size(rect.width(), rect.height())
-        cameraPreviewView.onResume()
         rotationChangeMonitor.enable()
-        setUpCameraOutputs()
-        cameraPreviewView.surfaceTextureListener = surfaceTextureListener
+        Log.i(TAG, "onResume: ")
+        if (checkPermissions()) {
+            val rect = windowManager.currentWindowMetrics.bounds
+            windowSize = Size(rect.width(), rect.height())
+            cameraPreviewView.onResume()
+            cameraPreviewView.surfaceTextureListener = surfaceTextureListener
+        }
     }
 
     override fun onPause() {
         Log.i(TAG, "onPause: ")
         rotationChangeMonitor.disable()
         cameraPreviewView.onPause()
-        closeCamera()
+        if (isCameraOpen) {
+            closeCamera()
+        }
         super.onPause()
     }
 
@@ -364,12 +376,18 @@ class CameraActivity : AppCompatActivity() {
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == MY_PERMISSIONS_REQUEST) {
+            var grantedPermissions = unGrantedPermissionList.size
             for (i in grantResults.indices) {
                 if (grantResults[i] != PackageManager.PERMISSION_GRANTED) {
                     Log.e(TAG, permissions[i] + " block")
                 } else {
+                    grantedPermissions--
                     Log.d(TAG, permissions[i] + " grand")
                 }
+            }
+            if (grantedPermissions == 0) {
+                unGrantedPermissionList.clear()
+                Log.d(TAG, "onRequestPermissionsResult: success")
             }
         } else {
             // TODO: 2019-11-22 运行时权限的申请
@@ -415,6 +433,7 @@ class CameraActivity : AppCompatActivity() {
 
     private fun closeCamera() {
         Log.i(TAG, "closeCamera: ")
+        if (currentCaptureSession == null) return
         try {
             cameraOpenCloseLock.acquire()
             closeCaptureSession()
@@ -428,10 +447,11 @@ class CameraActivity : AppCompatActivity() {
         }
     }
 
-    private fun checkPermissions() {
+    private fun checkPermissions(): Boolean {
+        Log.d(TAG, "checkPermissions: ")
         // Marshmallow开始运行时申请权限
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            for (permission in permissions_exclude_storage) {
+            for (permission in PERMISSIONS_EXCLUDE_STORAGE) {
                 if (ContextCompat.checkSelfPermission(this, permission)
                         != PackageManager.PERMISSION_GRANTED
                 ) {
@@ -439,17 +459,20 @@ class CameraActivity : AppCompatActivity() {
                 }
             }
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
-                if (ContextCompat.checkSelfPermission(this, permission_storage)
+                if (ContextCompat.checkSelfPermission(this, PERMISSION_STORAGE)
                         != PackageManager.PERMISSION_GRANTED
                 ) {
-                    unGrantedPermissionList.add(permission_storage)
+                    unGrantedPermissionList.add(PERMISSION_STORAGE)
                 }
             }
         }
-        if (!unGrantedPermissionList.isEmpty()) {
+        if (unGrantedPermissionList.isNotEmpty()) {
             val tmpPermissions = unGrantedPermissionList.toTypedArray()
             Log.d(TAG, "checkPermissions: size=" + tmpPermissions.size)
-            ActivityCompat.requestPermissions(this, tmpPermissions, MY_PERMISSIONS_REQUEST)
+            requestPermissions(tmpPermissions, MY_PERMISSIONS_REQUEST)
+            return false
+        } else {
+            return true
         }
     }
 
@@ -487,6 +510,7 @@ class CameraActivity : AppCompatActivity() {
     }
 
     private fun setUpCameraOutputs() {
+        Log.i(TAG, "setUpCameraOutputs: ")
         cameraManager = getSystemService(Context.CAMERA_SERVICE) as CameraManager
         cameraInfo = CameraInfoCache(cameraManager, useCameraFront)
         val previewAspectRatio = SettingsManager.getInstance()!!.getPreviewAspectRatio()
@@ -518,9 +542,8 @@ class CameraActivity : AppCompatActivity() {
                     YUV_IMAGE_READER_SIZE
                 )
                 yuvImageReader.setOnImageAvailableListener({ reader ->
-                    val image = reader.acquireLatestImage()
                     yuvLatestReceivedImage?.close()
-                    yuvLatestReceivedImage = image
+                    yuvLatestReceivedImage = reader.acquireLatestImage()
                 }, cameraHandler)
             }
             jpgImageReader = ImageReader.newInstance(
@@ -665,6 +688,7 @@ class CameraActivity : AppCompatActivity() {
                 }
 
             }
+            isCameraOpen = true
         } catch (e: CameraAccessException) {
             Log.e(TAG, e.toString())
         }
@@ -681,6 +705,7 @@ class CameraActivity : AppCompatActivity() {
         }
         previewSurface.release()
         cameraPreviewView.releaseSurface()
+        isCameraOpen = false
     }
 
     private fun updatePreview() {
@@ -1041,7 +1066,12 @@ class CameraActivity : AppCompatActivity() {
         private val TAG = CameraActivity::class.java.simpleName
         private val OREIENTATIONS = SparseIntArray()
 
-        private const val MY_PERMISSIONS_REQUEST = 1001
+        private const val MY_PERMISSIONS_REQUEST = 10001
+        private val PERMISSIONS_EXCLUDE_STORAGE = arrayOf(
+            Manifest.permission.RECORD_AUDIO,
+            Manifest.permission.CAMERA,
+        )
+        private val PERMISSION_STORAGE = Manifest.permission.WRITE_EXTERNAL_STORAGE
 
         private const val YUV_IMAGE_READER_SIZE = 8
         private const val ZSL_IMAGE_WRITER_SIZE = 2

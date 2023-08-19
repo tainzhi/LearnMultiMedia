@@ -95,10 +95,12 @@ class CameraPreviewView : GLSurfaceView {
     }
 
     interface SurfaceTextureListener {
-        fun onSurfaceTextureAvailable(surface: SurfaceTexture, width: Int, height: Int)
-        fun onSurfaceTextureCreated(surface: SurfaceTexture, width: Int, height: Int)
-        fun onSurfaceTextureDestroyed(surface: SurfaceTexture): Boolean
-        fun onSurfaceTextureUpdated(surface: SurfaceTexture)
+        fun onSurfaceTextureAvailable(surface: SurfaceTexture?, width: Int, height: Int)
+        fun onSurfaceTextureCreated(surface: SurfaceTexture?, width: Int, height: Int)
+        fun onSurfaceTextureDestroyed(surface: SurfaceTexture?): Boolean
+        fun onSurfaceTextureUpdated(surface: SurfaceTexture?)
+
+        fun onSurfaceTextureChanged(surfaceTexture: SurfaceTexture?, width: Int, height: Int)
     }
 
     companion object {
