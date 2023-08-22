@@ -1,7 +1,7 @@
 package com.tainzhi.sample.media.opengl2.shape.triangle
 
 import android.opengl.GLES20
-import com.tainzhi.sample.media.camera.gl.BaseGLSL
+import com.tainzhi.sample.media.opengl2.BaseGLSL
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.FloatBuffer

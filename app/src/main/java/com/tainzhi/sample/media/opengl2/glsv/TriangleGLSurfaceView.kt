@@ -2,7 +2,7 @@ package com.tainzhi.sample.media.opengl2.glsv
 
 import android.content.Context
 import android.opengl.GLES20
-import com.tainzhi.sample.media.camera.gl.BaseGLSurfaceView
+import com.tainzhi.sample.media.opengl2.BaseGLSurfaceView
 import com.tainzhi.sample.media.opengl2.shape.triangle.CameraTriangle
 import com.tainzhi.sample.media.opengl2.shape.triangle.ColorfulTriangle
 import com.tainzhi.sample.media.opengl2.shape.triangle.Triangle

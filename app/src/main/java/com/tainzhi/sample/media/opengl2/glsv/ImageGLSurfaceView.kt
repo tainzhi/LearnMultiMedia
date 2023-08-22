@@ -3,7 +3,7 @@ package com.tainzhi.sample.media.opengl2.glsv
 import android.content.Context
 import android.graphics.Bitmap
 import android.util.AttributeSet
-import com.tainzhi.sample.media.camera.gl.BaseGLSurfaceView
+import com.tainzhi.sample.media.opengl2.BaseGLSurfaceView
 import com.tainzhi.sample.media.opengl2.image.ImageRenderer
 
 /**

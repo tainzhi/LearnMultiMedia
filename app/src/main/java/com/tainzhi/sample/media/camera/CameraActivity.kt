@@ -558,7 +558,6 @@ class CameraActivity : AppCompatActivity() {
             )
             jpgImageReader.setOnImageAvailableListener({ reader ->
                 val image = reader.acquireLatestImage()
-                Log.d(TAG, "setUpCameraOutputs: jpgImageQueue add")
                 jpgImageQueue.add(image)
                 // val data = YUVTool.getBytesFromImageReader(it)
                 // val myMediaRecorder =  MyMediaRecorder()
@@ -604,8 +603,7 @@ class CameraActivity : AppCompatActivity() {
                 SettingsManager.PreviewAspectRatio.RATIO_16x9 -> RectF(0f, previewTopMargin, windowSize.width.toFloat(), previewTopMargin+ windowSize.width * 16/9f)
                 else -> RectF(0f, 0f, windowSize.width.toFloat(), windowSize.height.toFloat())
             }
-            cameraPreviewView.setWindowSize(windowSize, previewRect, useCameraFront)
-            cameraPreviewView.setTextureSize(cameraOutputPreviewTextureSize, isTrueAspectRatio)
+            cameraPreviewView.setTextureSize(cameraOutputPreviewTextureSize, isTrueAspectRatio, previewRect, useCameraFront)
             flashSupported = cameraInfo.isflashSupported
 
         } catch (e: CameraAccessException) {

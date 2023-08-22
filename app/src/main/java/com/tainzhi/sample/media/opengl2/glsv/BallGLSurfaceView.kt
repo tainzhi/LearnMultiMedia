@@ -4,7 +4,7 @@ import android.content.Context
 import android.opengl.GLSurfaceView
 import com.renhui.opengles20study.shape.oval.Ball
 import com.renhui.opengles20study.shape.oval.BallWithLight
-import com.tainzhi.sample.media.camera.gl.BaseGLSurfaceView
+import com.tainzhi.sample.media.opengl2.BaseGLSurfaceView
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
 

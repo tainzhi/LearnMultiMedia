@@ -7,7 +7,7 @@ import android.opengl.GLSurfaceView
 import android.opengl.GLUtils
 import android.opengl.Matrix
 import android.util.Log
-import com.tainzhi.sample.media.camera.gl.BaseGLSL
+import com.tainzhi.sample.media.opengl2.BaseGLSL
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.FloatBuffer

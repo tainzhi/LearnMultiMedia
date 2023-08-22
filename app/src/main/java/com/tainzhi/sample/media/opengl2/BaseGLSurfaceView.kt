@@ -1,4 +1,4 @@
-package com.tainzhi.sample.media.camera.gl
+package com.tainzhi.sample.media.opengl2
 
 import android.content.Context
 import android.opengl.GLSurfaceView

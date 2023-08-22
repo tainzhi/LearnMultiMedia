@@ -1,4 +1,4 @@
-package com.tainzhi.sample.media.camera.gl
+package com.tainzhi.sample.media.opengl2
 
 import android.opengl.GLES20
 import android.util.Log

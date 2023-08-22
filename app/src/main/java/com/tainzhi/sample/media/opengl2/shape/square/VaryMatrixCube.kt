@@ -2,7 +2,7 @@ package com.tainzhi.sample.media.opengl2.shape.square
 
 import android.opengl.GLES20
 import android.opengl.Matrix
-import com.tainzhi.sample.media.camera.gl.BaseGLSL
+import com.tainzhi.sample.media.opengl2.BaseGLSL
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.FloatBuffer

@@ -8,14 +8,14 @@ import android.opengl.GLSurfaceView
 import android.opengl.Matrix
 import android.util.Log
 import android.util.Size
-import com.tainzhi.sample.media.camera.gl.filter.OesFilter
 import com.tainzhi.sample.media.camera.gl.textures.GridLine
+import com.tainzhi.sample.media.camera.gl.textures.PreviewTexture
 import com.tainzhi.sample.media.camera.gl.textures.Vertex2F
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
 
 class CameraPreviewRender : GLSurfaceView.Renderer {
-    private val oesFilter = OesFilter()
+    private val previewTexture = PreviewTexture()
     private val gridLine = GridLine()
     private var windowWidth = 0
     private var windowHeight = 0
@@ -40,6 +40,8 @@ class CameraPreviewRender : GLSurfaceView.Renderer {
     // and get the width*height of FullScreen GlSurfaceView and transport to CameraActivity
     override fun onSurfaceChanged(gl: GL10, width: Int, height: Int) {
         Log.d(TAG, "onSurfaceChanged: ${width}x${height}")
+        windowWidth = width
+        windowHeight = height
         surfaceTextureListener?.onSurfaceTextureChanged(surfaceTexture, width, height)
     }
 
@@ -51,35 +53,26 @@ class CameraPreviewRender : GLSurfaceView.Renderer {
             GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT or GLES20.GL_DEPTH_BUFFER_BIT)
             // reset blend
             GLES20.glBlendFunc(GLES20.GL_ONE, GLES20.GL_ONE_MINUS_CONSTANT_ALPHA)
-            oesFilter.draw()
+            previewTexture.draw()
             gridLine.draw()
             surfaceTexture?.updateTexImage()
         }
     }
 
-    fun setWindowSize(windowSize: Size, rectF: RectF, isFrontCamera: Boolean) {
-        Log.d(
-            TAG,
-            "setWindowSize: w${windowSize.width}*h${windowSize.height}, previewViewSize:w${rectF.width()}*h${rectF.height()}, isFrontCamera: ${isFrontCamera}"
-        )
-        this.isFrontCamera = isFrontCamera
-        this.windowWidth = windowSize.width
-        this.windowHeight = windowSize.height
-        previewRectF = rectF
-        gridLine.build(previewRectF)
-    }
-
     // camera output texture size, width > height
-    fun setTextureSize(previewTextureSize: Size, isTrueAspectRatio: Boolean) {
+    fun setTextureSize(previewTextureSize: Size, isTrueAspectRatio: Boolean, rectF: RectF, isFrontCamera: Boolean) {
         Log.d(
             TAG,
             "setTextureSize:w${previewTextureSize.width}*h${previewTextureSize.height}, trueAspectRatio:${isTrueAspectRatio}"
         )
         this.textureWidth = previewTextureSize.width
         this.textureHeight = previewTextureSize.height
-        oesFilter.textureSize =
+        this.isFrontCamera = isFrontCamera
+        this.previewRectF = rectF
+        gridLine.build(previewRectF)
+        previewTexture.textureSize =
             Vertex2F(previewTextureSize.width.toFloat(), previewTextureSize.height.toFloat())
-        oesFilter.isTrueAspectRatio = if (isTrueAspectRatio) 1 else 0
+        previewTexture.isTrueAspectRatio = if (isTrueAspectRatio) 1 else 0
         calculateMatrix()
         setMatrixToShader()
     }
@@ -106,7 +99,7 @@ class CameraPreviewRender : GLSurfaceView.Renderer {
         GLES20.glEnable(GLES20.GL_BLEND)
         GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA)
 
-        oesFilter.run {
+        previewTexture.run {
             create()
             textureId = texture
             setVertices(
@@ -151,7 +144,7 @@ class CameraPreviewRender : GLSurfaceView.Renderer {
     }
 
     private fun setMatrixToShader() {
-        oesFilter.setMatrix(modelMatrix, viewMatrix, projectionMatrix, textureMatrix)
+        previewTexture.setMatrix(modelMatrix, viewMatrix, projectionMatrix, textureMatrix)
         gridLine.setMatrix(modelMatrix, viewMatrix, projectionMatrix)
     }
 

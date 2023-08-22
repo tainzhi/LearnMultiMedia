@@ -42,6 +42,8 @@ class CamApp: Application(), ActivityLifecycleCallbacks {
     companion object {
         @Volatile private lateinit var INSTANCE: CamApp
         fun getInstance() = INSTANCE
+
+        const val Debug = true
     }
 
 }
