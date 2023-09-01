@@ -33,29 +33,27 @@ abstract class TextureBase {
 
 abstract class Texture: TextureBase() {
      // 顶点坐标句柄
-    protected var mHPosition = 0
+    protected var programHandle = 0
     protected lateinit var shader: Shader
 
     private var attributeMap = hashMapOf<String, Int>()
     protected lateinit var shaderFactory: ShaderFactory
     protected lateinit var previewRect: RectF
+    var color = floatArrayOf(1f, 1f, 1f, 1f)
+    var alpha = 1f
+    var lineWidth = 1f
 
     override fun load(shaderFactory: ShaderFactory, previewRect: RectF) {
         super.load(shaderFactory, previewRect)
         this.shaderFactory = shaderFactory
         this.previewRect = previewRect
         shader = onSetShader()
-        mHPosition = GLES20.glGetAttribLocation(shader.programHandle, "a_Position")
+        programHandle = GLES20.glGetAttribLocation(shader.programHandle, "a_Position")
     }
 
     override fun unload() {
         super.unload()
     }
-
-    open fun setAlpha(alpha: Float) {}
-
-    open fun setLineWidth(alpha: Float) {}
-
 
     abstract fun onSetShader(): Shader
 

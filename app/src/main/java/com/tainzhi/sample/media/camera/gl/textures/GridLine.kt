@@ -12,11 +12,10 @@ class GridLine : TextureBase() {
     private var linePadding = 20f
     private var alpha = 0.9f
 
-    private fun build(previewRectF: RectF) {
+    private fun generateLines(previewRectF: RectF) {
         val enableGridLine = SettingsManager.getInstance().getGridLineEnable()
         if (!enableGridLine) return
-        val gridLineType = SettingsManager.getInstance().getGridLineType()
-        when (gridLineType) {
+        when (SettingsManager.getInstance().getGridLineType()) {
             // 对角线
             SettingsManager.GridLineType.DIAGONAL.ordinal -> {
                 components.add(
@@ -205,11 +204,11 @@ class GridLine : TextureBase() {
 
     override fun load(shaderFactory: ShaderFactory, previewRect: RectF) {
         super.load(shaderFactory, previewRect)
-        build(previewRect)
+        generateLines(previewRect)
         components.forEach {
             it.load(shaderFactory, previewRect)
-            it.setLineWidth(lineWidth)
-            it.setAlpha(alpha)
+            it.lineWidth = lineWidth
+            it.alpha = alpha
             it.setMatrix(modelMatrix, viewMatrix, projectionMatrix)
         }
     }
