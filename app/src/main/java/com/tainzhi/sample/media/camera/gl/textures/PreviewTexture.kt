@@ -8,7 +8,7 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.FloatBuffer
 
-class PreviewTexture : Texture(){
+class PreviewTexture : TextureOld(){
     protected var mHTexturePosition = 0
     private var mTextureMatrix: FloatArray = FloatArray(16)
     var textureSize = Vertex2F(0f, 0f)

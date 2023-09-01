@@ -74,7 +74,7 @@ class CameraActivity : AppCompatActivity() {
     private lateinit var rotationChangeMonitor: RotationChangeMonitor
     private var thumbnailOrientation = 0
 
-    private var isEnableZsl = SettingsManager.getInstance()!!
+    private var isEnableZsl = SettingsManager.getInstance()
             .getBoolean(SettingsManager.KEY_PHOTO_ZSL, SettingsManager.PHOTO_ZSL_DEFAULT_VALUE)
 
     private var surfaceTextureListener = object : CameraPreviewView.SurfaceTextureListener {
@@ -276,9 +276,7 @@ class CameraActivity : AppCompatActivity() {
             isNeedRecreateCaptureSession = true
         }
 
-        cameraPreviewView = findViewById<CameraPreviewView>(R.id.previewView).apply {
-            setRender(CameraPreviewRender())
-        }
+        cameraPreviewView = findViewById(R.id.previewView)
         ivThumbnail = findViewById<CircleImageView>(R.id.iv_thumbnail).apply {
             setOnClickListener {
                 viewPicture()

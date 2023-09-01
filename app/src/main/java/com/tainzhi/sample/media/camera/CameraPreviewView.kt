@@ -9,6 +9,7 @@ import android.util.Log
 import android.util.Size
 import com.tainzhi.sample.media.CamApp
 import com.tainzhi.sample.media.camera.gl.EglUtil
+import com.tainzhi.sample.media.camera.gl.GlUtil
 import com.tainzhi.sample.media.camera.gl.textures.TextureManager
 import javax.microedition.khronos.egl.EGL10
 import javax.microedition.khronos.egl.EGLConfig
@@ -17,14 +18,15 @@ import javax.microedition.khronos.egl.EGLDisplay
 import javax.microedition.khronos.egl.EGLSurface
 
 class CameraPreviewView : GLSurfaceView {
-
-    lateinit var render: CameraPreviewRender
     private var egl10: EGL10? = null
     private var eglDisplay = EGL10.EGL_NO_DISPLAY
     private var eglSurface = EGL10.EGL_NO_SURFACE
     private var eglContext = EGL10.EGL_NO_CONTEXT
 
     private val textureManager = TextureManager()
+    private val cameraPreviewRender = CameraPreviewRender().apply {
+        textureManager = this@CameraPreviewView.textureManager
+    }
     constructor(context: Context): super(context) {}
 
     constructor(context: Context, attr: AttributeSet) : super(context, attr) {
@@ -33,22 +35,17 @@ class CameraPreviewView : GLSurfaceView {
         setEGLConfigChooser(8, 8, 8, 8, 16, 8)
         setZOrderMediaOverlay(true)
         setEGLContextClientVersion(3)
+        setRenderer(cameraPreviewRender)
+        renderMode = RENDERMODE_WHEN_DIRTY
     }
 
     var surfaceTextureListener: SurfaceTextureListener? = null
         set(value) {
-            render.surfaceTextureListener = value
+            cameraPreviewRender.surfaceTextureListener = value
         }
 
-    fun setRender(render: GLSurfaceView.Renderer) {
-        Log.d(TAG, "setRender: ")
-        setRenderer(render)
-        this.render = render as CameraPreviewRender
-        renderMode = RENDERMODE_WHEN_DIRTY
-    }
-
     fun setTextureSize(previewTextureSize: Size, isTrueAspectRatio: Boolean, rectF: RectF, isFrontCamera: Boolean) {
-        render.setTextureSize(previewTextureSize, isTrueAspectRatio,rectF, isFrontCamera)
+        cameraPreviewRender.setTextureSize(previewTextureSize, isTrueAspectRatio,rectF, isFrontCamera)
         createSurface(previewTextureSize.width, previewTextureSize.height)
     }
 
@@ -62,13 +59,13 @@ class CameraPreviewView : GLSurfaceView {
 
     fun createSurface(width: Int, height: Int) {
         queueEvent {
-            render.createSurfaceTexture(width, height)
+            cameraPreviewRender.createSurfaceTexture(width, height)
         }
     }
 
     fun releaseSurface() {
         queueEvent {
-            render.releaseSurfaceTexture()
+            cameraPreviewRender.releaseSurfaceTexture()
         }
     }
 
@@ -80,7 +77,7 @@ class CameraPreviewView : GLSurfaceView {
             config: EGLConfig?,
             nativeWindow: Any?
         ): EGLSurface {
-            if (CamApp.Debug) Log.d(TAG, "createWindowSurface: ")
+            if (CamApp.DEBUG) Log.d(TAG, "createWindowSurface: ")
             egl10 = egl
             eglDisplay = display
             eglSurface = createSurfaceImpl(egl!!, display!!, config!!, nativeWindow!!)
@@ -89,7 +86,7 @@ class CameraPreviewView : GLSurfaceView {
         }
 
         override fun destroySurface(egl: EGL10?, display: EGLDisplay?, surface: EGLSurface?) {
-            if (CamApp.Debug) Log.d(TAG, "destroySurface: ")
+            if (CamApp.DEBUG) Log.d(TAG, "destroySurface: ")
             if (!EglUtil.destroySurface(egl, display, surface)) {
                 Log.w(TAG, "failed to destroy OpenGL ES surface")
             }
@@ -99,7 +96,7 @@ class CameraPreviewView : GLSurfaceView {
         }
 
         private fun createSurfaceImpl(egl: EGL10, display: EGLDisplay, eglConfig: EGLConfig, nativeWindow: Any): EGLSurface {
-            if (CamApp.Debug) Log.d(TAG, "create  OpenGL ES surface")
+            if (CamApp.DEBUG) Log.d(TAG, "create  OpenGL ES surface")
             try {
                 val surface = EglUtil.createWindowSurface(egl, display, eglConfig, nativeWindow)
                 if (surface != EGL10.EGL_NO_SURFACE) return surface
@@ -114,14 +111,14 @@ class CameraPreviewView : GLSurfaceView {
     inner class ContextFactory: EGLContextFactory {
 
         override fun createContext(egl: EGL10?, display: EGLDisplay?, eglConfig: EGLConfig?): EGLContext {
-            if (CamApp.Debug) Log.d(TAG, "createContext: ")
+            if (CamApp.DEBUG) Log.d(TAG, "createContext: ")
             eglContext = createContextImpl(egl!!, display!!, eglConfig!!)
             textureManager.loadTextures()
             return eglContext
         }
 
         override fun destroyContext(egl: EGL10?, display: EGLDisplay?, context: EGLContext?) {
-            if (CamApp.Debug) Log.d(TAG, "destroyContext: ")
+            if (CamApp.DEBUG) Log.d(TAG, "destroyContext: ")
             textureManager.unloadTextures()
             if (!EglUtil.destroyContext(egl!!, display!!, context!!)) {
                 Log.w(TAG, "failed to destroy OpenGL ES context")
@@ -132,12 +129,13 @@ class CameraPreviewView : GLSurfaceView {
         private fun createContextImpl(egl: EGL10, display: EGLDisplay, eglConfig: EGLConfig): EGLContext {
             val versions = intArrayOf(EglUtil.GLES3, EglUtil.GLES2)
             versions.forEach {
-                if (CamApp.Debug) {
+                if (CamApp.DEBUG) {
                     Log.d(TAG, "create OpenGL ES context with version:${it}")
                 }
                 try {
                     val context = EglUtil.createContext(egl, display, eglConfig, it)
                     if (context != EGL10.EGL_NO_CONTEXT) {
+                        GlUtil.glVersion = it
                         return context
                     }
                     Log.w(TAG, "failed to create OpenGL ES context with version:$it")

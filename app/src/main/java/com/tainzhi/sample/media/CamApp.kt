@@ -4,6 +4,8 @@ import android.app.Activity
 import android.app.Application
 import android.app.Application.ActivityLifecycleCallbacks
 import android.os.Bundle
+import com.tainzhi.sample.media.camera.CameraActivity
+import com.tainzhi.sample.media.camera.gl.ShaderCache
 import com.tainzhi.sample.media.camera.util.SettingsManager
 
 class CamApp: Application(), ActivityLifecycleCallbacks {
@@ -15,6 +17,7 @@ class CamApp: Application(), ActivityLifecycleCallbacks {
         registerActivityLifecycleCallbacks(this)
         SettingsManager.build(this)
         settingsManager = SettingsManager.getInstance()!!
+        ShaderCache.load()
     }
 
     override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
@@ -31,6 +34,9 @@ class CamApp: Application(), ActivityLifecycleCallbacks {
     }
 
     override fun onActivityStopped(activity: Activity) {
+        if (activity is CameraActivity) {
+            ShaderCache.save()
+        }
     }
 
     override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {
@@ -43,7 +49,7 @@ class CamApp: Application(), ActivityLifecycleCallbacks {
         @Volatile private lateinit var INSTANCE: CamApp
         fun getInstance() = INSTANCE
 
-        const val Debug = true
+        val DEBUG = BuildConfig.DEBUG
     }
 
 }

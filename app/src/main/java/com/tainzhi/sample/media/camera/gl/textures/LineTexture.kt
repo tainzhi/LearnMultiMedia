@@ -1,25 +1,26 @@
 package com.tainzhi.sample.media.camera.gl.textures
 
+import android.graphics.RectF
 import android.opengl.GLES20
-import com.tainzhi.sample.media.R
 import com.tainzhi.sample.media.camera.gl.GlUtil
+import com.tainzhi.sample.media.camera.gl.Shader
+import com.tainzhi.sample.media.camera.gl.ShaderFactory
+import com.tainzhi.sample.media.camera.gl.ShaderType
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.FloatBuffer
 
 class LineTexture(start: Vertex3F, end: Vertex3F): Texture() {
     private val vertices = floatArrayOf(start.x, start.y, start.z, end.x, end.y, end.z)
-    private var vertexShaderCode = GlUtil.getShaderSource(R.raw.frame_glvs)
-    private var fragmentShaderCode = GlUtil.getShaderSource(R.raw.frame_glfs)
     private lateinit var vertexBuffer:  FloatBuffer
     private var color = floatArrayOf(1f, 1f, 1f, 1f)
     private var alpha = 1f
     private var lineWidth = 1f
 
-    override fun onCreate() {
-        createProgram(vertexShaderCode, fragmentShaderCode)
+    override fun load(shaderFactory: ShaderFactory, previewRect: RectF) {
+        super.load(shaderFactory, previewRect)
         vertexBuffer = ByteBuffer.allocateDirect(vertices.size * 4)
-                .order(ByteOrder.nativeOrder()).asFloatBuffer()
+            .order(ByteOrder.nativeOrder()).asFloatBuffer()
         vertexBuffer.put(vertices).position(0)
     }
 
@@ -33,6 +34,8 @@ class LineTexture(start: Vertex3F, end: Vertex3F): Texture() {
     override fun setLineWidth(width: Float) {
         lineWidth = width
     }
+
+    override fun onSetShader(): Shader = shaderFactory.getShader(ShaderType.FRAME)
 
     override fun onDraw() {
         super.onDraw()

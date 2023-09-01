@@ -13,6 +13,8 @@ object GlUtil {
     const val COORDS_PER_VERTEX: Int = 3
     const val VERTEX_STRIDE: Int = COORDS_PER_VERTEX * 4
 
+    var glVersion = 3
+
     fun getShaderSource(sourceId: Int): String {
         val sb = StringBuilder()
         val inputStream = CamApp.getInstance().resources.openRawResource(sourceId)
@@ -46,7 +48,7 @@ object GlUtil {
         return shader
     }
 
-    fun createOpenGLProgram(vertexSource: String, fragmentSource: String): Int {
+    fun createProgram(vertexSource: String, fragmentSource: String): Int {
         val vertex: Int = loadShader(GLES20.GL_VERTEX_SHADER, vertexSource)
         if (vertex == 0) {
             Log.e(TAG, "load shader vertex failed")
@@ -73,6 +75,7 @@ object GlUtil {
         }
         return program
     }
+
 
     private fun getGlErrorName(error: Int): String {
         when (error) {
@@ -108,5 +111,10 @@ object GlUtil {
                 }
             }
         }
+    }
+
+    fun useProgram(program: Int) {
+        GLES20.glUseProgram(program)
+        checkGlError("glUseProgram")
     }
 }

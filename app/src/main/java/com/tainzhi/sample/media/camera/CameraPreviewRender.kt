@@ -8,15 +8,14 @@ import android.opengl.GLSurfaceView
 import android.opengl.Matrix
 import android.util.Log
 import android.util.Size
-import com.tainzhi.sample.media.camera.gl.textures.GridLine
 import com.tainzhi.sample.media.camera.gl.textures.PreviewTexture
+import com.tainzhi.sample.media.camera.gl.textures.TextureManager
 import com.tainzhi.sample.media.camera.gl.textures.Vertex2F
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
 
 class CameraPreviewRender : GLSurfaceView.Renderer {
     private val previewTexture = PreviewTexture()
-    private val gridLine = GridLine()
     private var windowWidth = 0
     private var windowHeight = 0
     private var textureWidth = 0
@@ -29,6 +28,7 @@ class CameraPreviewRender : GLSurfaceView.Renderer {
     private var surfaceTexture: SurfaceTexture? = null
     var surfaceTextureListener: CameraPreviewView.SurfaceTextureListener? = null
     private var isFrontCamera = false
+    lateinit var textureManager: TextureManager
 
     // invoked when EglContext created
     // not need to invoke surfaceTextureListener?.onSurfaceTextureCreated
@@ -54,13 +54,18 @@ class CameraPreviewRender : GLSurfaceView.Renderer {
             // reset blend
             GLES20.glBlendFunc(GLES20.GL_ONE, GLES20.GL_ONE_MINUS_CONSTANT_ALPHA)
             previewTexture.draw()
-            gridLine.draw()
             surfaceTexture?.updateTexImage()
         }
+        textureManager.onDraw()
     }
 
     // camera output texture size, width > height
-    fun setTextureSize(previewTextureSize: Size, isTrueAspectRatio: Boolean, rectF: RectF, isFrontCamera: Boolean) {
+    fun setTextureSize(
+        previewTextureSize: Size,
+        isTrueAspectRatio: Boolean,
+        rectF: RectF,
+        isFrontCamera: Boolean
+    ) {
         Log.d(
             TAG,
             "setTextureSize:w${previewTextureSize.width}*h${previewTextureSize.height}, trueAspectRatio:${isTrueAspectRatio}"
@@ -69,7 +74,7 @@ class CameraPreviewRender : GLSurfaceView.Renderer {
         this.textureHeight = previewTextureSize.height
         this.isFrontCamera = isFrontCamera
         this.previewRectF = rectF
-        gridLine.build(previewRectF)
+        textureManager.previewRectF = previewRectF
         previewTexture.textureSize =
             Vertex2F(previewTextureSize.width.toFloat(), previewTextureSize.height.toFloat())
         previewTexture.isTrueAspectRatio = if (isTrueAspectRatio) 1 else 0
@@ -109,7 +114,6 @@ class CameraPreviewRender : GLSurfaceView.Renderer {
                 Vertex2F(previewRectF.right, previewRectF.bottom)
             )
         }
-        gridLine.create()
 
         surfaceTextureListener?.onSurfaceTextureCreated(surfaceTexture, width, height)
     }
@@ -138,14 +142,14 @@ class CameraPreviewRender : GLSurfaceView.Renderer {
         // 3. rotate
         Matrix.rotateM(textureMatrix, 0, if (isFrontCamera) 270f else 90f, 0f, 0f, 1f)
         // 2. flip
-        Matrix.scaleM(textureMatrix, 0,  if(isFrontCamera) 1.0f else -1.0f, -1.0f, 1.0f)
+        Matrix.scaleM(textureMatrix, 0, if (isFrontCamera) 1.0f else -1.0f, -1.0f, 1.0f)
         // 1. move to center (0, 0)
         Matrix.translateM(textureMatrix, 0, -0.5f, -0.5f, 0f)
     }
 
     private fun setMatrixToShader() {
         previewTexture.setMatrix(modelMatrix, viewMatrix, projectionMatrix, textureMatrix)
-        gridLine.setMatrix(modelMatrix, viewMatrix, projectionMatrix)
+        textureManager.setMatrix(modelMatrix, viewMatrix, projectionMatrix)
     }
 
     private fun createTextureID(): Int {

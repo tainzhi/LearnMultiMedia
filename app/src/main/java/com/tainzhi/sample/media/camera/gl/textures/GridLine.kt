@@ -1,17 +1,18 @@
 package com.tainzhi.sample.media.camera.gl.textures
 
 import android.graphics.RectF
+import com.tainzhi.sample.media.camera.gl.ShaderFactory
 import com.tainzhi.sample.media.camera.util.SettingsManager
 import java.lang.Math.pow
 import kotlin.math.sqrt
 
-class GridLine() : Texture() {
+class GridLine : TextureBase() {
     private val components = mutableListOf<Texture>()
     private var lineWidth = 1f
     private var linePadding = 20f
     private var alpha = 0.9f
 
-    fun build(previewRectF: RectF) {
+    private fun build(previewRectF: RectF) {
         val enableGridLine = SettingsManager.getInstance().getGridLineEnable()
         if (!enableGridLine) return
         val gridLineType = SettingsManager.getInstance().getGridLineType()
@@ -202,22 +203,29 @@ class GridLine() : Texture() {
         }
     }
 
-    override fun onCreate() {
+    override fun load(shaderFactory: ShaderFactory, previewRect: RectF) {
+        super.load(shaderFactory, previewRect)
+        build(previewRect)
         components.forEach {
-            it.create()
+            it.load(shaderFactory, previewRect)
             it.setLineWidth(lineWidth)
             it.setAlpha(alpha)
             it.setMatrix(modelMatrix, viewMatrix, projectionMatrix)
         }
     }
-
     override fun onDraw() {
         components.forEach {
             it.draw()
         }
     }
 
+    override fun unload() {
+        components.clear()
+        super.unload()
+    }
+
     companion object {
         private val GOLDEN_SPLIT_RATIO = (1 + sqrt(5.0))/2
+        private val TAG = GridLine::class.java.simpleName
     }
 }
