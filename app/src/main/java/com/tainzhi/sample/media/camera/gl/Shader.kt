@@ -42,7 +42,7 @@ class Shader(val vertexShaderSourceId: Int, val fragmentShaderSourceId: Int) {
 
 enum class ShaderType(val vsId: Int, val fsId: Int) {
     CAMERA_PREVIEW(R.raw.preview_vs, R.raw.preview_fs),
-    FRAME(R.raw.frame_glvs, R.raw.frame_glfs)
+    FRAME(R.raw.frame_vs, R.raw.frame_fs),
 }
 
 class ShaderFactory {

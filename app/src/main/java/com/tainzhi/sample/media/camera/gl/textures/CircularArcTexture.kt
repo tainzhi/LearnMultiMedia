@@ -44,7 +44,8 @@ class CircularArcTexture(val center: Vertex3F, val radius: Float, val startAngle
     }
 
     private fun generateVertices() {
-        val segments = abs(sweepAngle).toInt() + 1
+        // 360, 720, 1440...分割越多，绘制出的圆越平滑
+        val segments = abs(sweepAngle).toInt() * 6
         vertices = FloatArray((segments + 1) * GlUtil.COORDS_PER_VERTEX)
         val angleStep = sweepAngle / segments.toFloat()
         for (i in 0 .. segments) {
