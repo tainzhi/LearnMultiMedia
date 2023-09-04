@@ -922,9 +922,9 @@ class CameraActivity : AppCompatActivity() {
     private fun updateThumbnail(capturedImageUri: Uri, isNew: Boolean = false) {
         val thumbnail = if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
             val temp = MediaStore.Images.Media.getBitmap(contentResolver, capturedImageUri)
-            ThumbnailUtils.extractThumbnail(temp, 100, 100)
+            ThumbnailUtils.extractThumbnail(temp, 360, 360)
         } else {
-            contentResolver.loadThumbnail(capturedImageUri, Size(100, 100), null)
+            contentResolver.loadThumbnail(capturedImageUri, Size(360, 360), null)
         }
         ivThumbnail.apply {
             post {
