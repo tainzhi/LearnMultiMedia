@@ -16,8 +16,8 @@ import kotlin.math.max
 class CameraInfoCache(cameraManager: CameraManager, useFrontCamera: Boolean = false) {
     private lateinit var cameraCharacteristics: CameraCharacteristics
     var cameraId: String = ""
-    private var largestJpgSize =  Size(0, 0)
     var largestYuvSize = Size(0, 0)
+
     // to fixme
     var videoSize = Size(0, 0)
     var isflashSupported = false
@@ -29,6 +29,7 @@ class CameraInfoCache(cameraManager: CameraManager, useFrontCamera: Boolean = fa
     private var hardwareLevel: Int = 0
     var reprocessingNoiseMode = CameraCharacteristics.NOISE_REDUCTION_MODE_HIGH_QUALITY
     var reprocessingEdgeMode = CameraCharacteristics.EDGE_MODE_HIGH_QUALITY
+
     init {
         val cameraList = cameraManager.cameraIdList
         for (id in cameraList) {
@@ -42,35 +43,38 @@ class CameraInfoCache(cameraManager: CameraManager, useFrontCamera: Boolean = fa
         if (cameraCharacteristics == null) {
             throw Exception("cannot get camera characteristics")
         }
-        streamConfigurationMap = cameraCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
+        streamConfigurationMap =
+            cameraCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
         // videoSize = chooseVideoSize(streamConfigurationMap!!.getOutputSizes(MediaRecorder::class.java))
         if (streamConfigurationMap == null) {
             throw Exception("cannot get stream configuration")
         }
         streamConfigurationMap?.outputFormats?.forEach {
-            when(it) {
-                ImageFormat.YUV_420_888 ->{
-                    largestYuvSize = getLargestSize(streamConfigurationMap!!.getOutputSizes(ImageFormat.YUV_420_888))
-                }
-                ImageFormat.JPEG -> {
-                    largestJpgSize = getLargestSize(streamConfigurationMap!!.getOutputSizes(ImageFormat.JPEG))
+            when (it) {
+                ImageFormat.YUV_420_888 -> {
+                    largestYuvSize =
+                        getLargestSize(streamConfigurationMap!!.getOutputSizes(ImageFormat.YUV_420_888))
                 }
             }
         }
-        requestAvailableAbilities = cameraCharacteristics.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES)
+        requestAvailableAbilities =
+            cameraCharacteristics.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES)
         edgeModes = cameraCharacteristics.get(CameraCharacteristics.EDGE_AVAILABLE_EDGE_MODES)
-        noiseModes = cameraCharacteristics.get(CameraCharacteristics.NOISE_REDUCTION_AVAILABLE_NOISE_REDUCTION_MODES)
-        hardwareLevel = cameraCharacteristics.get(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL)!!
+        noiseModes =
+            cameraCharacteristics.get(CameraCharacteristics.NOISE_REDUCTION_AVAILABLE_NOISE_REDUCTION_MODES)
+        hardwareLevel =
+            cameraCharacteristics.get(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL)!!
         sensorOrientation = cameraCharacteristics!!.get(CameraCharacteristics.SENSOR_ORIENTATION)
-        isflashSupported = cameraCharacteristics.get(CameraCharacteristics.FLASH_INFO_AVAILABLE) == true
+        isflashSupported =
+            cameraCharacteristics.get(CameraCharacteristics.FLASH_INFO_AVAILABLE) == true
     }
 
 
     fun isSupportReproc(): Boolean {
-        if (requestAvailableAbilities!= null &&
-            requestAvailableAbilities!!.contains(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_YUV_REPROCESSING)  ||
-            requestAvailableAbilities!!.contains(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_PRIVATE_REPROCESSING))
-        {
+        if (requestAvailableAbilities != null &&
+            requestAvailableAbilities!!.contains(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_YUV_REPROCESSING) ||
+            requestAvailableAbilities!!.contains(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_PRIVATE_REPROCESSING)
+        ) {
             Log.d(TAG, "isSupportReproc: true")
             return true
         }
@@ -83,14 +87,16 @@ class CameraInfoCache(cameraManager: CameraManager, useFrontCamera: Boolean = fa
     }
 
     fun getOutputJpgSizes(): Array<Size> {
-        return streamConfigurationMap!!.getOutputSizes(ImageFormat.JPEG)
+        return streamConfigurationMap!!.getOutputSizes(ImageFormat.JPEG) +
+                streamConfigurationMap!!.getHighResolutionOutputSizes(ImageFormat.JPEG)
     }
 
     fun getOutputYuvSizes(): Array<Size> {
         return streamConfigurationMap!!.getOutputSizes(ImageFormat.YUV_420_888)
     }
 
-    fun isCamera2FullModeAvailable() = isHardwareLevelAtLeast(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_FULL)
+    fun isCamera2FullModeAvailable() =
+        isHardwareLevelAtLeast(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_FULL)
 
     fun getCaptureNoiseMode(): Int {
         if (noiseModes!!.contains(CameraCharacteristics.NOISE_REDUCTION_MODE_ZERO_SHUTTER_LAG)) {
@@ -107,6 +113,7 @@ class CameraInfoCache(cameraManager: CameraManager, useFrontCamera: Boolean = fa
             return CameraCharacteristics.EDGE_MODE_FAST
         }
     }
+
     private fun isHardwareLevelAtLeast(level: Int): Boolean {
         if (level == CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY) return true
         if (hardwareLevel == CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY) return false
@@ -140,10 +147,10 @@ class CameraInfoCache(cameraManager: CameraManager, useFrontCamera: Boolean = fa
          */
         @JvmStatic
         fun chooseOptimalSize(
-                choices: Array<Size>,
-                viewSize: Size,
-                ratioValue: Float,
-                isPreview: Boolean = false
+            choices: Array<Size>,
+            viewSize: Size,
+            ratioValue: Float,
+            isPreview: Boolean = false
         ): Pair<Size, Boolean> {
             val filterChoices = choices.filter {
                 if (isPreview)
@@ -152,17 +159,33 @@ class CameraInfoCache(cameraManager: CameraManager, useFrontCamera: Boolean = fa
                     true
             }
             val chosenSizes = ArrayList<Size>()
+            val constraintChosenSizes = ArrayList<Size>()
             for (option in filterChoices) {
-                val tempRatio = option.width/option.height.toFloat()
+                val tempRatio = option.width / option.height.toFloat()
+                // viewSize.width contrast to sensor height
                 if (abs(ratioValue - tempRatio) < DIFF_FLOAT_EPS) {
                     chosenSizes.add(option)
+                    // for preview, choose smallest size but larger or equal viewSize
+                    if (option.height >= viewSize.width) {
+                        constraintChosenSizes.add(option)
+                    }
                 }
             }
-            // 首先选取宽高和预览窗口一直且最大的输出尺寸
+            // todo: 优化空间，对于preview可以不使用最高分辨率的，只要宽高大于预览窗口宽高即可
             if (chosenSizes.size > 0) {
                 Log.d(TAG, "optimal size by same w/h aspect ratio")
-                val result = Collections.min(chosenSizes, CompareSizesByArea())
-                return Pair(result, true)
+                if (isPreview) {
+                    if (constraintChosenSizes.size > 0) {
+                        return Pair(Collections.min(constraintChosenSizes, CompareSizesByArea()), true)
+                    } else {
+                        return Pair(Collections.max(chosenSizes, CompareSizesByArea()), true)
+                    }
+                } else {
+                    // 对于非preview，输出最高分辨率的stream
+                    // 首先选取宽高和预览窗口一直且最大的输出尺寸
+                    val result = Collections.max(chosenSizes, CompareSizesByArea())
+                    return Pair(result, true)
+                }
             }
 
             var suboptimalSize = Size(0, 0)
@@ -170,7 +193,7 @@ class CameraInfoCache(cameraManager: CameraManager, useFrontCamera: Boolean = fa
             // 如果不存在宽高比与预览窗口一致的输出尺寸，则选择与其宽高最接近的尺寸
             var minRatioDiff = Float.MAX_VALUE
             filterChoices.forEach { option ->
-                val tempRatio = option.width/option.height.toFloat()
+                val tempRatio = option.width / option.height.toFloat()
                 if (abs(tempRatio - ratioValue) < minRatioDiff) {
                     minRatioDiff = abs(tempRatio - ratioValue)
                     suboptimalAspectRatio = tempRatio
