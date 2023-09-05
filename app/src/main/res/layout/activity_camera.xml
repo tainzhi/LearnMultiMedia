@@ -74,6 +74,19 @@
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
+    <androidx.appcompat.widget.AppCompatImageView
+        android:id="@+id/filter"
+        android:layout_width="28dp"
+        android:layout_height="28dp"
+        android:layout_marginEnd="24dp"
+        android:background="@drawable/circle_gray_background"
+        android:backgroundTint="@color/colorOverlaySurface"
+        android:layout_marginBottom="32dp"
+        android:padding="4dp"
+        android:src="@drawable/ic_filter"
+        app:layout_constraintBottom_toTopOf="@id/cl_mode_bar"
+        app:layout_constraintEnd_toEndOf="parent" />
+
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/cl_mode_bar"
         android:layout_width="match_parent"
@@ -143,15 +156,14 @@
             android:id="@+id/iv_switch_camera"
             android:layout_width="0dp"
             android:layout_height="0dp"
-            app:layout_constraintDimensionRatio="1:1"
-            android:background="@drawable/circle_gray_background"
             android:layout_marginEnd="30dp"
+            android:background="@drawable/circle_gray_background"
             android:backgroundTint="@color/colorOverlaySurface"
             android:src="@drawable/ic_flip_camera"
-            app:layout_constraintTop_toTopOf="@id/iv_thumbnail"
             app:layout_constraintBottom_toBottomOf="@id/iv_thumbnail"
+            app:layout_constraintDimensionRatio="1:1"
             app:layout_constraintEnd_toEndOf="parent"
-            />
+            app:layout_constraintTop_toTopOf="@id/iv_thumbnail" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
