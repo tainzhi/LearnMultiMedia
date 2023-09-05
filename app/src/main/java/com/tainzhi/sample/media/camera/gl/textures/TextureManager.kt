@@ -7,32 +7,43 @@ import com.tainzhi.sample.media.camera.gl.ShaderFactory
 class TextureManager {
 
     private val shaderFactory = ShaderFactory()
-    private val textures = mutableListOf<TextureBase>(GridLine())
+    private val textures = mutableListOf<TextureBase>()
 
     var previewRectF: RectF = RectF()
+    private var isLoaded = false
+
+    fun addTextures(textures: List<TextureBase>) {
+        this.textures.addAll(textures)
+    }
 
     // cannot be called in createContext() like unloadTextures()
-    fun loadTextures() {
-        Log.d(TAG, "loadTextures: ")
+    fun load() {
+        Log.d(TAG, "load: ")
     }
 
     fun onDraw() {
-        if (!shaderFactory.isLoaded()) {
+        if (textures.size > 0 && !isLoaded) {
             shaderFactory.loadShaders()
+            Log.d(TAG, "onDraw: loadShaders.size=${textures.size}")
             textures.forEach { it.load(shaderFactory, previewRectF) }
+            isLoaded = true
         }
-        textures.forEach { it.draw() }
+        if (isLoaded) {
+            textures.forEach { it.draw() }
+        }
     }
 
-    fun unloadTextures() {
+    fun unload() {
+        Log.d(TAG, "unload: ")
+        isLoaded = false
         textures.forEach {
             it.unload()
         }
+        textures.clear()
         shaderFactory.clearShaders()
     }
 
     fun setMatrix(model: FloatArray, view: FloatArray, projection:FloatArray) {
-        Log.d(TAG, "setMatrix: ")
         textures.forEach {
             it.setMatrix(model, view, projection)
         }

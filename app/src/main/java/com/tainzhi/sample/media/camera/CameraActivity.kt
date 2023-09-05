@@ -109,8 +109,11 @@ class CameraActivity : AppCompatActivity() {
             height: Int
         ) {
             Log.d(TAG, "onSurfaceTextureChanged: w${width}*h${height}")
-            windowSize = Size(width, height)
-            setUpCameraOutputs()
+            if (!isHasSetupCameraOutputs) {
+                isHasSetupCameraOutputs = true
+                windowSize = Size(width, height)
+                setUpCameraOutputs()
+            }
         }
 
     }
@@ -146,6 +149,7 @@ class CameraActivity : AppCompatActivity() {
     // default open front-facing cameras/lens
     private var useCameraFront = false
     private var isCameraOpen = false
+    private var isHasSetupCameraOutputs = false
     private lateinit var cameraId: String
 
     // default set to full screen size
@@ -351,6 +355,7 @@ class CameraActivity : AppCompatActivity() {
 
     override fun onPause() {
         Log.i(TAG, "onPause: ")
+        isHasSetupCameraOutputs = false
         rotationChangeMonitor.disable()
         cameraPreviewView.onPause()
         if (isCameraOpen) {
@@ -611,6 +616,7 @@ class CameraActivity : AppCompatActivity() {
             ErrorDialog.newInstance(getString(R.string.camera_error))
                     .show(supportFragmentManager, "fragment_dialog")
         }
+        isHasSetupCameraOutputs = true
     }
 
     private fun openCaptureSession() {

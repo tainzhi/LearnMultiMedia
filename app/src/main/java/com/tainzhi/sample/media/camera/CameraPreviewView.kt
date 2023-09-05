@@ -45,8 +45,10 @@ class CameraPreviewView : GLSurfaceView {
         }
 
     fun setTextureSize(previewTextureSize: Size, isTrueAspectRatio: Boolean, rectF: RectF, isFrontCamera: Boolean) {
-        cameraPreviewRender.setTextureSize(previewTextureSize, isTrueAspectRatio,rectF, isFrontCamera)
-        createSurface(previewTextureSize.width, previewTextureSize.height)
+        queueEvent {
+            cameraPreviewRender.createSurfaceTexture(previewTextureSize.width, previewTextureSize.height)
+            cameraPreviewRender.setTextureSize(previewTextureSize, isTrueAspectRatio,rectF, isFrontCamera)
+        }
     }
 
     override fun onResume() {
@@ -55,12 +57,6 @@ class CameraPreviewView : GLSurfaceView {
 
     override fun onPause() {
         super.onPause()
-    }
-
-    fun createSurface(width: Int, height: Int) {
-        queueEvent {
-            cameraPreviewRender.createSurfaceTexture(width, height)
-        }
     }
 
     fun releaseSurface() {
@@ -113,13 +109,13 @@ class CameraPreviewView : GLSurfaceView {
         override fun createContext(egl: EGL10?, display: EGLDisplay?, eglConfig: EGLConfig?): EGLContext {
             if (CamApp.DEBUG) Log.d(TAG, "createContext: ")
             eglContext = createContextImpl(egl!!, display!!, eglConfig!!)
-            textureManager.loadTextures()
+            textureManager.load()
             return eglContext
         }
 
         override fun destroyContext(egl: EGL10?, display: EGLDisplay?, context: EGLContext?) {
             if (CamApp.DEBUG) Log.d(TAG, "destroyContext: ")
-            textureManager.unloadTextures()
+            textureManager.unload()
             if (!EglUtil.destroyContext(egl!!, display!!, context!!)) {
                 Log.w(TAG, "failed to destroy OpenGL ES context")
             }
