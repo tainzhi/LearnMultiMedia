@@ -35,6 +35,7 @@ import androidx.core.view.updatePadding
 import com.tainzhi.sample.media.R
 import com.tainzhi.sample.media.camera.CameraInfoCache.Companion.chooseOptimalSize
 import com.tainzhi.sample.media.camera.ui.ControlBar
+import com.tainzhi.sample.media.camera.ui.FilterBar
 import com.tainzhi.sample.media.camera.util.RotationChangeListener
 import com.tainzhi.sample.media.camera.util.RotationChangeMonitor
 import com.tainzhi.sample.media.camera.util.SettingsManager
@@ -279,6 +280,7 @@ class CameraActivity : AppCompatActivity() {
             closeCaptureSession()
             isNeedRecreateCaptureSession = true
         }
+        FilterBar(this, _binding)
 
         cameraPreviewView = findViewById(R.id.previewView)
         ivThumbnail = findViewById<CircleImageView>(R.id.iv_thumbnail).apply {

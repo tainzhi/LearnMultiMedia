@@ -87,6 +87,16 @@
         app:layout_constraintBottom_toTopOf="@id/cl_mode_bar"
         app:layout_constraintEnd_toEndOf="parent" />
 
+    <ViewStub
+        android:id="@+id/vs_filter"
+        android:layout_width="match_parent"
+        android:layout_height="120dp"
+        android:layout_marginBottom="@dimen/control_bar_top_margin"
+        android:layout="@layout/vstub_camera_filter"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/cl_mode_bar" />
+
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/cl_mode_bar"
         android:layout_width="match_parent"

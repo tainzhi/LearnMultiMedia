@@ -112,6 +112,6 @@ class MainAdapter() : BaseQuickAdapter<ActivityItem, QuickViewHolder>() {
         parent: ViewGroup,
         viewType: Int
     ): QuickViewHolder {
-        return QuickViewHolder(R.layout.main_item, parent)
+        return QuickViewHolder(R.layout.item_main, parent)
     }
 }
