@@ -1,14 +1,16 @@
 package com.tainzhi.sample.media
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
+import android.view.ViewGroup
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.chad.library.adapter.base.BaseQuickAdapter
-import com.chad.library.adapter.base.viewholder.BaseViewHolder
+import com.chad.library.adapter.base.viewholder.QuickViewHolder
 import com.tainzhi.sample.media.camera.CameraActivity
 import com.tainzhi.sample.media.native_codec.NativeCodecActivity
 import com.tainzhi.sample.media.opengl2.BallActivity
@@ -57,10 +59,11 @@ class MainActivity : AppCompatActivity() {
         setSupportActionBar(toolbar)
         findViewById<RecyclerView>(R.id.mainRecyclerView).run {
             layoutManager = LinearLayoutManager(context)
-            adapter = MainAdapter(datas).apply {
+            adapter = MainAdapter().apply {
                 setOnItemClickListener { _, _, position ->
                     startActivity(Intent(this@MainActivity, datas[position].clazz))
                 }
+                submitList(datas)
             }
             
         }
@@ -98,9 +101,17 @@ class MainActivity : AppCompatActivity() {
 
 data class ActivityItem(val title: String, val description: String, val clazz: Class<*>)
 
-class MainAdapter(datas: MutableList<ActivityItem>) : BaseQuickAdapter<ActivityItem, BaseViewHolder>(R.layout.main_item, datas) {
-    override fun convert(holder: BaseViewHolder, item: ActivityItem) {
-        holder.setText(R.id.itemTitleTv, item.title)
-        holder.setText(R.id.itemDescriptionTv, item.description)
+class MainAdapter() : BaseQuickAdapter<ActivityItem, QuickViewHolder>() {
+    override fun onBindViewHolder(holder: QuickViewHolder, position: Int, item: ActivityItem?) {
+        holder.setText(R.id.itemTitleTv, item?.title)
+        holder.setText(R.id.itemDescriptionTv, item?.description)
+    }
+
+    override fun onCreateViewHolder(
+        context: Context,
+        parent: ViewGroup,
+        viewType: Int
+    ): QuickViewHolder {
+        return QuickViewHolder(R.layout.main_item, parent)
     }
 }
