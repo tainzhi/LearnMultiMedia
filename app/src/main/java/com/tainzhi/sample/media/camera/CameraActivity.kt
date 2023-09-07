@@ -280,7 +280,9 @@ class CameraActivity : AppCompatActivity() {
             closeCaptureSession()
             isNeedRecreateCaptureSession = true
         }
-        FilterBar(this, _binding)
+        FilterBar(this, _binding) {
+            Log.d(TAG, "onFilterTypeSelected: ${it}")
+        }
 
         cameraPreviewView = findViewById(R.id.previewView)
         ivThumbnail = findViewById<CircleImageView>(R.id.iv_thumbnail).apply {

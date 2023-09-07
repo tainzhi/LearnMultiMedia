@@ -90,8 +90,8 @@
     <ViewStub
         android:id="@+id/vs_filter"
         android:layout_width="match_parent"
-        android:layout_height="120dp"
-        android:layout_marginBottom="@dimen/control_bar_top_margin"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="32dp"
         android:layout="@layout/vstub_camera_filter"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -124,7 +124,7 @@
             app:spv_max_text_size="24dp"
             app:spv_min_text_size="20dp"
             app:spv_orientation="horizontal"
-            app:spv_start_color="@android:color/holo_red_dark"
+            app:spv_start_color="@color/colorPrimary"
             app:spv_visible_item_count="3" />
 
         <com.tainzhi.sample.media.widget.CircleImageView

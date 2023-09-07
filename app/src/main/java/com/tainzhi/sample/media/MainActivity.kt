@@ -98,7 +98,7 @@ class MainActivity : AppCompatActivity() {
 
 data class ActivityItem(val title: String, val description: String, val clazz: Class<*>)
 
-class MainAdapter(datas: MutableList<ActivityItem>) : BaseQuickAdapter<ActivityItem, BaseViewHolder>(R.layout.main_item, datas) {
+class MainAdapter(datas: MutableList<ActivityItem>) : BaseQuickAdapter<ActivityItem, BaseViewHolder>(R.layout.item_main, datas) {
     override fun convert(holder: BaseViewHolder, item: ActivityItem) {
         holder.setText(R.id.itemTitleTv, item.title)
         holder.setText(R.id.itemDescriptionTv, item.description)
