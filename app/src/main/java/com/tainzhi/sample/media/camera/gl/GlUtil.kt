@@ -1,6 +1,9 @@
 package com.tainzhi.sample.media.camera.gl
 
+import android.graphics.BitmapFactory
 import android.opengl.GLES20
+import android.opengl.GLES30
+import android.opengl.GLUtils
 import android.util.Log
 import com.tainzhi.sample.media.CamApp
 import java.io.BufferedReader
@@ -14,6 +17,29 @@ object GlUtil {
     const val VERTEX_STRIDE: Int = COORDS_PER_VERTEX * 4
 
     var glVersion = 3
+
+    fun loadTextureFromRes(sourceId: Int): Int {
+        var textureId = IntArray(1)
+        GLES30.glGenTextures(1, textureId, 0)
+        if (textureId[0] == 0) {
+            Log.e(TAG, "loadTextureFromRes: create texture failed")
+        }
+        val options = BitmapFactory.Options().apply {
+            inScaled = false
+        }
+        val bitmap = BitmapFactory.decodeResource(CamApp.getInstance().resources, sourceId, options)
+        if (bitmap == null) {
+            GLES30.glDeleteTextures(1, textureId, 0)
+            Log.e(TAG, "loadTextureFromRes: load bitmap failed")
+        }
+        GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, textureId[0])
+        GLES30.glTexParameterf(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_MIN_FILTER, GLES30.GL_NEAREST.toFloat())
+        GLES30.glTexParameterf(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_MAG_FILTER, GLES30.GL_NEAREST.toFloat())
+        GLUtils.texImage2D(GLES30.GL_TEXTURE_2D, 0, bitmap, 0)
+        bitmap.recycle()
+        GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, 0)
+        return textureId[0]
+    }
 
     fun getShaderSource(sourceId: Int): String {
         val sb = StringBuilder()
