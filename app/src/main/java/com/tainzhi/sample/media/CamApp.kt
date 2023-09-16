@@ -18,7 +18,12 @@ class CamApp: Application(), ActivityLifecycleCallbacks {
         SettingsManager.build(this)
         settingsManager = SettingsManager.getInstance()!!
         ShaderCache.load()
+        System.loadLibrary("opencv")
+        initOpenCV()
     }
+
+
+    external fun initOpenCV()
 
     override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
     }
