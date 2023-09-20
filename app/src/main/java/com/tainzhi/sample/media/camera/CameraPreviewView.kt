@@ -51,6 +51,10 @@ class CameraPreviewView : GLSurfaceView {
         }
     }
 
+    fun changeFilterType() {
+        cameraPreviewRender.changeFilterType()
+    }
+
     override fun onResume() {
         super.onResume()
     }

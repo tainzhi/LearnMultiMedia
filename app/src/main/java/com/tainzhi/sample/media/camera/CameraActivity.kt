@@ -281,6 +281,7 @@ class CameraActivity : AppCompatActivity() {
             isNeedRecreateCaptureSession = true
         }
         FilterBar(this, _binding) {
+            cameraPreviewView.changeFilterType()
             Log.d(TAG, "onFilterTypeSelected: ${it}")
         }
 

@@ -30,6 +30,7 @@ class CameraPreviewRender : GLSurfaceView.Renderer {
     private var isFrontCamera = false
     private var textureId = 0
     lateinit var textureManager: TextureManager
+    lateinit var previewTexture: PreviewTexture
 
     // invoked when EglContext created
     // not need to invoke surfaceTextureListener?.onSurfaceTextureCreated
@@ -73,25 +74,27 @@ class CameraPreviewRender : GLSurfaceView.Renderer {
         this.isFrontCamera = isFrontCamera
         this.previewRectF = rectF
         calculateMatrix()
+        previewTexture = PreviewTexture(
+                textureId,
+                Vertex2F(
+                    previewTextureSize.width.toFloat(),
+                    previewTextureSize.height.toFloat()
+                ),
+                textureMatrix,
+                if (isTrueAspectRatio) 1 else 0,
+                rectF
+            )
         textureManager.apply {
             addTextures(
-                listOf(
-                    PreviewTexture(
-                        textureId,
-                        Vertex2F(
-                            previewTextureSize.width.toFloat(),
-                            previewTextureSize.height.toFloat()
-                        ),
-                        textureMatrix,
-                        if (isTrueAspectRatio) 1 else 0,
-                        rectF
-                    ),
-                    GridLine(),
-                )
+                listOf(previewTexture, GridLine())
             )
             previewRectF = rectF
             setMatrix(modelMatrix, viewMatrix, projectionMatrix)
         }
+    }
+
+    fun changeFilterType() {
+        previewTexture.changeFilterType()
     }
 
     fun releaseSurfaceTexture() {
