@@ -93,10 +93,11 @@ class CameraActivity : AppCompatActivity() {
         }
 
         override fun onSurfaceTextureCreated(surfaceTexture: SurfaceTexture?, width: Int, height: Int) {
-            Log.d(TAG, "onSurfaceTextureCreated: ${width}x${height}, ${surfaceTexture}")
+            Log.d(TAG, "onSurfaceTextureCreated: ${width}x${height}, ${surfaceTexture}, isNeedRecreateCaptureSession:" + isNeedRecreateCaptureSession)
             if (surfaceTexture != null) {
                 previewSurface = Surface(surfaceTexture)
                 if (isNeedRecreateCaptureSession) {
+                    isNeedRecreateCaptureSession = false
                     openCaptureSession()
                 } else {
                     openCamera()

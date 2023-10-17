@@ -80,9 +80,8 @@ class PreviewTexture(
         setInt("u_textureLUT", filterTextureId)
         setInt("u_filterType", filterType)
         // set vertex attribute
-        GLES20.glEnableVertexAttribArray(programHandle)
         GLES20.glVertexAttribPointer(programHandle, 2, GLES20.GL_FLOAT, false, 0, vertexBuffer)
-        GLES20.glEnableVertexAttribArray(hTexturePosition)
+        GLES20.glEnableVertexAttribArray(programHandle)
         GLES20.glVertexAttribPointer(
             hTexturePosition,
             2,
@@ -91,6 +90,7 @@ class PreviewTexture(
             0,
             textureVertexBuffer
         )
+        GLES20.glEnableVertexAttribArray(hTexturePosition)
         GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4)
         GLES20.glDisableVertexAttribArray(programHandle)
         GLES20.glDisableVertexAttribArray(hTexturePosition)
