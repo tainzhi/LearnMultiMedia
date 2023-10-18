@@ -19,26 +19,17 @@ object GlUtil {
     var glVersion = 3
 
     fun loadTextureFromRes(sourceId: Int): Int {
-        var textureId = IntArray(1)
-        GLES30.glGenTextures(1, textureId, 0)
-        if (textureId[0] == 0) {
-            Log.e(TAG, "loadTextureFromRes: create texture failed")
-        }
         val options = BitmapFactory.Options().apply {
             inScaled = false
         }
         val bitmap = BitmapFactory.decodeResource(CamApp.getInstance().resources, sourceId, options)
         if (bitmap == null) {
-            GLES30.glDeleteTextures(1, textureId, 0)
-            Log.e(TAG, "loadTextureFromRes: load bitmap failed")
+            Log.e(TAG, "loadTextureFromRes: bitmap is null")
         }
-        GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, textureId[0])
-        GLES30.glTexParameterf(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_MIN_FILTER, GLES30.GL_NEAREST.toFloat())
-        GLES30.glTexParameterf(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_MAG_FILTER, GLES30.GL_NEAREST.toFloat())
+        val textureId = generateTexture(GLES30.GL_TEXTURE_2D)
         GLUtils.texImage2D(GLES30.GL_TEXTURE_2D, 0, bitmap, 0)
         bitmap.recycle()
-        GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, 0)
-        return textureId[0]
+        return textureId
     }
 
     fun getShaderSource(sourceId: Int): String {
@@ -116,6 +107,10 @@ object GlUtil {
         }
     }
 
+    fun useProgram(program: Int) {
+        GLES20.glUseProgram(program)
+        checkGlError("glUseProgram")
+    }
     fun checkGlError(op: String) {
         val error = GLES20.glGetError();
         if (GLES20.GL_NO_ERROR != error) {
@@ -139,8 +134,15 @@ object GlUtil {
         }
     }
 
-    fun useProgram(program: Int) {
-        GLES20.glUseProgram(program)
-        checkGlError("glUseProgram")
+    fun generateTexture(type: Int): Int {
+        var textureId = IntArray(1)
+        GLES30.glGenTextures(1, textureId, 0)
+        checkGlError("glGenTextures")
+        GLES30.glBindTexture(type, textureId[0])
+        GLES30.glTexParameterf(type, GLES30.GL_TEXTURE_MIN_FILTER, GLES30.GL_NEAREST.toFloat())
+        GLES30.glTexParameterf(type, GLES30.GL_TEXTURE_MAG_FILTER, GLES30.GL_NEAREST.toFloat())
+        GLES30.glTexParameteri(type, GLES30.GL_TEXTURE_WRAP_S, GLES30.GL_CLAMP_TO_EDGE)
+        GLES30.glTexParameteri(type, GLES30.GL_TEXTURE_WRAP_T, GLES30.GL_CLAMP_TO_EDGE)
+        return textureId[0]
     }
 }

@@ -8,6 +8,7 @@ import android.opengl.GLSurfaceView
 import android.opengl.Matrix
 import android.util.Log
 import android.util.Size
+import com.tainzhi.sample.media.camera.gl.GlUtil
 import com.tainzhi.sample.media.camera.gl.textures.GridLine
 import com.tainzhi.sample.media.camera.gl.textures.PreviewTexture
 import com.tainzhi.sample.media.camera.gl.textures.TextureManager
@@ -108,7 +109,7 @@ class CameraPreviewRender : GLSurfaceView.Renderer {
         Log.d(TAG, "createSurfaceTexture: w${width}*h${height}")
         // texture 不能在UI thread创建，只能在其他线程创建，比如 GLThread
         // 在 onSurfaceCreated回调就在 GLThread 被执行
-        textureId = createTextureID()
+        textureId = GlUtil.generateTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES)
         surfaceTexture = SurfaceTexture(textureId).apply {
             setDefaultBufferSize(width, height)
             setOnFrameAvailableListener {
@@ -149,38 +150,6 @@ class CameraPreviewRender : GLSurfaceView.Renderer {
         Matrix.scaleM(textureMatrix, 0, if (isFrontCamera) 1.0f else -1.0f, -1.0f, 1.0f)
         // 1. move to center (0, 0)
         Matrix.translateM(textureMatrix, 0, -0.5f, -0.5f, 0f)
-    }
-
-    private fun createTextureID(): Int {
-        val texture = IntArray(1)
-        GLES20.glGenTextures(1, texture, 0) // 创建纹理，生成你要操作的纹理对象的索引
-        GLES20.glBindTexture(
-            GLES11Ext.GL_TEXTURE_EXTERNAL_OES,
-            texture[0]
-        ) // 绑定纹理，告诉OpenGL下面代码中对2D纹理的任何设置都是针对索引为0的纹理的
-        // glTexParameterf 是设置纹理贴图的参数属性
-        GLES20.glTexParameterf(
-            GLES11Ext.GL_TEXTURE_EXTERNAL_OES,
-            GL10.GL_TEXTURE_MIN_FILTER,
-            GL10.GL_LINEAR.toFloat()
-        )
-        GLES20.glTexParameterf(
-            GLES11Ext.GL_TEXTURE_EXTERNAL_OES,
-            GL10.GL_TEXTURE_MAG_FILTER,
-            GL10.GL_LINEAR.toFloat()
-        )
-        // OpenGL——纹理过滤函数glTexParameteri() 确定如何把纹理象素映射成像素.
-        GLES20.glTexParameteri(
-            GLES11Ext.GL_TEXTURE_EXTERNAL_OES,
-            GL10.GL_TEXTURE_WRAP_S,
-            GL10.GL_CLAMP_TO_EDGE
-        )
-        GLES20.glTexParameteri(
-            GLES11Ext.GL_TEXTURE_EXTERNAL_OES,
-            GL10.GL_TEXTURE_WRAP_T,
-            GL10.GL_CLAMP_TO_EDGE
-        )
-        return texture[0]
     }
 
     companion object {

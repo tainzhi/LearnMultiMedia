@@ -49,7 +49,8 @@ class PreviewTexture(
 
     override fun load(shaderFactory: ShaderFactory, previewRect: RectF) {
         super.load(shaderFactory, previewRect)
-        Log.v("PreviewTexture", "load: previewTexture load")
+        Log.v(TAG, "load: previewTexture load")
+        Log.d(TAG, "load: vertices:" + vertices.joinToString(", ") { it.toString() })
         vertexBuffer = ByteBuffer.allocateDirect(vertices.size * 4)
             .order(ByteOrder.nativeOrder()).asFloatBuffer()
         vertexBuffer.put(vertices).position(0)
@@ -61,6 +62,7 @@ class PreviewTexture(
     }
 
     override fun unload() {
+        Log.d(TAG, "unload: ")
         super.unload()
     }
 
@@ -98,6 +100,10 @@ class PreviewTexture(
 
     fun changeFilterType() {
         filterType =( filterType + 1) % 7
-        Log.d("qfq", "changeFilterType: type=" + filterType)
+        Log.d(TAG, "changeFilterType: type=" + filterType)
+    }
+
+    companion object {
+        private val TAG = PreviewTexture::class.java.simpleName
     }
 }
