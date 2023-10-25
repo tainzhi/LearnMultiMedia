@@ -33,8 +33,7 @@ class PreviewTexture(
     )
     private lateinit var vertexBuffer: FloatBuffer
     private lateinit var textureVertexBuffer: FloatBuffer
-    var previewTextureId = 0 //默认使用Texture2D0
-    private var filterTextureId = 1
+    private var filterTextureId: Int = 0
     var filterType = 0
 
     //纹理坐标
@@ -63,23 +62,25 @@ class PreviewTexture(
 
     override fun unload() {
         Log.d(TAG, "unload: ")
+        GlUtil.deleteTexture(textureId)
+        GlUtil.deleteTexture(filterTextureId)
         super.unload()
     }
 
     override fun onDraw() {
         super.onDraw()
-        val filterTexture = GlUtil.loadTextureFromRes(R.drawable.amatorka)
+        filterTextureId = GlUtil.loadTextureFromRes(R.drawable.amatorka)
         setMat4("u_TextureMatrix", textureMatrix)
         setVec2("u_TextureSize", floatArrayOf(textureSize.x, textureSize.y))
         setInt("u_IsTrueAspectRatio", isTrueAspectRatio)
         // bind preview texture
-        GLES20.glActiveTexture(GLES20.GL_TEXTURE0 + previewTextureId)
+        GLES20.glActiveTexture(PREVIEW_TEXTURE)
         GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, textureId)
-        setInt("u_TextureSampler", previewTextureId)
+        setInt("u_TextureSampler", PREVIEW_TEXTURE - GLES20.GL_TEXTURE0)
         // bind filter texture
-        GLES20.glActiveTexture(GLES20.GL_TEXTURE0 + filterTextureId)
-        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, filterTexture)
-        setInt("u_textureLUT", filterTextureId)
+        GLES20.glActiveTexture(FILTER_TEXTURE)
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, filterTextureId)
+        setInt("u_textureLUT", FILTER_TEXTURE - GLES20.GL_TEXTURE0)
         setInt("u_filterType", filterType)
         // set vertex attribute
         GLES20.glVertexAttribPointer(programHandle, 2, GLES20.GL_FLOAT, false, 0, vertexBuffer)
@@ -100,7 +101,7 @@ class PreviewTexture(
 
     fun changeFilterType() {
         filterType =( filterType + 1) % 7
-        Log.d(TAG, "changeFilterType: type=" + filterType)
+        Log.d(TAG, "changeFilterType: type=$filterType")
     }
 
     companion object {

@@ -7,6 +7,9 @@ import com.tainzhi.sample.media.camera.gl.Shader
 import com.tainzhi.sample.media.camera.gl.ShaderFactory
 
 abstract class TextureBase {
+    protected val PREVIEW_TEXTURE = GLES20.GL_TEXTURE0
+    protected val FILTER_TEXTURE = GLES20.GL_TEXTURE1
+    protected val OFFSCREEN_TEXTURE = GLES20.GL_TEXTURE3
     private var isInitialed = false
     protected var modelMatrix = FloatArray(16)
     protected var viewMatrix = FloatArray(16)
