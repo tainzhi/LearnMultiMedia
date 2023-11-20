@@ -58,6 +58,8 @@ class PreviewTexture(
             .order(ByteOrder.nativeOrder()).asFloatBuffer()
         textureVertexBuffer.put(textureVertices).position(0)
         hTexturePosition = GLES20.glGetAttribLocation(shader.programHandle, "a_TexturePosition")
+
+        filterTextureId = GlUtil.loadTextureFromRes(R.drawable.amatorka)
     }
 
     override fun unload() {
@@ -69,7 +71,6 @@ class PreviewTexture(
 
     override fun onDraw() {
         super.onDraw()
-        filterTextureId = GlUtil.loadTextureFromRes(R.drawable.amatorka)
         setMat4("u_TextureMatrix", textureMatrix)
         setVec2("u_TextureSize", floatArrayOf(textureSize.x, textureSize.y))
         setInt("u_IsTrueAspectRatio", isTrueAspectRatio)
