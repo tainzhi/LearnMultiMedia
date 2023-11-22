@@ -31,6 +31,7 @@ import java.util.List;
  * @mail: qfq61@qq.com
  * @date: 2020/8/17 23:32
  * @description: [copy自](https://blog.csdn.net/u012964944/article/details/73189206)
+ *  [github repo](https://github.com/1993hzw/Androids/blob/master/AndroidsDemo/src/com/example/androidsdemo/ScrollPickerViewDemo.java)
  **/
 
 public abstract class ScrollPickerView<T> extends View {
