@@ -22,9 +22,11 @@ import javax.microedition.khronos.egl.EGLSurface;
 import javax.microedition.khronos.opengles.GL;
 import javax.microedition.khronos.opengles.GL10;
 
-// 完全copy [GLSurfaceView](android.opengl.GLSurfaceView)
-// 添加了1467行 catch exception log
-// 方便打开static log 开关
+/**
+ * 完全copy {@link android.opengl.GLSurfaceView android.opengl.GLSurfaceView}
+ * <p>然后添加了1467行 catch exception log
+ * <p>方便打开static log 开关
+ **/
 public class GLSurfaceView extends SurfaceView implements SurfaceHolder.Callback2 {
     private final static String TAG = "GLSurfaceView";
     private final static boolean LOG_ATTACH_DETACH = false;
