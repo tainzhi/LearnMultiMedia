@@ -46,6 +46,8 @@ import com.tainzhi.sample.media.widget.CircleImageView
 import java.io.IOException
 import java.util.*
 import java.util.concurrent.ArrayBlockingQueue
+import java.util.concurrent.Semaphore
+import java.util.concurrent.TimeUnit
 
 /**
  * @author:       tainzhi
@@ -137,7 +139,7 @@ class CameraActivity : AppCompatActivity() {
     private lateinit var zslImageWriter: ImageWriter
 
     // a [Semaphore] to prevent the app from exiting before closing the camera
-    // private val cameraOpenCloseLock = Semaphore(1)
+    private val cameraOpenCloseLock = Semaphore(1)
 
     private lateinit var capturedImageUri: Uri
     private lateinit var cameraInfo: CameraInfoCache
@@ -180,7 +182,7 @@ class CameraActivity : AppCompatActivity() {
 
     private val cameraDeviceCallback = object : CameraDevice.StateCallback() {
         override fun onOpened(p0: CameraDevice) {
-            // cameraOpenCloseLock.release()
+            cameraOpenCloseLock.release()
             this@CameraActivity.cameraDevice = p0
             Log.i(TAG, "camera onOpened: ")
             openCaptureSession()
@@ -189,7 +191,7 @@ class CameraActivity : AppCompatActivity() {
         override fun onDisconnected(p0: CameraDevice) {
             super.onClosed(p0)
             Log.i(TAG, "camera onDisconnected: ")
-            // cameraOpenCloseLock.release()
+            cameraOpenCloseLock.release()
             closeCaptureSession()
             p0.close()
             this@CameraActivity.cameraDevice = null
@@ -369,11 +371,10 @@ class CameraActivity : AppCompatActivity() {
     }
 
     override fun onPause() {
-        Log.i(TAG, "onPause: begin")
+        Log.i(TAG, "onPause: ")
         isHasSetupCameraOutputs = false
         rotationChangeMonitor.disable()
         closeCaptureSession()
-        Log.i(TAG, "onPause: end")
         super.onPause()
     }
 
@@ -428,9 +429,9 @@ class CameraActivity : AppCompatActivity() {
         sensorOrientation = cameraInfo.sensorOrientation
         try {
             // Wait for camera to open - 2.5 seconds is sufficient
-            // if (!cameraOpenCloseLock.tryAcquire(2500, TimeUnit.MILLISECONDS)) {
-            //     throw RuntimeException("Time out waiting to lock camera opening.")
-            // }
+            if (!cameraOpenCloseLock.tryAcquire(2500, TimeUnit.MILLISECONDS)) {
+                throw RuntimeException("Time out waiting to lock camera opening.")
+            }
             if (ActivityCompat.checkSelfPermission(
                             this,
                             Manifest.permission.CAMERA
@@ -457,15 +458,13 @@ class CameraActivity : AppCompatActivity() {
     private fun closeCamera() {
         Log.i(TAG, "closeCamera: ")
         try {
-            // cameraOpenCloseLock.acquire()
+            cameraOpenCloseLock.acquire()
             cameraDevice?.close()
             cameraDevice = null
-        // } catch (e: InterruptedException) {
-        //     throw RuntimeException("Interrupted while trying to lock camera closing.", e)
-        } catch (e: Exception) {
-            Log.e(TAG, e.toString())
+        } catch (e: InterruptedException) {
+            throw RuntimeException("Interrupted while trying to lock camera closing.", e)
         } finally {
-            // cameraOpenCloseLock.release()
+            cameraOpenCloseLock.release()
             Log.i(TAG, "closeCamera: released")
         }
         if (isNeedReopenCamera) {
@@ -733,6 +732,7 @@ class CameraActivity : AppCompatActivity() {
     }
 
     private fun closeCaptureSession(switchMode:Boolean = false) {
+        // closeCaptureSession -> session.onClosed() -> closeCamera()
         Log.i(TAG, "closeCaptureSession: ")
         currentCaptureSession?.close()
         currentCaptureSession = null
