@@ -46,8 +46,6 @@ import com.tainzhi.sample.media.widget.CircleImageView
 import java.io.IOException
 import java.util.*
 import java.util.concurrent.ArrayBlockingQueue
-import java.util.concurrent.Semaphore
-import java.util.concurrent.TimeUnit
 
 /**
  * @author:       tainzhi
@@ -139,7 +137,7 @@ class CameraActivity : AppCompatActivity() {
     private lateinit var zslImageWriter: ImageWriter
 
     // a [Semaphore] to prevent the app from exiting before closing the camera
-    private val cameraOpenCloseLock = Semaphore(1)
+    // private val cameraOpenCloseLock = Semaphore(1)
 
     private lateinit var capturedImageUri: Uri
     private lateinit var cameraInfo: CameraInfoCache
@@ -182,7 +180,7 @@ class CameraActivity : AppCompatActivity() {
 
     private val cameraDeviceCallback = object : CameraDevice.StateCallback() {
         override fun onOpened(p0: CameraDevice) {
-            cameraOpenCloseLock.release()
+            // cameraOpenCloseLock.release()
             this@CameraActivity.cameraDevice = p0
             Log.i(TAG, "camera onOpened: ")
             openCaptureSession()
@@ -190,16 +188,22 @@ class CameraActivity : AppCompatActivity() {
 
         override fun onDisconnected(p0: CameraDevice) {
             super.onClosed(p0)
-            Log.i(TAG, "camera onClosed: ")
-            cameraOpenCloseLock.release()
+            Log.i(TAG, "camera onDisconnected: ")
+            // cameraOpenCloseLock.release()
+            closeCaptureSession()
             p0.close()
             this@CameraActivity.cameraDevice = null
         }
 
         override fun onError(p0: CameraDevice, p1: Int) {
             onDisconnected(p0)
-            Log.i(TAG, "onError: $p0, $p1")
+            Log.e(TAG, "camera onError: $p0, $p1")
             finish()
+        }
+
+        override fun onClosed(camera: CameraDevice) {
+            super.onClosed(camera)
+            Log.i(TAG, "camera onClosed: ")
         }
     }
 
@@ -311,7 +315,7 @@ class CameraActivity : AppCompatActivity() {
                 isNeedReopenCamera = true
                 useCameraFront = !useCameraFront
                 Log.d(TAG, "click switch camera icon")
-                closeCamera()
+                closeCaptureSession()
             }
         }
 
@@ -347,6 +351,12 @@ class CameraActivity : AppCompatActivity() {
         }
     }
 
+    override fun onStart() {
+        super.onStart()
+        cameraPreviewView.onResume()
+        Log.d(TAG, "onStart: ")
+    }
+
     override fun onResume() {
         super.onResume()
         rotationChangeMonitor.enable()
@@ -354,20 +364,23 @@ class CameraActivity : AppCompatActivity() {
         if (checkPermissions()) {
             val rect = windowManager.currentWindowMetrics.bounds
             windowSize = Size(rect.width(), rect.height())
-            cameraPreviewView.onResume()
             cameraPreviewView.surfaceTextureListener = surfaceTextureListener
         }
     }
 
     override fun onPause() {
-        Log.i(TAG, "onPause: ")
+        Log.i(TAG, "onPause: begin")
         isHasSetupCameraOutputs = false
         rotationChangeMonitor.disable()
-        cameraPreviewView.onPause()
-        if (isCameraOpen) {
-            closeCamera()
-        }
+        closeCaptureSession()
+        Log.i(TAG, "onPause: end")
         super.onPause()
+    }
+
+    override fun onStop() {
+        Log.d(TAG, "onStop: ")
+        cameraPreviewView.onPause()
+        super.onStop()
     }
 
     override fun onDestroy() {
@@ -415,9 +428,9 @@ class CameraActivity : AppCompatActivity() {
         sensorOrientation = cameraInfo.sensorOrientation
         try {
             // Wait for camera to open - 2.5 seconds is sufficient
-            if (!cameraOpenCloseLock.tryAcquire(2500, TimeUnit.MILLISECONDS)) {
-                throw RuntimeException("Time out waiting to lock camera opening.")
-            }
+            // if (!cameraOpenCloseLock.tryAcquire(2500, TimeUnit.MILLISECONDS)) {
+            //     throw RuntimeException("Time out waiting to lock camera opening.")
+            // }
             if (ActivityCompat.checkSelfPermission(
                             this,
                             Manifest.permission.CAMERA
@@ -433,7 +446,7 @@ class CameraActivity : AppCompatActivity() {
                 Log.e(TAG, "openCamera: not grand permission")
                 return
             }
-            cameraManager.openCamera(cameraId, cameraDeviceCallback, cameraHandler)
+            cameraManager.openCamera(cameraId, cameraExecutor, cameraDeviceCallback)
         } catch (e: CameraAccessException) {
             Log.e(TAG, e.toString())
         } catch (e: InterruptedException) {
@@ -443,16 +456,16 @@ class CameraActivity : AppCompatActivity() {
 
     private fun closeCamera() {
         Log.i(TAG, "closeCamera: ")
-        if (currentCaptureSession == null) return
         try {
-            cameraOpenCloseLock.acquire()
-            closeCaptureSession()
+            // cameraOpenCloseLock.acquire()
             cameraDevice?.close()
             cameraDevice = null
-        } catch (e: InterruptedException) {
-            throw RuntimeException("Interrupted while trying to lock camera closing.", e)
+        // } catch (e: InterruptedException) {
+        //     throw RuntimeException("Interrupted while trying to lock camera closing.", e)
+        } catch (e: Exception) {
+            Log.e(TAG, e.toString())
         } finally {
-            cameraOpenCloseLock.release()
+            // cameraOpenCloseLock.release()
             Log.i(TAG, "closeCamera: released")
         }
         if (isNeedReopenCamera) {
@@ -632,9 +645,20 @@ class CameraActivity : AppCompatActivity() {
                 override fun onClosed(session: CameraCaptureSession) {
                     super.onClosed(session)
                     Log.d(TAG, "CaptureSession onClosed: ")
+
+                    jpgImageReader.close()
+                    if (isEnableZsl) {
+                        yuvImageReader.close()
+                        zslImageWriter.close()
+                    }
+
+                    previewSurface.release()
+                    cameraPreviewView.releaseSurface()
                     if (isNeedRecreateCaptureSession) {
                         Log.d(TAG, "need to recreate CaptureSession")
                         setUpCameraOutputs()
+                    } else {
+                        closeCamera()
                     }
                 }
 
@@ -647,10 +671,10 @@ class CameraActivity : AppCompatActivity() {
                 }
 
                 override fun onConfigured(session: CameraCaptureSession) {
-                    Log.d(TAG, "onConfigured: ")
+                    Log.d(TAG, "CaptureSession onConfigured: ")
                     currentCaptureSession = session
                     updatePreview()
-                    Log.d(TAG, "openCaptureSession onReady isReprocessable=${session.isReprocessable} ")
+                    Log.d(TAG, "openCaptureSession onConfigured isReprocessable=${session.isReprocessable} ")
                     if (session.isReprocessable) {
                         zslImageWriter = ImageWriter.newInstance(session.inputSurface!!, ZSL_IMAGE_WRITER_SIZE)
                         zslImageWriter.setOnImageReleasedListener({ _ ->
@@ -665,7 +689,7 @@ class CameraActivity : AppCompatActivity() {
                 override fun onReady(session: CameraCaptureSession) {
                     // When the session is ready, we start displaying the preview.
                     super.onReady(session)
-                    Log.d(TAG, "capture session onReady()")
+                    Log.d(TAG, "CaptureSession onReady()")
                 }
             }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -708,18 +732,10 @@ class CameraActivity : AppCompatActivity() {
         }
     }
 
-    private fun closeCaptureSession() {
+    private fun closeCaptureSession(switchMode:Boolean = false) {
         Log.i(TAG, "closeCaptureSession: ")
         currentCaptureSession?.close()
         currentCaptureSession = null
-        jpgImageReader.close()
-        if (isEnableZsl) {
-            yuvImageReader.close()
-            zslImageWriter.close()
-        }
-        previewSurface.release()
-        cameraPreviewView.releaseSurface()
-        isCameraOpen = false
     }
 
     private fun updatePreview() {

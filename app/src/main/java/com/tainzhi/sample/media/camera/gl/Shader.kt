@@ -7,6 +7,7 @@ import android.util.Log
 import android.util.LongSparseArray
 import android.util.SparseArray
 import androidx.annotation.RawRes
+import androidx.core.util.isEmpty
 import androidx.core.util.isNotEmpty
 import com.tainzhi.sample.media.BuildConfig
 import com.tainzhi.sample.media.CamApp
@@ -42,6 +43,7 @@ class Shader(val vertexShaderSourceId: Int, val fragmentShaderSourceId: Int) {
 
 enum class ShaderType(val vsId: Int, val fsId: Int) {
     CAMERA_PREVIEW(R.raw.preview_vs, R.raw.preview_fs),
+    CAMERA_PREVIEW_BLUR(R.raw.preview_blur_vs, R.raw.preview_blur_fs),
     FRAME(R.raw.frame_vs, R.raw.frame_fs),
 }
 
@@ -60,7 +62,14 @@ class ShaderFactory {
 
     fun isLoaded() = shaders.isNotEmpty()
 
-    fun getShader(shaderType: ShaderType): Shader = shaders[shaderType.ordinal]
+    fun getShader(shaderType: ShaderType): Shader {
+          if (shaders.isEmpty()) throw RuntimeException("Shaders is empty")
+          return shaders[shaderType.ordinal]
+    }
+
+    companion object {
+        private val TAG = ShaderFactory::class.java.name
+    }
 }
 
 class ShaderCache {

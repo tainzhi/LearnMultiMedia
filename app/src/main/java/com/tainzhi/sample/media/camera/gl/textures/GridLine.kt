@@ -11,6 +11,7 @@ class GridLine : TextureBase() {
     private var lineWidth = 1f
     private var linePadding = 20f
     private var alpha = 0.9f
+    private lateinit var shaderFactory: ShaderFactory
 
     private fun generateLines(previewRectF: RectF) {
         val enableGridLine = SettingsManager.getInstance().getGridLineEnable()
@@ -202,19 +203,24 @@ class GridLine : TextureBase() {
         }
     }
 
-    override fun load(shaderFactory: ShaderFactory, previewRect: RectF) {
-        super.load(shaderFactory, previewRect)
-        generateLines(previewRect)
-        components.forEach {
-            it.load(shaderFactory, previewRect)
-            it.lineWidth = lineWidth
-            it.alpha = alpha
-            it.setMatrix(modelMatrix, viewMatrix, projectionMatrix)
-        }
+    override fun load(shaderFactory: ShaderFactory) {
+        super.load(shaderFactory)
+        this.shaderFactory = shaderFactory
     }
     override fun onDraw() {
         components.forEach {
             it.draw()
+        }
+    }
+
+    fun setLayout(previewRect: RectF) {
+        components.clear()
+        generateLines(previewRect)
+        components.forEach {
+            it.load(shaderFactory)
+            it.lineWidth = lineWidth
+            it.alpha = alpha
+            it.setMatrix(modelMatrix, viewMatrix, projectionMatrix)
         }
     }
 

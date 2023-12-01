@@ -1,6 +1,5 @@
 package com.tainzhi.sample.media.camera.gl.textures
 
-import android.graphics.RectF
 import android.opengl.GLES20
 import com.tainzhi.sample.media.camera.gl.GlUtil
 import com.tainzhi.sample.media.camera.gl.Shader
@@ -14,7 +13,7 @@ abstract class TextureBase {
     protected var modelMatrix = FloatArray(16)
     protected var viewMatrix = FloatArray(16)
     protected var projectionMatrix = FloatArray(16)
-    open fun load(shaderFactory: ShaderFactory, previewRect: RectF) {
+    open fun load(shaderFactory: ShaderFactory) {
         isInitialed = true
     }
     open fun unload() {
@@ -41,15 +40,14 @@ abstract class Texture: TextureBase() {
 
     private var attributeMap = hashMapOf<String, Int>()
     protected lateinit var shaderFactory: ShaderFactory
-    protected lateinit var previewRect: RectF
     var color = floatArrayOf(1f, 1f, 1f, 1f)
     var alpha = 1f
     var lineWidth = 1f
+    var visibility = true
 
-    override fun load(shaderFactory: ShaderFactory, previewRect: RectF) {
-        super.load(shaderFactory, previewRect)
+    override fun load(shaderFactory: ShaderFactory) {
+        super.load(shaderFactory)
         this.shaderFactory = shaderFactory
-        this.previewRect = previewRect
         shader = onSetShader()
         programHandle = GLES20.glGetAttribLocation(shader.programHandle, "a_Position")
     }
@@ -65,12 +63,14 @@ abstract class Texture: TextureBase() {
     }
 
     override fun onDraw() {
-        onClear()
-        shader.use()
-        // 4x4 matrix
-        setMat4("u_ModelMatrix", modelMatrix)
-        setMat4("u_ViewMatrix", viewMatrix)
-        setMat4("u_ProjectionMatrix", projectionMatrix)
+        if (visibility) {
+            onClear()
+            shader.use()
+            // 4x4 matrix
+            setMat4("u_ModelMatrix", modelMatrix)
+            setMat4("u_ViewMatrix", viewMatrix)
+            setMat4("u_ProjectionMatrix", projectionMatrix)
+        }
     }
 
     protected fun setMat4(matName: String, mat: FloatArray) {

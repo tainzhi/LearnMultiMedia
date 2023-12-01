@@ -3,14 +3,12 @@ package com.tainzhi.sample.media.camera
 import android.content.Context
 import android.graphics.RectF
 import android.graphics.SurfaceTexture
-import android.opengl.GLSurfaceView
 import android.util.AttributeSet
 import android.util.Log
 import android.util.Size
 import com.tainzhi.sample.media.CamApp
 import com.tainzhi.sample.media.camera.gl.EglUtil
 import com.tainzhi.sample.media.camera.gl.GlUtil
-import com.tainzhi.sample.media.camera.gl.textures.TextureManager
 import javax.microedition.khronos.egl.EGL10
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.egl.EGLContext
@@ -23,10 +21,7 @@ class CameraPreviewView : GLSurfaceView {
     private var eglSurface = EGL10.EGL_NO_SURFACE
     private var eglContext = EGL10.EGL_NO_CONTEXT
 
-    private val textureManager = TextureManager()
-    private val cameraPreviewRender = CameraPreviewRender().apply {
-        textureManager = this@CameraPreviewView.textureManager
-    }
+    private val cameraPreviewRender = CameraPreviewRender()
     constructor(context: Context): super(context) {}
 
     constructor(context: Context, attr: AttributeSet) : super(context, attr) {
@@ -44,10 +39,10 @@ class CameraPreviewView : GLSurfaceView {
             cameraPreviewRender.surfaceTextureListener = value
         }
 
-    fun setTextureSize(previewTextureSize: Size, isTrueAspectRatio: Boolean, rectF: RectF, isFrontCamera: Boolean) {
+    fun setTextureSize(previewTextureSize: Size, isTrueAspectRatio: Boolean, previewRectF: RectF, isFrontCamera: Boolean) {
         queueEvent {
             cameraPreviewRender.createSurfaceTexture(previewTextureSize.width, previewTextureSize.height)
-            cameraPreviewRender.setTextureSize(previewTextureSize, isTrueAspectRatio,rectF, isFrontCamera)
+            cameraPreviewRender.setTextureSize(previewTextureSize, isTrueAspectRatio,previewRectF, isFrontCamera)
         }
     }
 
@@ -66,6 +61,12 @@ class CameraPreviewView : GLSurfaceView {
     fun releaseSurface() {
         queueEvent {
             cameraPreviewRender.releaseSurfaceTexture()
+        }
+    }
+
+    fun copyFrame() {
+        queueEvent {
+            cameraPreviewRender.copyFrame()
         }
     }
 
@@ -113,13 +114,13 @@ class CameraPreviewView : GLSurfaceView {
         override fun createContext(egl: EGL10?, display: EGLDisplay?, eglConfig: EGLConfig?): EGLContext {
             if (CamApp.DEBUG) Log.d(TAG, "createContext: ")
             eglContext = createContextImpl(egl!!, display!!, eglConfig!!)
-            textureManager.load()
+            cameraPreviewRender.textureManager.load()
             return eglContext
         }
 
         override fun destroyContext(egl: EGL10?, display: EGLDisplay?, context: EGLContext?) {
             if (CamApp.DEBUG) Log.d(TAG, "destroyContext: ")
-            textureManager.unload()
+            cameraPreviewRender.textureManager.unload()
             if (!EglUtil.destroyContext(egl!!, display!!, context!!)) {
                 Log.w(TAG, "failed to destroy OpenGL ES context")
             }

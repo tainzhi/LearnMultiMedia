@@ -1,6 +1,5 @@
 package com.tainzhi.sample.media.camera.gl.textures
 
-import android.graphics.RectF
 import android.opengl.GLES20
 import com.tainzhi.sample.media.camera.gl.GlUtil
 import com.tainzhi.sample.media.camera.gl.Shader
@@ -20,8 +19,8 @@ class CircularArcTexture(val center: Vertex3F, val radius: Float, val startAngle
 
     override fun onSetShader(): Shader = shaderFactory.getShader(ShaderType.FRAME)
 
-    override fun load(shaderFactory: ShaderFactory, previewRect: RectF) {
-        super.load(shaderFactory, previewRect)
+    override fun load(shaderFactory: ShaderFactory) {
+        super.load(shaderFactory)
         generateVertices()
         vertexBuffer = ByteBuffer.allocateDirect(vertices.size * 4)
             .order(ByteOrder.nativeOrder()).asFloatBuffer()

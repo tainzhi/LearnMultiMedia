@@ -10,9 +10,10 @@ class TextureManager {
     private val textures = mutableListOf<TextureBase>()
 
     var previewRectF: RectF = RectF()
-    private var isLoaded = false
+    var isReady = false
 
     fun addTextures(textures: List<TextureBase>) {
+        Log.d(TAG, "addTextures: ")
         this.textures.addAll(textures)
     }
 
@@ -22,24 +23,22 @@ class TextureManager {
     }
 
     fun onDraw() {
-        if (textures.size > 0 && !isLoaded) {
+        if (textures.size > 0 && !isReady) {
             shaderFactory.loadShaders()
             Log.d(TAG, "onDraw: loadShaders.size=${textures.size}")
-            textures.forEach { it.load(shaderFactory, previewRectF) }
-            isLoaded = true
+            textures.forEach { it.load(shaderFactory) }
         }
-        if (isLoaded) {
+        if (isReady) {
             textures.forEach { it.draw() }
         }
     }
 
     fun unload() {
         Log.d(TAG, "unload: ")
-        isLoaded = false
+        isReady = false
         textures.forEach {
             it.unload()
         }
-        textures.clear()
         shaderFactory.clearShaders()
     }
 

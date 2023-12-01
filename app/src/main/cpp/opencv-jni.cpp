@@ -18,9 +18,9 @@ Java_com_tainzhi_sample_media_CamApp_initOpenCV(JNIEnv *env, jobject thiz) {
     cv::ocl::Context ctx = cv::ocl::Context::getDefault();
     if (!ctx.ptr())
     {
-        LOGV("qfq", "opencv+opencl is not available");
+        LOGV("qfq", "opencv:opencl is not available");
     } else {
-        LOGV("qfq", "opencv+opencl is available");
+        LOGV("qfq", "opencv:opencl is available");
     }
     cv::UMat umat;
 }

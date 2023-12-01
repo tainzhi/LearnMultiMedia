@@ -14,23 +14,12 @@ import java.nio.ByteOrder
 import java.nio.FloatBuffer
 
 class PreviewTexture(
-    val textureId: Int,
-    val textureSize: Vertex2F,
-    var textureMatrix: FloatArray,
-    val isTrueAspectRatio: Int,
-    previewRectF: RectF
-
 ) : Texture() {
     private var hTexturePosition = 0
-
-    //顶点坐标
-    // 忽略z维度，只保留x,y维度
-    private var vertices = floatArrayOf(
-        previewRectF.left, previewRectF.top,
-        previewRectF.left, previewRectF.bottom,
-        previewRectF.right, previewRectF.top,
-        previewRectF.right, previewRectF.bottom
-    )
+    private lateinit var textureSize: Vertex2F
+    private lateinit var textureMatrix: FloatArray
+    private var isTrueAspectRatio: Int = 0
+    private var textureId: Int = 0
     private lateinit var vertexBuffer: FloatBuffer
     private lateinit var textureVertexBuffer: FloatBuffer
     private var filterTextureId: Int = 0
@@ -46,20 +35,13 @@ class PreviewTexture(
 
     override fun onSetShader(): Shader = shaderFactory.getShader(ShaderType.CAMERA_PREVIEW)
 
-    override fun load(shaderFactory: ShaderFactory, previewRect: RectF) {
-        super.load(shaderFactory, previewRect)
-        Log.v(TAG, "load: previewTexture load")
-        Log.d(TAG, "load: vertices:" + vertices.joinToString(", ") { it.toString() })
-        vertexBuffer = ByteBuffer.allocateDirect(vertices.size * 4)
-            .order(ByteOrder.nativeOrder()).asFloatBuffer()
-        vertexBuffer.put(vertices).position(0)
-
+    override fun load(shaderFactory: ShaderFactory) {
+        super.load(shaderFactory)
+        hTexturePosition = GLES20.glGetAttribLocation(shader.programHandle, "a_TexturePosition")
+        filterTextureId = GlUtil.loadTextureFromRes(R.drawable.amatorka)
         textureVertexBuffer = ByteBuffer.allocateDirect(textureVertices.size * 4)
             .order(ByteOrder.nativeOrder()).asFloatBuffer()
         textureVertexBuffer.put(textureVertices).position(0)
-        hTexturePosition = GLES20.glGetAttribLocation(shader.programHandle, "a_TexturePosition")
-
-        filterTextureId = GlUtil.loadTextureFromRes(R.drawable.amatorka)
     }
 
     override fun unload() {
@@ -103,6 +85,33 @@ class PreviewTexture(
     fun changeFilterType() {
         filterType =( filterType + 1) % 7
         Log.d(TAG, "changeFilterType: type=$filterType")
+    }
+
+    fun setLayout(
+        textureId: Int,
+        textureSize: Vertex2F,
+        textureMatrix: FloatArray,
+        isTrueAspectRatio: Int,
+        previewRectF: RectF
+    ) {
+        Log.d(TAG, "setLayout: ")
+        //顶点坐标
+        // 忽略z维度，只保留x,y维度
+        val vertices = floatArrayOf(
+            previewRectF.left, previewRectF.top,
+            previewRectF.left, previewRectF.bottom,
+            previewRectF.right, previewRectF.top,
+            previewRectF.right, previewRectF.bottom
+        )
+
+        vertexBuffer = ByteBuffer.allocateDirect(vertices.size * 4)
+            .order(ByteOrder.nativeOrder()).asFloatBuffer()
+        vertexBuffer.put(vertices).position(0)
+
+        this.textureId = textureId
+        this.textureSize = textureSize
+        this.textureMatrix = textureMatrix
+        this.isTrueAspectRatio = isTrueAspectRatio
     }
 
     companion object {

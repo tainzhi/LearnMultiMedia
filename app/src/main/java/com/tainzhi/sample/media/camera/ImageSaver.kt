@@ -29,7 +29,7 @@ class ImageSaver(
     override fun run() {
         Log.d(TAG, "begin run")
         Kpi.start(Kpi.TYPE.SHOT_TO_SAVE_IMAGE)
-        val relativeLocation = Environment.DIRECTORY_PICTURES
+        val relativeLocation = Environment.DIRECTORY_DCIM + "/Camera"
         val fileName = "IMG_${SimpleDateFormat("yyyyMMddHHmmssSSS", Locale.US).format(image.timestamp)}.jpg"
         val contentValues = ContentValues().apply {
             put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)

@@ -1,6 +1,5 @@
 package com.tainzhi.sample.media.camera.gl.textures
 
-import android.graphics.RectF
 import android.opengl.GLES20
 import com.tainzhi.sample.media.camera.gl.GlUtil
 import com.tainzhi.sample.media.camera.gl.Shader
@@ -14,8 +13,8 @@ class LineTexture(start: Vertex3F, end: Vertex3F): Texture() {
     private val vertices = floatArrayOf(start.x, start.y, start.z, end.x, end.y, end.z)
     private lateinit var vertexBuffer:  FloatBuffer
 
-    override fun load(shaderFactory: ShaderFactory, previewRect: RectF) {
-        super.load(shaderFactory, previewRect)
+    override fun load(shaderFactory: ShaderFactory) {
+        super.load(shaderFactory)
         vertexBuffer = ByteBuffer.allocateDirect(vertices.size * 4)
             .order(ByteOrder.nativeOrder()).asFloatBuffer()
         vertexBuffer.put(vertices).position(0)
