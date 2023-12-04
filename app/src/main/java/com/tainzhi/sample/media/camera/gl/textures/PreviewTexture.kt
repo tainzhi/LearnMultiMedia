@@ -45,7 +45,6 @@ class PreviewTexture(
     }
 
     override fun unload() {
-        Log.d(TAG, "unload: ")
         GlUtil.deleteTexture(textureId)
         GlUtil.deleteTexture(filterTextureId)
         super.unload()

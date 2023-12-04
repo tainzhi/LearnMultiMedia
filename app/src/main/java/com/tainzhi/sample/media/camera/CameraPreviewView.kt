@@ -50,6 +50,10 @@ class CameraPreviewView : GLSurfaceView {
         cameraPreviewRender.changeFilterType()
     }
 
+    fun changePreviewAspectRatio() {
+        cameraPreviewRender.changePreviewAspectRatio()
+    }
+
     override fun onResume() {
         super.onResume()
     }

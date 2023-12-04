@@ -2,12 +2,10 @@ package com.tainzhi.sample.media.camera
 
 import android.graphics.RectF
 import android.graphics.SurfaceTexture
-import android.opengl.GLES11Ext
 import android.opengl.GLES20
 import android.opengl.Matrix
 import android.util.Log
 import android.util.Size
-import com.tainzhi.sample.media.camera.gl.GlUtil
 import com.tainzhi.sample.media.camera.gl.textures.BlurPreviewTexture
 import com.tainzhi.sample.media.camera.gl.textures.GridLine
 import com.tainzhi.sample.media.camera.gl.textures.PreviewTexture
@@ -30,7 +28,9 @@ class CameraPreviewRender : GLSurfaceView.Renderer {
     var surfaceTextureListener: CameraPreviewView.SurfaceTextureListener? = null
     private var isFrontCamera = false
     private var textureId = 0
-    lateinit var blurPreviewTexture: BlurPreviewTexture
+    private val blurPreviewTexture = BlurPreviewTexture().apply {
+        visibility = false
+    }
     private val previewTexture = PreviewTexture()
     private val gridLine = GridLine()
     var textureManager: TextureManager = TextureManager().apply {
@@ -83,7 +83,6 @@ class CameraPreviewRender : GLSurfaceView.Renderer {
         textureManager.apply {
             this.previewRectF = previewRectF
             setMatrix(modelMatrix, viewMatrix, projectionMatrix)
-            Log.d(TAG, "setlayout")
             previewTexture.setLayout(
                 textureId,
                 Vertex2F(
@@ -94,15 +93,34 @@ class CameraPreviewRender : GLSurfaceView.Renderer {
                 if (isTrueAspectRatio) 1 else 0,
                 previewRectF
             )
+            blurPreviewTexture.setLayout(
+                textureId,
+                Vertex2F(
+                    previewTextureSize.width.toFloat(),
+                    previewTextureSize.height.toFloat()
+                ),
+                textureMatrix,
+                if (isTrueAspectRatio) 1 else 0,
+                previewRectF
+            )
+            blurPreviewTexture.visibility = false
             // must after setMatrix
             gridLine.setLayout(previewRectF)
-            Log.d(TAG, "setTextureSize: isReady=True")
             isReady = true
         }
     }
 
     fun changeFilterType() {
         previewTexture.changeFilterType()
+    }
+
+    fun changePreviewAspectRatio() {
+        // todo: implement
+        // blurPreviewTexture.visibility = true
+        // blurPreviewTexture.toggleBindFrameBuffer(true)
+        // previewTexture.onDraw()
+        // blurPreviewTexture.toggleBindFrameBuffer(false)
+        // blurPreviewTexture.onDraw()
     }
 
     fun copyFrame() {
@@ -119,7 +137,6 @@ class CameraPreviewRender : GLSurfaceView.Renderer {
         Log.d(TAG, "createSurfaceTexture: w${width}*h${height}")
         // texture 不能在UI thread创建，只能在其他线程创建，比如 GLThread
         // 在 onSurfaceCreated回调就在 GLThread 被执行
-        textureId = GlUtil.generateTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES)
         surfaceTexture = SurfaceTexture(textureId).apply {
             setDefaultBufferSize(width, height)
             setOnFrameAvailableListener {

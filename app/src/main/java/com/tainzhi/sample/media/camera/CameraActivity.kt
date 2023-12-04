@@ -283,9 +283,10 @@ class CameraActivity : AppCompatActivity() {
         rootView = _binding.root
         setFullScreen()
         controlBar = ControlBar(this, _binding) {
-            Log.d(TAG, "onPreviewAspectRationChange")
+            Log.d(TAG, "onPreviewAspectRatioChange")
             closeCaptureSession()
             isNeedRecreateCaptureSession = true
+            cameraPreviewView.changePreviewAspectRatio()
         }
         FilterBar(this, _binding) {
             cameraPreviewView.changeFilterType()
