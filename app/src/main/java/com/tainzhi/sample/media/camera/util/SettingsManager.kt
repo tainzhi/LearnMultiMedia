@@ -10,6 +10,7 @@ class SettingsManager(val context: Context) {
     private val spEditor = sp.edit()
     fun setBoolean(key: String, value: Boolean, defaultValue: Boolean = false) {
         spEditor.putBoolean(key, value)
+        commit()
     }
 
     fun getBoolean(key: String, defaultValue: Boolean = false): Boolean {
@@ -67,6 +68,7 @@ class SettingsManager(val context: Context) {
         val KEY_PHOTO_ZSL = "photo_zsl"
         val PHOTO_ZSL_DEFAULT_VALUE = true
         val KEY_PREVIEW_RATIO = "preview_ratio"
+        val KEY_HDR_ENABLE = "key_hdr_enable"
         val KEY_LAST_CAPTURED_MEDIA_URI = "key_last_captured_media_uri"
         val PREVIEW_RATIO_DEFAULT_VALUE = PreviewAspectRatio.RATIO_FULL
         val GRID_TYPE_DEFAULT_VALUE = GridLineType.GOLDEN_SPIRAL

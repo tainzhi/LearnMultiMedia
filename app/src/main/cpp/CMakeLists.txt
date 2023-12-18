@@ -9,7 +9,9 @@ add_library( # Specifies the name of the library.
         opencv
         # Sets the library as a shared library.
         SHARED
-        opencv-jni.cpp )
+        opencv-jni.cpp
+        image-processor.cpp
+        )
 include_directories(${OpenCV_INCLUDE_DIRS}) # Not needed for CMake >= 2.8.11
 message("opencv_include_dirs=${OpenCV_INCLUDE_DIRS}")
 target_link_libraries(opencv

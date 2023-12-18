@@ -7,6 +7,7 @@ import android.hardware.camera2.CameraManager
 import android.hardware.camera2.CameraMetadata
 import android.hardware.camera2.params.StreamConfigurationMap
 import android.util.Log
+import android.util.Range
 import android.util.Size
 import java.lang.Long.signum
 import java.util.Collections
@@ -27,6 +28,15 @@ class CameraInfoCache(cameraManager: CameraManager, useFrontCamera: Boolean = fa
     private var edgeModes: IntArray? = null
     private var streamConfigurationMap: StreamConfigurationMap? = null
     private var hardwareLevel: Int = 0
+    var supportIsoRange = false
+    var minIso = 0
+    var maxIso = 0
+    var supportExposureTime = false
+    var supportExposureBracketing = false
+    var minExposureTime = 0
+    var maxExposureTime = 0
+    val exposureBracketingImages = IMAGE_BUFFER_SIZE
+    val exposureBracketingStops = 2.0
     var reprocessingNoiseMode = CameraCharacteristics.NOISE_REDUCTION_MODE_HIGH_QUALITY
     var reprocessingEdgeMode = CameraCharacteristics.EDGE_MODE_HIGH_QUALITY
 
@@ -67,6 +77,22 @@ class CameraInfoCache(cameraManager: CameraManager, useFrontCamera: Boolean = fa
         sensorOrientation = cameraCharacteristics!!.get(CameraCharacteristics.SENSOR_ORIENTATION)
         isflashSupported =
             cameraCharacteristics.get(CameraCharacteristics.FLASH_INFO_AVAILABLE) == true
+
+        val isoRange: Range<Int>? = cameraCharacteristics.get(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE)
+        if (isoRange!= null) {
+            supportIsoRange = true
+            minIso = isoRange.lower
+            maxIso = isoRange.upper
+            val exposureTimeRange: Range<Long>? = cameraCharacteristics.get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE)
+            if (exposureTimeRange!= null) {
+                supportExposureTime = true
+                supportExposureBracketing = true
+                minExposureTime = exposureTimeRange.lower.toInt()
+                maxExposureTime = exposureTimeRange.upper.toInt()
+            }
+        }
+
+
     }
 
 
@@ -117,7 +143,7 @@ class CameraInfoCache(cameraManager: CameraManager, useFrontCamera: Boolean = fa
     private fun isHardwareLevelAtLeast(level: Int): Boolean {
         if (level == CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY) return true
         if (hardwareLevel == CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY) return false
-        return hardwareLevel >= level;
+        return hardwareLevel >= level
     }
 
     companion object {
@@ -221,8 +247,17 @@ class CameraInfoCache(cameraManager: CameraManager, useFrontCamera: Boolean = fa
 
         private val TAG = CameraInfoCache::class.java.simpleName
         private const val DIFF_FLOAT_EPS = 0.0001f
+        // at least 3 buffers to HDR capture and should be odd number
+        const val IMAGE_BUFFER_SIZE = 3
     }
 }
+
+enum class RequestTagType {
+    CAPTURE,
+    CAPTURE_BURST_IN_PROCESS
+}
+
+data class RequestTagObject(val type: RequestTagType)
 
 class CompareSizesByArea : Comparator<Size> {
     override fun compare(p0: Size, p1: Size) =

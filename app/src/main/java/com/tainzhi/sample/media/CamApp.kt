@@ -5,6 +5,7 @@ import android.app.Application
 import android.app.Application.ActivityLifecycleCallbacks
 import android.os.Bundle
 import com.tainzhi.sample.media.camera.CameraActivity
+import com.tainzhi.sample.media.camera.ImageProcessor
 import com.tainzhi.sample.media.camera.gl.ShaderCache
 import com.tainzhi.sample.media.camera.util.SettingsManager
 
@@ -18,12 +19,13 @@ class CamApp: Application(), ActivityLifecycleCallbacks {
         SettingsManager.build(this)
         settingsManager = SettingsManager.getInstance()!!
         ShaderCache.load()
-        System.loadLibrary("opencv")
-        initOpenCV()
+        ImageProcessor.create()
     }
 
-
-    external fun initOpenCV()
+    override fun onTerminate() {
+        ImageProcessor.destroy()
+        super.onTerminate()
+    }
 
     override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
     }

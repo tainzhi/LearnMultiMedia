@@ -44,6 +44,23 @@ class ControlBar(val context: Context, val binding: ActivityCameraBinding, priva
         }
     }
 
+    private val btnHdr = binding.btnHdr.apply {
+        if (SettingsManager.getInstance().getBoolean(SettingsManager.KEY_HDR_ENABLE)) {
+            setImageResource(R.drawable.ic_hdr_on)
+        } else {
+            setImageResource(R.drawable.ic_hdr_off)
+        }
+        setOnClickListener {
+            if (SettingsManager.getInstance().getBoolean(SettingsManager.KEY_HDR_ENABLE)) {
+                SettingsManager.getInstance().setBoolean(SettingsManager.KEY_HDR_ENABLE, false)
+                setImageResource(R.drawable.ic_hdr_off)
+            } else {
+                SettingsManager.getInstance().setBoolean(SettingsManager.KEY_HDR_ENABLE, true)
+                setImageResource(R.drawable.ic_hdr_on)
+            }
+        }
+    }
+
     fun rotate(angle: Int) {
         for (view in arrayOf(btnSettings, btnRatio, binding.btnHdr)) {
             view.animate()

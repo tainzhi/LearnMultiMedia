@@ -33,6 +33,7 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
 import com.tainzhi.sample.media.R
+import com.tainzhi.sample.media.camera.CameraInfoCache.Companion.IMAGE_BUFFER_SIZE
 import com.tainzhi.sample.media.camera.CameraInfoCache.Companion.chooseOptimalSize
 import com.tainzhi.sample.media.camera.ui.ControlBar
 import com.tainzhi.sample.media.camera.ui.FilterBar
@@ -167,7 +168,7 @@ class CameraActivity : AppCompatActivity() {
 
     // handles still image capture
     private lateinit var jpgImageReader: ImageReader
-    private val jpgImageQueue = ArrayBlockingQueue<Image>(IMAGE_BUFFER_SIZE)
+    private val jpgImageQueue = ArrayBlockingQueue<Image>(CameraInfoCache.IMAGE_BUFFER_SIZE)
     private lateinit var yuvImageReader: ImageReader
     private var yuvLatestReceivedImage: Image? = null
 
@@ -574,13 +575,24 @@ class CameraActivity : AppCompatActivity() {
                     yuvLatestReceivedImage = reader.acquireLatestImage()
                 }, cameraHandler)
             }
-            jpgImageReader = ImageReader.newInstance(
+            if (SettingsManager.getInstance().getBoolean(SettingsManager.KEY_HDR_ENABLE, false)) {
+                jpgImageReader = ImageReader.newInstance(
+                    chosenJpgSize.width, chosenJpgSize.height,
+                    ImageFormat.YUV_420_888, IMAGE_BUFFER_SIZE
+                )
+            } else {
+                jpgImageReader = ImageReader.newInstance(
                     chosenJpgSize.width, chosenJpgSize.height,
                     ImageFormat.JPEG, IMAGE_BUFFER_SIZE
-            )
+                )
+            }
             jpgImageReader.setOnImageAvailableListener({ reader ->
                 val image = reader.acquireLatestImage()
-                jpgImageQueue.add(image)
+                if (SettingsManager.getInstance().getBoolean(SettingsManager.KEY_HDR_ENABLE, false)) {
+                    ImageProcessor.processImage(image)
+                } else {
+                    jpgImageQueue.add(image)
+                }
                 // val data = YUVTool.getBytesFromImageReader(it)
                 // val myMediaRecorder =  MyMediaRecorder()
                 // myMediaRecorder.addVideoData(data)
@@ -781,6 +793,7 @@ class CameraActivity : AppCompatActivity() {
      * we get a response in [.captureCallback] from [.lockFocus].
      */
     private fun runPrecaptureSequence() {
+        Log.d(TAG, "runPrecaptureSequence: ")
         try {
             previewRequestBuilder.set(
                     CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER,
@@ -802,7 +815,6 @@ class CameraActivity : AppCompatActivity() {
      */
     private fun captureStillPicture() {
         Log.d(TAG, "captureStillPicture: enableZsl=${isEnableZsl}")
-        mediaActionSound.play(MediaActionSound.SHUTTER_CLICK)
         Kpi.start(Kpi.TYPE.SHOT_TO_SHOT)
         try {
             if (isEnableZsl && yuvLatestReceivedImage == null) {
@@ -812,11 +824,14 @@ class CameraActivity : AppCompatActivity() {
             val rotation = windowManager.defaultDisplay.rotation
 
             val captureBuilder =
-                    if (isEnableZsl && this::zslImageWriter.isInitialized) {
+                    if (isEnableZsl && this::zslImageWriter.isInitialized &&
+                                !SettingsManager.getInstance().getBoolean(SettingsManager.KEY_HDR_ENABLE, false)
+                        ) {
                         Log.d(TAG, "captureStillPicture: queueInput yuvLatestReceiveImage to HAL")
                         zslImageWriter.queueInputImage(yuvLatestReceivedImage)
                         cameraDevice!!.createReprocessCaptureRequest(lastTotalCaptureResult)
                     } else {
+                        Log.i(TAG, "captureStillPicture: enableZsl:${isEnableZsl}, enableHdr:${SettingsManager.getInstance().getBoolean(SettingsManager.KEY_HDR_ENABLE, false)}}")
                         cameraDevice!!.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
                     }
             captureBuilder.apply {
@@ -840,14 +855,6 @@ class CameraActivity : AppCompatActivity() {
             }
 
             val captureCallback = object : CameraCaptureSession.CaptureCallback() {
-                override fun onCaptureStarted(
-                        session: CameraCaptureSession,
-                        request: CaptureRequest,
-                        timestamp: Long,
-                        frameNumber: Long
-                ) {
-                    super.onCaptureStarted(session, request, timestamp, frameNumber)
-                }
 
                 override fun onCaptureCompleted(
                         session: CameraCaptureSession,
@@ -855,30 +862,90 @@ class CameraActivity : AppCompatActivity() {
                         result: TotalCaptureResult
                 ) {
                     Log.d(TAG, "capture onCaptureCompleted: ")
-                    super.onCaptureCompleted(session, request, result)
-                    unlockFocus()
-                    Kpi.end(Kpi.TYPE.SHOT_TO_SHOT)
-                    Log.d(TAG, "onCaptureCompleted: jpgImageQueue.size=${jpgImageQueue.size}")
-                    val image = jpgImageQueue.take()
-                    // clear the queue of images, if there are left
-                    while (jpgImageQueue.size > 0) {
-                        jpgImageQueue.take().close()
-                    }
-                    imageReaderHandler?.post(
+                    if ((request.tag as RequestTagObject).type == RequestTagType.CAPTURE &&
+                        !SettingsManager.getInstance().getBoolean(SettingsManager.KEY_HDR_ENABLE, false)
+                        ) {
+                        Kpi.end(Kpi.TYPE.SHOT_TO_SHOT)
+                        Log.d(TAG, "onCaptureCompleted: jpgImageQueue.size=${jpgImageQueue.size}")
+                        val image = jpgImageQueue.take()
+                        // clear the queue of images, if there are left
+                        while (jpgImageQueue.size > 0) {
+                            jpgImageQueue.take().close()
+                        }
+                        unlockFocus()
+                        imageReaderHandler?.post(
                             ImageSaver(
-                                    this@CameraActivity,
-                                    image,
-                                    imageReaderHandler
+                                this@CameraActivity,
+                                image,
+                                imageReaderHandler
                             )
-                    )
+                        )
+                    } else {
+
+                    }
+                    super.onCaptureCompleted(session, request, result)
                 }
             }
+            if (SettingsManager.getInstance().getBoolean(SettingsManager.KEY_HDR_ENABLE, false)) {
+                Log.d(TAG, "captureStillPicture: HDR enable")
+                captureBuilder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
+                captureBuilder.set(CaptureRequest.FLASH_MODE, CaptureRequest.FLASH_MODE_TORCH)
 
-            currentCaptureSession?.apply {
-//                stopRepeating()
-//                abortCaptures()
-                capture(captureBuilder.build(), captureCallback, cameraHandler)
+                val baseExposureTime = 1000000000L/30
+                val halfImageSize = cameraInfo.exposureBracketingImages/2
+                val scale = Math.pow(2.0, cameraInfo.exposureBracketingStops/halfImageSize)
+                val requests = ArrayList<CaptureRequest>()
+                // darker images
+                for (i in 0 until halfImageSize) {
+                    var exposureTime = baseExposureTime
+                    if (cameraInfo.supportExposureTime) {
+                        var currentScale = scale
+                        for (j in i until halfImageSize - 1)
+                            currentScale *= scale
+                        exposureTime = (exposureTime / currentScale).toLong()
+                        if (exposureTime < cameraInfo.minExposureTime) {
+                            exposureTime = cameraInfo.minExposureTime.toLong()
+                        }
+                        captureBuilder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, exposureTime)
+                        captureBuilder.setTag(RequestTagObject(RequestTagType.CAPTURE_BURST_IN_PROCESS))
+                        requests.add(captureBuilder.build())
+                    }
+                }
+                // base image
+                captureBuilder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, baseExposureTime)
+                captureBuilder.setTag(RequestTagObject(RequestTagType.CAPTURE_BURST_IN_PROCESS))
+                requests.add(captureBuilder.build())
+                // lighter images
+                for (i in 0 until halfImageSize) {
+                    var exposureTime = baseExposureTime
+                    if (cameraInfo.supportExposureTime) {
+                        var currentScale = scale
+                        for (j in i until halfImageSize)
+                            currentScale *= scale
+                        exposureTime = (exposureTime * currentScale).toLong()
+                        if (exposureTime > cameraInfo.maxExposureTime) {
+                            exposureTime = cameraInfo.maxExposureTime.toLong()
+                        }
+                        captureBuilder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, exposureTime)
+                        if (i == halfImageSize - 1) {
+                            captureBuilder.setTag(RequestTagObject(RequestTagType.CAPTURE))
+                        } else {
+                            captureBuilder.setTag(RequestTagObject(RequestTagType.CAPTURE_BURST_IN_PROCESS))
+                        }
+                        requests.add(captureBuilder.build())
+                    }
+                }
+                Log.d(TAG, "captureStillPicture: captureBurst, requests.size: ${requests.size}")
+                currentCaptureSession?.apply {
+                    captureBurst(requests, captureCallback, cameraHandler)
+                }
+            } else {
+                captureBuilder.setTag(RequestTagObject(RequestTagType.CAPTURE))
+                currentCaptureSession?.apply {
+                    capture(captureBuilder.build(), captureCallback, cameraHandler)
+                }
             }
+            mediaActionSound.play(MediaActionSound.SHUTTER_CLICK)
         } catch (e: CameraAccessException) {
             Log.e(TAG, e.toString())
         }
@@ -1111,7 +1178,6 @@ class CameraActivity : AppCompatActivity() {
 
         private const val YUV_IMAGE_READER_SIZE = 8
         private const val ZSL_IMAGE_WRITER_SIZE = 2
-        private const val IMAGE_BUFFER_SIZE = 3
 
         private const val RecordMode = 0
         private const val CaptureMode = 1
