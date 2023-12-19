@@ -7,7 +7,7 @@ import java.nio.ByteBuffer
 
 object ImageProcessor {
     fun create() {
-        System.loadLibrary("opencv")
+        System.loadLibrary("image-processor")
         init()
     }
 

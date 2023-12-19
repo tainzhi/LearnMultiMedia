@@ -75,6 +75,16 @@ set_target_properties(IlmImf PROPERTIES
 list(APPEND _IMPORT_CHECK_TARGETS IlmImf )
 list(APPEND _IMPORT_CHECK_FILES_FOR_IlmImf "${_IMPORT_PREFIX}/sdk/native/3rdparty/libs/arm64-v8a/libIlmImf.a" )
 
+# Import target "tbb" for configuration "Release"
+set_property(TARGET tbb APPEND PROPERTY IMPORTED_CONFIGURATIONS RELEASE)
+set_target_properties(tbb PROPERTIES
+  IMPORTED_LINK_INTERFACE_LANGUAGES_RELEASE "CXX"
+  IMPORTED_LOCATION_RELEASE "${_IMPORT_PREFIX}/sdk/native/3rdparty/libs/arm64-v8a/libtbb.a"
+  )
+
+list(APPEND _IMPORT_CHECK_TARGETS tbb )
+list(APPEND _IMPORT_CHECK_FILES_FOR_tbb "${_IMPORT_PREFIX}/sdk/native/3rdparty/libs/arm64-v8a/libtbb.a" )
+
 # Import target "libprotobuf" for configuration "Release"
 set_property(TARGET libprotobuf APPEND PROPERTY IMPORTED_CONFIGURATIONS RELEASE)
 set_target_properties(libprotobuf PROPERTIES
@@ -274,6 +284,16 @@ set_target_properties(opencv_gapi PROPERTIES
 
 list(APPEND _IMPORT_CHECK_TARGETS opencv_gapi )
 list(APPEND _IMPORT_CHECK_FILES_FOR_opencv_gapi "${_IMPORT_PREFIX}/sdk/native/staticlibs/arm64-v8a/libopencv_gapi.a" )
+
+# Import target "opencv_java" for configuration "Release"
+set_property(TARGET opencv_java APPEND PROPERTY IMPORTED_CONFIGURATIONS RELEASE)
+set_target_properties(opencv_java PROPERTIES
+  IMPORTED_LOCATION_RELEASE "${_IMPORT_PREFIX}/sdk/native/libs/arm64-v8a/libopencv_java4.so"
+  IMPORTED_SONAME_RELEASE "libopencv_java4.so"
+  )
+
+list(APPEND _IMPORT_CHECK_TARGETS opencv_java )
+list(APPEND _IMPORT_CHECK_FILES_FOR_opencv_java "${_IMPORT_PREFIX}/sdk/native/libs/arm64-v8a/libopencv_java4.so" )
 
 # Commands beyond this point should not need to know the version.
 set(CMAKE_IMPORT_FILE_VERSION)

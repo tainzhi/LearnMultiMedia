@@ -636,7 +636,7 @@ public:
      * Caller should guarantee binary buffer lifetime greater than ProgramSource object (and any of its copies).
      *
      * Programs in this format are portable between OpenCL implementations with 'khr_spir' extension:
-     * https://www.khronos.org/registry/OpenCL/opencv.sdk/2.0/docs/man/xhtml/cl_khr_spir.html
+     * https://www.khronos.org/registry/OpenCL/sdk/2.0/docs/man/xhtml/cl_khr_spir.html
      * (but they are not portable between different platforms: 32-bit / 64-bit)
      *
      * Note: these programs can't support vendor specific extensions, like 'cl_intel_subgroups'.

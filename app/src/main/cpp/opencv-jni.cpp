@@ -29,70 +29,16 @@ JNIEXPORT void JNICALL
 Java_com_tainzhi_sample_media_camera_ImageProcessor_deinit(JNIEnv *env, jobject thiz) {
     LOGV(TAG, "opencv deinit");
 }
-//extern "C"
-//JNIEXPORT void JNICALL
-//Java_com_tainzhi_sample_media_camera_ImageProcessor_processImage(JNIEnv *env, jobject thiz,
-//                                                                 jbyteArray y_plane,
-//                                                                 jbyteArray u_plane,
-//                                                                 jbyteArray v_plane, jint width,
-//                                                                 jint height) {
-//    cv::Mat yuvMat(height, width, CV_8UC3);
-//    LOGD(TAG, "processImage, width:%d height:%d", width, height);
-//    // Get the Y plane
-//    jboolean isCopy;
-//    jbyte* yPlane = env->GetByteArrayElements(y_plane, &isCopy);
-//    for (int i = 0; i < height; i++) {
-//        for (int j = 0; j < width; j++) {
-//            yuvMat.at<uchar>(i, j) = yPlane[i * width + j];
-//        }
-//    }
-//    env->ReleaseByteArrayElements(y_plane,  yPlane, JNI_ABORT);
-//
-//    // Get the U plane
-//    jbyte* uPlane = env->GetByteArrayElements(u_plane, &isCopy);
-//    for (int i = 0; i < height / 2; i++) {
-//        for (int j = 0; j < width / 2; j++) {
-//            yuvMat.at<uchar>(i * 2, j * 2) = uPlane[i * width / 2 + j];
-//        }
-//    }
-//    env->ReleaseByteArrayElements(u_plane, uPlane, JNI_ABORT);
-//
-//    // Get the V plane
-//    jbyte* vPlane = env->GetByteArrayElements(v_plane, &isCopy);
-//    for (int i = 0; i < height / 2; i++) {
-//        for (int j = 0; j < width / 2; j++) {
-//            yuvMat.at<uchar>(i * 2 + 1, j * 2) = vPlane[i * width / 2 + j];
-//        }
-//    }
-//    env->ReleaseByteArrayElements(v_plane, vPlane, JNI_ABORT);
-//
-//    // Convert YUV to BGR
-//    cv::Mat bgrMat;
-//    cv::cvtColor(yuvMat, bgrMat, cv::COLOR_YUV2BGR_I420);
-//
-////    // Copy the bitmap pixels
-////    env->GetDirectBufferAddress(bitmapOutput);
-////    uint8_t* bitmapPixels = reinterpret_cast<uint8_t*>(env->GetDirectBufferAddress(bitmapOutput));
-////    for (int i = 0; i < height; i++) {
-////        for (int j = 0; j < width; j++) {
-////            int bitmapIndex = (i * rowBytes + j * 3);
-////            int colorIndex = i * width * 3 + j * 3;
-////            bitmapPixels[bitmapIndex] = bgrMat.at<Vec3b>(i, j)[2];
-////            bitmapPixels[bitmapIndex + 1] = bgrMat.at<Vec3b>(i, j)[1];
-////            bitmapPixels[bitmapIndex + 2] = bgrMat.at<Vec3b>(i, j)[0];
-////        }
-////    }
-//}
+
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_tainzhi_sample_media_camera_ImageProcessor_processImage(JNIEnv *env, jobject thiz,
                                                                  jobject y_plane, jobject u_plane,
                                                                  jobject v_plane, jint width,
                                                                  jint height) {
-    cv::Mat yuvMat(height, width, CV_8UC3);
+    cv::Mat yuvMat(height + height/2, width, CV_8UC1);
     LOGD(TAG, "processImage, width:%d height:%d", width, height);
     // Get the Y plane
-    jboolean isCopy;
     jbyte* yPlane = (jbyte*) env->GetDirectBufferAddress(y_plane);
     for (int i = 0; i < height; i++) {
         for (int j = 0; j < width; j++) {
@@ -100,11 +46,17 @@ Java_com_tainzhi_sample_media_camera_ImageProcessor_processImage(JNIEnv *env, jo
         }
     }
 
+    int h_offset = height, w_offset = 0;
     // Get the U plane
     jbyte* uPlane = (jbyte*)env->GetDirectBufferAddress(u_plane);
     for (int i = 0; i < height / 2; i++) {
         for (int j = 0; j < width / 2; j++) {
-            yuvMat.at<uchar>(i * 2, j * 2) = uPlane[i * width / 2 + j];
+            yuvMat.at<uchar>(h_offset, w_offset) = uPlane[i * width / 2 + j];
+            w_offset++;
+            if (w_offset >= width) {
+                w_offset = 0;
+                h_offset++;
+            }
         }
     }
 
@@ -112,11 +64,20 @@ Java_com_tainzhi_sample_media_camera_ImageProcessor_processImage(JNIEnv *env, jo
     jbyte* vPlane = (jbyte*)env->GetDirectBufferAddress(v_plane);
     for (int i = 0; i < height / 2; i++) {
         for (int j = 0; j < width / 2; j++) {
-            yuvMat.at<uchar>(i * 2 + 1, j * 2) = vPlane[i * width / 2 + j];
+            yuvMat.at<uchar>(h_offset, w_offset) = vPlane[i * width / 2 + j];
+            w_offset++;
+            if (w_offset >= width) {
+                w_offset = 0;
+                h_offset++;
+            }
         }
     }
+    LOGD(TAG, "processImage, width_offset:%d height_offset:%d", w_offset, h_offset);
+
 
     // Convert YUV to BGR
+    // https://www.jianshu.com/p/11365d423d26
+    // https://gist.github.com/FWStelian/4c3dcd35960d6eabbe661c3448dd5539
     cv::Mat bgrMat;
     cv::cvtColor(yuvMat, bgrMat, cv::COLOR_YUV2BGR_I420);
 

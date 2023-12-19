@@ -63,10 +63,10 @@
 #define HAVE_INTTYPES_H 1
 
 /* Intel Integrated Performance Primitives */
-/* #undef HAVE_IPP */
-/* #undef HAVE_IPP_ICV */
-/* #undef HAVE_IPP_IW */
-/* #undef HAVE_IPP_IW_LL */
+#define HAVE_IPP
+#define HAVE_IPP_ICV
+#define HAVE_IPP_IW
+#define HAVE_IPP_IW_LL
 
 /* JPEG-2000 codec */
 #define HAVE_OPENJPEG
@@ -93,7 +93,7 @@
 /* #undef HAVE_NVCUVENC */
 
 /* OpenCL Support */
-#define HAVE_OPENCL
+/* #undef HAVE_OPENCL */
 /* #undef HAVE_OPENCL_STATIC */
 /* #undef HAVE_OPENCL_SVM */
 
@@ -119,7 +119,7 @@
 #define HAVE_PTHREADS_PF
 
 /* Intel Threading Building Blocks */
-/* #undef HAVE_TBB */
+#define HAVE_TBB
 
 /* Ste||ar Group High Performance ParallelX */
 /* #undef HAVE_HPX */
